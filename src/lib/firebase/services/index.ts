@@ -18,3 +18,4 @@ export { healthVisitService } from './healthVisit';
 export { healthPermissionService } from './healthPermission';
 export { guruService } from './guru';
 export { governanceCaseService } from './governanceCase';
+export { auditLogService } from './auditLog';

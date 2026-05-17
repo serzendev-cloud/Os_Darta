@@ -4,3 +4,5 @@ export { useCollection } from './useCollection';
 export { useRoleAccess, useHasPermission, useHasAnyPermission, useHasAllPermissions, useIsRole, useViewAsRole } from './useRoleAccess';
 export { useTimeSeries, useDistribution, useTopN, useAggregation } from './useChartData';
 export type { TimeSeriesPoint, DistributionItem, TopNItem } from './useChartData';
+export { useNotificationGroup } from './useNotificationGroup';
+export type { NotificationGroup, NotificationPreferences } from './useNotificationGroup';
