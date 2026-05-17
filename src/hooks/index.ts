@@ -2,3 +2,5 @@ export { useAuth } from './useAuth';
 export { useDocument } from './useDocument';
 export { useCollection } from './useCollection';
 export { useRoleAccess, useHasPermission, useHasAnyPermission, useHasAllPermissions, useIsRole, useViewAsRole } from './useRoleAccess';
+export { useTimeSeries, useDistribution, useTopN, useAggregation } from './useChartData';
+export type { TimeSeriesPoint, DistributionItem, TopNItem } from './useChartData';

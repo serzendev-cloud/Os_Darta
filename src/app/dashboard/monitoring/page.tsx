@@ -7,8 +7,10 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { EmptyState } from '@/components/shared/empty-state';
-import { DashboardShell, StatsGrid, ChartRow, ChartContainer } from '@/components/shared/dashboard-shell';
+import { DashboardShell, StatsGrid, ChartRow } from '@/components/shared/dashboard-shell';
 import { useCollection } from '@/hooks';
+import { useTimeSeries, useDistribution } from '@/hooks';
+import { TrendChart, DonutChart } from '@/components/shared/charts';
 import { Activity, Users, AlertTriangle, Building2, AlertCircle } from 'lucide-react';
 import type { Santri, Pelanggaran, Asrama, Notification } from '@/types';
 
@@ -26,6 +28,13 @@ export default function MonitoringPage() {
     pelanggaranPending: 0, // Pending now tracked via GovernanceCase collection
     asramaAktifCount: asramaList.filter(a => a.status === 'aktif').length,
   }), [santriList, pelanggaranList, asramaList]);
+
+  // Chart data
+  const trendData = useTimeSeries(pelanggaranList, 'date', 30);
+  const severityLabels: Record<string, string> = {
+    ringan: 'Ringan', sedang: 'Sedang', berat: 'Berat', sangat_berat: 'Sangat Berat',
+  };
+  const severityData = useDistribution(pelanggaranList, 'severity', severityLabels);
 
   // Last 5 notifications as activity log
   const recentNotifications = useMemo(() => {
@@ -93,11 +102,11 @@ export default function MonitoringPage() {
 
       <ChartRow>
         <PageCard title="Tren Pelanggaran" description="30 hari terakhir">
-          <ChartContainer />
+          <TrendChart data={trendData} />
         </PageCard>
 
-        <PageCard title="Distribusi Pelanggaran per Asrama" description="Bulan ini">
-          <ChartContainer />
+        <PageCard title="Distribusi Pelanggaran per Severitas" description="Bulan ini">
+          <DonutChart data={severityData} />
         </PageCard>
       </ChartRow>
 
