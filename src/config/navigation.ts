@@ -57,10 +57,9 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
 
-  // ── 3. AKADEMIK ───────────────────────────────────────────────────────
-  // Future: split into Akademik Formal (Depag) and Akademik Pesantren (Madin/Madqur)
+  // ── 3. AKADEMIK FORMAL (Depag) ─────────────────────────────────────────
   {
-    title: 'Akademik',
+    title: 'Akademik Formal',
     icon: 'GraduationCap',
     items: [
       {
@@ -70,6 +69,7 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
         governanceDomain: 'akademik',
+        academicDomain: 'formal',
         operationalData: true,
       },
       {
@@ -79,6 +79,7 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'kepala_kesiswaan', 'staff'],
         requiredPermission: Permission.VIEW_MAPEL,
         governanceDomain: 'akademik',
+        academicDomain: 'formal',
         operationalData: true,
       },
       {
@@ -88,12 +89,193 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'kepala_kesiswaan', 'staff'],
         requiredPermission: Permission.VIEW_DISTRIBUSI_GURU,
         governanceDomain: 'akademik',
+        academicDomain: 'formal',
         operationalData: true,
+      },
+      {
+        title: 'Kalender Akademik',
+        href: '/dashboard/kalender-akademik',
+        icon: 'Calendar',
+        roles: ['admin', 'kepala_kesiswaan'],
+        requiredPermission: Permission.VIEW_KALENDER_AKADEMIK,
+        governanceDomain: 'akademik',
+        academicDomain: 'formal',
+        requiredFeature: 'akademik',
+      },
+      {
+        title: 'Penilaian',
+        href: '/dashboard/penilaian',
+        icon: 'ClipboardCheck',
+        roles: ['admin', 'kepala_kesiswaan', 'guru'],
+        requiredPermission: Permission.VIEW_PENILAIAN,
+        governanceDomain: 'akademik',
+        academicDomain: 'formal',
+        requiredFeature: 'akademik',
+      },
+      {
+        title: 'Raport',
+        href: '/dashboard/raport',
+        icon: 'FileSpreadsheet',
+        roles: ['admin', 'kepala_kesiswaan', 'wali_kelas', 'wali'],
+        requiredPermission: Permission.VIEW_RAPORT,
+        governanceDomain: 'akademik',
+        academicDomain: 'formal',
+        requiredFeature: 'rapor',
       },
     ],
   },
 
-  // ── 4. KESISWAAN ──────────────────────────────────────────────────────
+  // ── 4. AKADEMIK PESANTREN (Madin / MadQur umbrella) ────────────────────
+  {
+    title: 'Akademik Pesantren',
+    icon: 'BookMarked',
+    items: [
+      {
+        title: 'Madin',
+        href: '',
+        icon: 'BookOpen',
+        roles: ['admin', 'kepala_kesiswaan', 'staff'],
+        requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+        governanceDomain: 'akademik',
+        academicDomain: 'pesantren',
+        children: [
+          {
+            title: 'Struktur Akademik',
+            href: '/dashboard/struktur-akademik',
+            icon: 'GraduationCap',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            operationalData: true,
+          },
+          {
+            title: 'Mata Pelajaran',
+            href: '/dashboard/mapel',
+            icon: 'Library',
+            roles: ['admin', 'kepala_kesiswaan', 'staff'],
+            requiredPermission: Permission.VIEW_MAPEL,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            operationalData: true,
+          },
+          {
+            title: 'Distribusi Guru',
+            href: '/dashboard/distribusi-guru',
+            icon: 'UsersRound',
+            roles: ['admin', 'kepala_kesiswaan', 'staff'],
+            requiredPermission: Permission.VIEW_DISTRIBUSI_GURU,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            operationalData: true,
+          },
+          {
+            title: 'Kalender Akademik',
+            href: '/dashboard/kalender-akademik',
+            icon: 'Calendar',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_KALENDER_AKADEMIK,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            requiredFeature: 'akademik',
+          },
+          {
+            title: 'Evaluasi',
+            href: '/dashboard/evaluasi',
+            icon: 'FileSearch',
+            roles: ['admin', 'kepala_kesiswaan', 'guru'],
+            requiredPermission: Permission.VIEW_EVALUASI,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            requiredFeature: 'akademik',
+          },
+          {
+            title: 'Raport',
+            href: '/dashboard/raport',
+            icon: 'FileSpreadsheet',
+            roles: ['admin', 'kepala_kesiswaan', 'wali_kelas', 'wali'],
+            requiredPermission: Permission.VIEW_RAPORT,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            requiredFeature: 'rapor',
+          },
+        ],
+      },
+      {
+        title: 'MadQur',
+        href: '',
+        icon: 'BookOpen',
+        roles: ['admin', 'kepala_kesiswaan', 'staff'],
+        requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+        governanceDomain: 'akademik',
+        academicDomain: 'pesantren',
+        children: [
+          {
+            title: 'Struktur Akademik',
+            href: '/dashboard/struktur-akademik',
+            icon: 'GraduationCap',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            operationalData: true,
+          },
+          {
+            title: 'Mata Pelajaran',
+            href: '/dashboard/mapel',
+            icon: 'Library',
+            roles: ['admin', 'kepala_kesiswaan', 'staff'],
+            requiredPermission: Permission.VIEW_MAPEL,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            operationalData: true,
+          },
+          {
+            title: 'Distribusi Guru',
+            href: '/dashboard/distribusi-guru',
+            icon: 'UsersRound',
+            roles: ['admin', 'kepala_kesiswaan', 'staff'],
+            requiredPermission: Permission.VIEW_DISTRIBUSI_GURU,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            operationalData: true,
+          },
+          {
+            title: 'Kalender Akademik',
+            href: '/dashboard/kalender-akademik',
+            icon: 'Calendar',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_KALENDER_AKADEMIK,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            requiredFeature: 'akademik',
+          },
+          {
+            title: 'Evaluasi',
+            href: '/dashboard/evaluasi',
+            icon: 'FileSearch',
+            roles: ['admin', 'kepala_kesiswaan', 'guru'],
+            requiredPermission: Permission.VIEW_EVALUASI,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            requiredFeature: 'akademik',
+          },
+          {
+            title: 'Raport',
+            href: '/dashboard/raport',
+            icon: 'FileSpreadsheet',
+            roles: ['admin', 'kepala_kesiswaan', 'wali_kelas', 'wali'],
+            requiredPermission: Permission.VIEW_RAPORT,
+            governanceDomain: 'akademik',
+            academicDomain: 'pesantren',
+            requiredFeature: 'rapor',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── 5. KESISWAAN ──────────────────────────────────────────────────────
   {
     title: 'Kesiswaan',
     icon: 'BookOpen',
@@ -158,7 +340,7 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
 
-  // ── 5. ASRAMA ─────────────────────────────────────────────────────────
+  // ── 6. ASRAMA ─────────────────────────────────────────────────────────
   {
     title: 'Asrama',
     icon: 'Home',
@@ -175,7 +357,7 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
 
-  // ── 6. KESEHATAN ──────────────────────────────────────────────────────
+  // ── 7. KESEHATAN ──────────────────────────────────────────────────────
   {
     title: 'Kesehatan',
     icon: 'Stethoscope',
@@ -203,7 +385,7 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
 
-  // ── 7. ADMINISTRASI ─────────────────────────────────────────────────────
+  // ── 8. ADMINISTRASI ─────────────────────────────────────────────────────
   // New domain — route placeholders, feature-gated behind 'administrasi' flag
   {
     title: 'Administrasi',
@@ -262,7 +444,7 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
 
-  // ── 8. ANALYTICS ──────────────────────────────────────────────────────
+  // ── 9. ANALYTICS ──────────────────────────────────────────────────────
   // Generated analytics only — data aggregated from source domains
   {
     title: 'Analytics',
@@ -281,7 +463,7 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
 
-  // ── 9. SISTEM ─────────────────────────────────────────────────────────
+  // ── 10. SISTEM ─────────────────────────────────────────────────────────
   {
     title: 'Sistem',
     icon: 'Settings',
@@ -419,31 +601,44 @@ export function getGroupedMenuForRole(
 ): NavGroup[] {
   const flagCheck = flags ?? {};
 
+  const processItem = (item: NavItem): NavItem | null => {
+    if (item.visualState === 'hidden') return null;
+    if (!isNavItemVisible(item, role)) return null;
+
+    const withTitle = applyDynamicTitle(item, role);
+    let processed = withTitle;
+
+    if (item.requiredFeature && flagCheck[item.requiredFeature] === false) {
+      processed = { ...processed, disabled: true };
+    }
+    if (withTitle.visualState === 'disabled') {
+      processed = { ...processed, disabled: true };
+    }
+    if (withTitle.visualState === 'beta') {
+      processed = { ...processed, badge: 'Beta' };
+    }
+    if (withTitle.visualState === 'internal') {
+      processed = { ...processed, badge: 'Internal' };
+    }
+
+    // Recursively process children
+    if (processed.children && processed.children.length > 0) {
+      const processedChildren = processed.children
+        .map((child) => processItem(child))
+        .filter((c): c is NavItem => c !== null);
+
+      if (processedChildren.length === 0) return null;
+      processed = { ...processed, children: processedChildren };
+    }
+
+    return processed;
+  };
+
   return navigationGroups
     .map((group) => {
       const filteredItems = group.items
-        .filter((item) => {
-          if (item.visualState === 'hidden') return false;
-          return isNavItemVisible(item, role);
-        })
-        .map((item) => {
-          const withTitle = applyDynamicTitle(item, role);
-          // Feature flag gating → disabled
-          if (item.requiredFeature && flagCheck[item.requiredFeature] === false) {
-            return { ...withTitle, disabled: true };
-          }
-          // Visual state → badge or disabled
-          if (withTitle.visualState === 'disabled') {
-            return { ...withTitle, disabled: true };
-          }
-          if (withTitle.visualState === 'beta') {
-            return { ...withTitle, badge: 'Beta' };
-          }
-          if (withTitle.visualState === 'internal') {
-            return { ...withTitle, badge: 'Internal' };
-          }
-          return withTitle;
-        });
+        .map((item) => processItem(item))
+        .filter((i): i is NavItem => i !== null);
 
       if (filteredItems.length === 0) return null;
 

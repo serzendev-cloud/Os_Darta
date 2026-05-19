@@ -17,6 +17,7 @@ import {
   Stethoscope, FileText, Upload, Home, ChevronDown, PieChart,
   Megaphone, Archive, Calendar, Radio,
   SlidersHorizontal, Wrench, ScrollText, Link2,
+  BookMarked, ClipboardCheck, FileSpreadsheet, FileSearch,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   GraduationCap, School, Library, Stethoscope, FileText, Upload, Home, PieChart,
   Megaphone, Archive, Calendar, Radio,
   SlidersHorizontal, Wrench, ScrollText, Link2,
+  BookMarked, ClipboardCheck, FileSpreadsheet, FileSearch,
 };
 
 export function Sidebar() {
@@ -42,7 +44,11 @@ export function Sidebar() {
   // Auto-expand group containing active route
   useEffect(() => {
     const activeGroup = menuGroups.find((g) =>
-      g.items.some((item) => pathname === item.href || pathname?.startsWith(item.href + '/'))
+      g.items.some((item) => {
+        const check = (i: typeof item) => pathname === i.href || pathname?.startsWith(i.href + '/');
+        if (check(item)) return true;
+        return item.children?.some((c) => check(c)) ?? false;
+      })
     );
     if (activeGroup && !expandedGroups[activeGroup.title]) {
       setExpandedGroups((prev) => ({ ...prev, [activeGroup.title]: true }));
@@ -96,7 +102,11 @@ export function Sidebar() {
               const GroupIcon = iconMap[group.icon];
               const isExpanded = expandedGroups[group.title] || false;
               const isActiveGroup = group.items.some(
-                (item) => pathname === item.href || pathname?.startsWith(item.href + '/')
+                (item) => {
+                  const check = (i: typeof item) => pathname === i.href || pathname?.startsWith(i.href + '/');
+                  if (check(item)) return true;
+                  return item.children?.some((c) => check(c)) ?? false;
+                }
               );
 
               return (
@@ -105,7 +115,13 @@ export function Sidebar() {
                   {isCollapsed ? (
                     /* Collapsed: show items directly with tooltips, no group header */
                     <div className="space-y-1">
-                      {group.items.map((item) => {
+                      {group.items.flatMap((item) => {
+                        if (item.children?.length) {
+                          return item.children.map((child) => ({ ...child, _parent: item.title }));
+                        }
+                        return [item];
+                      }).map((item) => {
+                        const parentLabel = (item as unknown as { _parent?: string })._parent;
                         const Icon = iconMap[item.icon] || LayoutDashboard;
                         const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                         const isNotifItem = item.icon === 'Bell';
@@ -139,11 +155,11 @@ export function Sidebar() {
                           </Link>
                         );
                         return (
-                          <Tooltip key={item.href}>
+                          <Tooltip key={parentLabel ? `${parentLabel}-${item.href}` : item.href}>
                             <TooltipTrigger>
                               {linkContent}
                             </TooltipTrigger>
-                            <TooltipContent side="right" sideOffset={8}>{item.title}</TooltipContent>
+                            <TooltipContent side="right" sideOffset={8}>{parentLabel ? `${parentLabel} › ${item.title}` : item.title}</TooltipContent>
                           </Tooltip>
                         );
                       })}
@@ -179,6 +195,49 @@ export function Sidebar() {
                       )}>
                         <div className="space-y-0.5 pt-0.5 pb-1">
                           {group.items.map((item) => {
+                            // ── Items with children → sub-header + indented children ──
+                            if (item.children && item.children.length > 0) {
+                              const ParentIcon = iconMap[item.icon] || LayoutDashboard;
+                              return (
+                                <div key={item.title} className="space-y-0.5">
+                                  <div className="flex items-center gap-2.5 px-3 py-1.5 ml-2.5 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                                    <ParentIcon className="w-3.5 h-3.5 shrink-0" />
+                                    <span className="truncate">{item.title}</span>
+                                  </div>
+                                  {item.children.map((child) => {
+                                    const Icon = iconMap[child.icon] || LayoutDashboard;
+                                    const isActive = pathname === child.href || pathname?.startsWith(child.href + '/');
+                                    const childClasses = cn(
+                                      'flex items-center gap-3 rounded-lg px-3 py-2 ml-5 text-[13px] font-medium',
+                                      'transition-all duration-200 ease-out',
+                                      'border border-transparent',
+                                      isActive
+                                        ? 'bg-primary/8 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.05)]'
+                                        : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/8',
+                                      child.disabled && 'opacity-40 pointer-events-none',
+                                    );
+                                    return child.disabled ? (
+                                      <span key={child.href} className={childClasses}>
+                                        <Icon className="shrink-0 w-4 h-4 text-muted-foreground" />
+                                        <span className="truncate">{child.title}</span>
+                                        {child.badge && (
+                                          <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', child.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{child.badge}</span>
+                                        )}
+                                      </span>
+                                    ) : (
+                                      <Link key={child.href} href={child.href} onClick={() => setMobileOpen(false)} className={childClasses}>
+                                        <Icon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
+                                        <span className="truncate">{child.title}</span>
+                                        {child.badge && (
+                                          <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', child.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{child.badge}</span>
+                                        )}
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            }
+                            // ── Regular item (no children) ──
                             const Icon = iconMap[item.icon] || LayoutDashboard;
                             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                             const isNotifItem = item.icon === 'Bell';

@@ -25,6 +25,10 @@ export const Permission = {
   MANAGE_MAPEL: 'manage_mapel',
   VIEW_DISTRIBUSI_GURU: 'view_distribusi_guru',
   MANAGE_DISTRIBUSI_GURU: 'manage_distribusi_guru',
+  VIEW_KALENDER_AKADEMIK: 'view_kalender_akademik',
+  VIEW_PENILAIAN: 'view_penilaian',
+  VIEW_RAPORT: 'view_raport',
+  VIEW_EVALUASI: 'view_evaluasi',
 
   // Pelanggaran
   VIEW_PELANGGARAN: 'view_pelanggaran',
@@ -102,6 +106,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.MANAGE_MAPEL,
     Permission.VIEW_DISTRIBUSI_GURU,
     Permission.MANAGE_DISTRIBUSI_GURU,
+    Permission.VIEW_KALENDER_AKADEMIK,
+    Permission.VIEW_PENILAIAN,
+    Permission.VIEW_RAPORT,
+    Permission.VIEW_EVALUASI,
     Permission.VIEW_PELANGGARAN,
     Permission.REPORT_PELANGGARAN,
     Permission.MANAGE_PELANGGARAN,
@@ -179,6 +187,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
+    Permission.VIEW_PENILAIAN,
   ]),
 
   wali_kelas: new Set([
@@ -191,6 +200,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
+    Permission.VIEW_RAPORT,
   ]),
 
   wali: new Set([
@@ -200,6 +210,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
+    Permission.VIEW_RAPORT,
   ]),
 
   santri: new Set([
