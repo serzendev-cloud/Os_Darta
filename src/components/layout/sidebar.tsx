@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { useAuthStore } from '@/store/auth-store';
 import { getGroupedMenuForRole } from '@/config/navigation';
-import { featureFlags, isFeatureEnabled } from '@/config/features';
+import { featureFlags } from '@/config/features';
 import { useCollection, useIsRole } from '@/hooks';
 import type { Notification } from '@/types';
 import {
@@ -16,6 +16,7 @@ import {
   ChevronRight, GraduationCap, X, UsersRound, School, Library,
   Stethoscope, FileText, Upload, Home, ChevronDown, PieChart,
   Megaphone, Archive, Calendar, Radio,
+  SlidersHorizontal, Wrench, ScrollText, Link2,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Gavel, Trophy, Activity, Bell, Settings, UsersRound,
   GraduationCap, School, Library, Stethoscope, FileText, Upload, Home, PieChart,
   Megaphone, Archive, Calendar, Radio,
+  SlidersHorizontal, Wrench, ScrollText, Link2,
 };
 
 export function Sidebar() {
@@ -173,7 +175,7 @@ export function Sidebar() {
                       {/* Submenu items */}
                       <div className={cn(
                         'overflow-hidden transition-all duration-200 ease-in-out',
-                        isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                        isExpanded ? 'max-h-[32rem] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0'
                       )}>
                         <div className="space-y-0.5 pt-0.5 pb-1">
                           {group.items.map((item) => {
