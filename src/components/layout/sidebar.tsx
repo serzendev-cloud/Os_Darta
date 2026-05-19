@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Users, Building2, BookOpen, AlertTriangle,
   Gavel, Trophy, Activity, Bell, Settings, ChevronLeft,
   ChevronRight, GraduationCap, X, UsersRound, School, Library,
-  Stethoscope, FileText, Upload, Home, ChevronDown,
+  Stethoscope, FileText, Upload, Home, ChevronDown, PieChart,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Users, Building2, BookOpen, AlertTriangle,
   Gavel, Trophy, Activity, Bell, Settings, UsersRound,
-  GraduationCap, School, Library, Stethoscope, FileText, Upload, Home,
+  GraduationCap, School, Library, Stethoscope, FileText, Upload, Home, PieChart,
 };
 
 export function Sidebar() {
