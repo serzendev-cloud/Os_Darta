@@ -6,3 +6,4 @@ export { useTimeSeries, useDistribution, useTopN, useAggregation } from './useCh
 export type { TimeSeriesPoint, DistributionItem, TopNItem } from './useChartData';
 export { useNotificationGroup } from './useNotificationGroup';
 export type { NotificationGroup, NotificationPreferences } from './useNotificationGroup';
+export { useConfig } from './useConfig';

@@ -82,6 +82,29 @@ function initStore() {
     { id: 'mj-6', namaJenjang: 'MTs',        instansi: 'depag', progressionIndexes: [13, 14, 15], status: 'active' },
     { id: 'mj-7', namaJenjang: 'MA',         instansi: 'depag', progressionIndexes: [16, 17, 18], status: 'active' },
   ];
+  store['appConfig'] = [
+    {
+      id: 'settings',
+      maintenance: {
+        enabled: false,
+        message: '',
+        bypassRoles: ['admin'],
+        type: 'full',
+      },
+      featureFlags: {
+        quest: true,
+        monitoring: true,
+        notifikasi: true,
+        akademik: false,
+        keuangan: false,
+        absensi: false,
+        rapor: false,
+        tahfidz: false,
+        kesehatan: false,
+        perpustakaan: false,
+      },
+    },
+  ];
   store['masterTingkat'] = [
     // ── Madin ──────────────────────────────────────────────────────────
     { id: 'mt-1',  instansi: 'madin', progressionIndex: 1,  tingkatLabel: 'Tamhidi',        jenjangId: 'mj-1', status: 'active' },
@@ -200,6 +223,8 @@ export function getDemoCollection(collectionName: string): unknown[] {
       return ensure('masterTingkat');
     case 'users':
       return ensure('users');
+    case 'appConfig':
+      return ensure('appConfig');
     default:
       return [];
   }

@@ -37,6 +37,7 @@ export const COLLECTIONS = {
 
   // System
   AUDIT_LOG: 'auditLog',
+  APP_CONFIG: 'appConfig',
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

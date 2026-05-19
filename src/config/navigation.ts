@@ -34,8 +34,8 @@ export const navigationGroups: NavGroup[] = [
       { title: 'Master Pelanggaran', href: '/dashboard/master-pelanggaran', icon: 'BookOpen', roles: ['admin', 'kepala_kesiswaan'] },
       { title: 'Pelanggaran', href: '/dashboard/pelanggaran', icon: 'AlertTriangle', roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'] },
       { title: 'Hukuman', href: '/dashboard/hukuman', icon: 'Gavel', roles: ['admin', 'musyrif', 'kepala_kesiswaan'] },
-      { title: 'Quest & Pemutihan', href: '/dashboard/quest', icon: 'Trophy', roles: ['admin', 'musyrif', 'santri', 'wali', 'kepala_kesiswaan', 'wali_kelas'] },
-      { title: 'Monitoring', href: '/dashboard/monitoring', icon: 'Activity', roles: ['admin', 'kepala_kesiswaan'] },
+      { title: 'Quest & Pemutihan', href: '/dashboard/quest', icon: 'Trophy', roles: ['admin', 'musyrif', 'santri', 'wali', 'kepala_kesiswaan', 'wali_kelas'], requiredFeature: 'quest' },
+      { title: 'Monitoring', href: '/dashboard/monitoring', icon: 'Activity', roles: ['admin', 'kepala_kesiswaan'], requiredFeature: 'monitoring' },
     ],
   },
   {
@@ -49,15 +49,15 @@ export const navigationGroups: NavGroup[] = [
     title: 'Kesehatan',
     icon: 'Stethoscope',
     items: [
-      { title: 'Kunjungan UKS', href: '/dashboard/uks', icon: 'Stethoscope', roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan'] },
-      { title: 'Izin Berobat', href: '/dashboard/uks/izin-berobat', icon: 'FileText', roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan'] },
+      { title: 'Kunjungan UKS', href: '/dashboard/uks', icon: 'Stethoscope', roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan'], requiredFeature: 'kesehatan' },
+      { title: 'Izin Berobat', href: '/dashboard/uks/izin-berobat', icon: 'FileText', roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan'], requiredFeature: 'kesehatan' },
     ],
   },
   {
     title: 'Sistem',
     icon: 'Settings',
     items: [
-      { title: 'Notifikasi', href: '/dashboard/notifikasi', icon: 'Bell', roles: ['admin', 'musyrif', 'wali', 'santri', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'] },
+      { title: 'Notifikasi', href: '/dashboard/notifikasi', icon: 'Bell', roles: ['admin', 'musyrif', 'wali', 'santri', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'], requiredFeature: 'notifikasi' },
       { title: 'Import Data', href: '/dashboard/import', icon: 'Upload', roles: ['admin', 'kepala_kesiswaan'] },
       { title: 'Pengaturan', href: '/dashboard/pengaturan', icon: 'Settings', roles: ['admin', 'musyrif', 'wali', 'santri', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'] },
     ],
@@ -83,12 +83,24 @@ function applyDynamicTitle(item: NavItem, role: UserRole): NavItem {
   return { ...item, title: dynamicTitle };
 }
 
-export function getGroupedMenuForRole(role: UserRole): NavGroup[] {
+export function getGroupedMenuForRole(
+  role: UserRole,
+  flags?: Record<string, boolean>,
+): NavGroup[] {
+  const flagCheck = flags ?? {};
+
   return navigationGroups
     .map((group) => {
       const filteredItems = group.items
         .filter((item) => item.roles.includes(role))
-        .map((item) => applyDynamicTitle(item, role));
+        .map((item) => {
+          const withTitle = applyDynamicTitle(item, role);
+          // If item has a requiredFeature and that feature is disabled, grey it out
+          if (item.requiredFeature && flagCheck[item.requiredFeature] === false) {
+            return { ...withTitle, disabled: true };
+          }
+          return withTitle;
+        });
 
       if (filteredItems.length === 0) return null;
 

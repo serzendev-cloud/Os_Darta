@@ -23,9 +23,19 @@ export interface NavItem {
   roles: UserRole[];
   /** Centralized permission key from @/config/permissions — preferred over roles array for new pages */
   requiredPermission?: string;
+  /** Feature flag key from @/config/features — when flag is disabled, item is greyed out */
+  requiredFeature?: string;
   badge?: string;
   children?: NavItem[];
   disabled?: boolean;
+}
+
+export interface MaintenanceConfig {
+  enabled: boolean;
+  message: string;
+  estimatedEndAt?: string;
+  bypassRoles: UserRole[];
+  type: 'full' | 'readonly';
 }
 
 export interface NavGroup {

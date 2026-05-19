@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { useAuthStore } from '@/store/auth-store';
 import { getGroupedMenuForRole } from '@/config/navigation';
+import { featureFlags, isFeatureEnabled } from '@/config/features';
 import { useCollection, useIsRole } from '@/hooks';
 import type { Notification } from '@/types';
 import {
@@ -28,7 +29,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const { isCollapsed, isMobileOpen, toggle, setMobileOpen } = useSidebarStore();
   const { user } = useAuthStore();
-  const menuGroups = getGroupedMenuForRole(user?.role ?? 'admin');
+  const flags = Object.fromEntries(featureFlags.map((f) => [f.key, f.enabled]));
+  const menuGroups = getGroupedMenuForRole(user?.role ?? 'admin', flags);
 
   // Accordion: track which groups are expanded
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -103,16 +105,21 @@ export function Sidebar() {
                         const Icon = iconMap[item.icon] || LayoutDashboard;
                         const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                         const isNotifItem = item.icon === 'Bell';
-                        const linkContent = (
-                          <Link href={item.href} onClick={() => setMobileOpen(false)}
-                            className={cn(
-                              'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                              'border border-transparent',
-                              isActive
-                                ? 'bg-primary/5 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.06)]'
-                                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/10',
-                              'justify-center px-2'
-                            )}>
+                        const itemClasses = cn(
+                          'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                          'border border-transparent',
+                          isActive
+                            ? 'bg-primary/5 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.06)]'
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/10',
+                          'justify-center px-2',
+                          item.disabled && 'opacity-40 pointer-events-none',
+                        );
+                        const linkContent = item.disabled ? (
+                          <span className={itemClasses}>
+                            <Icon className="shrink-0 transition-colors duration-200 w-5 h-5 text-muted-foreground" />
+                          </span>
+                        ) : (
+                          <Link href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
                             <div className={cn(isNotifItem ? 'relative' : '')}>
                               <Icon className={cn('shrink-0 transition-colors duration-200 w-5 h-5', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
                               {isNotifItem && unreadCount > 0 && (
@@ -167,16 +174,22 @@ export function Sidebar() {
                             const Icon = iconMap[item.icon] || LayoutDashboard;
                             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                             const isNotifItem = item.icon === 'Bell';
-                            return (
-                              <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}
-                                className={cn(
-                                  'flex items-center gap-3 rounded-lg px-3 py-2 ml-2.5 text-[13px] font-medium',
-                                  'transition-all duration-200 ease-out',
-                                  'border border-transparent',
-                                  isActive
-                                    ? 'bg-primary/8 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.05)]'
-                                    : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/8',
-                                )}>
+                            const itemClasses = cn(
+                              'flex items-center gap-3 rounded-lg px-3 py-2 ml-2.5 text-[13px] font-medium',
+                              'transition-all duration-200 ease-out',
+                              'border border-transparent',
+                              isActive
+                                ? 'bg-primary/8 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.05)]'
+                                : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/8',
+                              item.disabled && 'opacity-40 pointer-events-none',
+                            );
+                            return item.disabled ? (
+                              <span key={item.href} className={itemClasses}>
+                                <Icon className="shrink-0 w-4 h-4 text-muted-foreground" />
+                                <span className="truncate">{item.title}</span>
+                              </span>
+                            ) : (
+                              <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
                                 <Icon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
                                 <span className="truncate">{item.title}</span>
                                 {isNotifItem && unreadCount > 0 && (
