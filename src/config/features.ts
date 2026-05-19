@@ -11,6 +11,7 @@ export const featureFlags: FeatureFlag[] = [
   { key: 'quest', enabled: true, label: 'Modul Quest & Pemutihan' },
   { key: 'monitoring', enabled: true, label: 'Modul Monitoring' },
   { key: 'notifikasi', enabled: true, label: 'Modul Notifikasi' },
+  { key: 'administrasi', enabled: false, label: 'Modul Administrasi' },
 ];
 
 export function isFeatureEnabled(key: string): boolean {

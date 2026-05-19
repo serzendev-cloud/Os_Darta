@@ -4,6 +4,8 @@
 
 export type UserRole = 'admin' | 'musyrif' | 'wali' | 'santri' | 'staff' | 'kepala_kesiswaan' | 'guru' | 'wali_kelas' | 'alumni';
 
+export type AcademicDomain = 'formal' | 'pesantren';
+
 export type SantriStatus = 'aktif' | 'cuti' | 'skors';
 export type AlumniStatus = 'Lulus' | 'Keluar';
 
@@ -25,9 +27,26 @@ export interface NavItem {
   requiredPermission?: string;
   /** Feature flag key from @/config/features — when flag is disabled, item is greyed out */
   requiredFeature?: string;
+  /** Future akademik split: formal (Depag) vs pesantren (Madin/Madqur) */
+  academicDomain?: AcademicDomain;
+  /** Visual state for advanced toggle rendering */
+  visualState?: 'hidden' | 'disabled' | 'beta' | 'internal';
   badge?: string;
   children?: NavItem[];
   disabled?: boolean;
+  // ── Navigation Metadata (not rendered — for analytics/governance integration) ──
+  /** Governance domain this item belongs to */
+  governanceDomain?: 'kesiswaan' | 'akademik' | 'asrama' | 'kesehatan' | 'administrasi' | 'sistem';
+  /** Whether this item's data feeds into analytics dashboards */
+  analyticsSource?: boolean;
+  /** Whether this item displays generated/aggregated data (vs operational input) */
+  generatedData?: boolean;
+  /** Whether this item is used for operational data entry */
+  operationalData?: boolean;
+  /** Whether this item should show maintenance banner when mode active */
+  maintenanceAware?: boolean;
+  /** Whether this item triggers notifications */
+  notificationAware?: boolean;
 }
 
 export interface MaintenanceConfig {

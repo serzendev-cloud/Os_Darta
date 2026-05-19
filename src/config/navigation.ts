@@ -35,6 +35,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'Users',
         roles: ['admin', 'musyrif', 'staff', 'guru', 'wali_kelas', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_SANTRI,
+        operationalData: true,
+        governanceDomain: 'kesiswaan',
       },
       {
         title: 'Data Guru',
@@ -42,6 +44,7 @@ export const navigationGroups: NavGroup[] = [
         icon: 'UsersRound',
         roles: ['admin', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_GURU,
+        operationalData: true,
       },
       {
         title: 'Data Kelas',
@@ -49,6 +52,7 @@ export const navigationGroups: NavGroup[] = [
         icon: 'School',
         roles: ['admin', 'kepala_kesiswaan', 'staff'],
         requiredPermission: Permission.VIEW_KELAS,
+        operationalData: true,
       },
     ],
   },
@@ -65,6 +69,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'GraduationCap',
         roles: ['admin', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+        governanceDomain: 'akademik',
+        operationalData: true,
       },
       {
         title: 'Mata Pelajaran',
@@ -72,6 +78,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'Library',
         roles: ['admin', 'kepala_kesiswaan', 'staff'],
         requiredPermission: Permission.VIEW_MAPEL,
+        governanceDomain: 'akademik',
+        operationalData: true,
       },
       {
         title: 'Distribusi Guru',
@@ -79,6 +87,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'UsersRound',
         roles: ['admin', 'kepala_kesiswaan', 'staff'],
         requiredPermission: Permission.VIEW_DISTRIBUSI_GURU,
+        governanceDomain: 'akademik',
+        operationalData: true,
       },
     ],
   },
@@ -94,6 +104,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'Gavel',
         roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
         requiredPermission: Permission.VIEW_GOVERNANCE,
+        governanceDomain: 'kesiswaan',
+        operationalData: true,
       },
       {
         title: 'Master Pelanggaran',
@@ -101,6 +113,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'BookOpen',
         roles: ['admin', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_MASTER_PELANGGARAN,
+        governanceDomain: 'kesiswaan',
+        operationalData: true,
       },
       {
         title: 'Pelanggaran',
@@ -108,6 +122,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'AlertTriangle',
         roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
         requiredPermission: Permission.VIEW_PELANGGARAN,
+        governanceDomain: 'kesiswaan',
+        operationalData: true,
       },
       {
         title: 'Hukuman',
@@ -115,6 +131,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'Gavel',
         roles: ['admin', 'musyrif', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_HUKUMAN,
+        governanceDomain: 'kesiswaan',
+        operationalData: true,
       },
       {
         title: 'Quest & Pemutihan',
@@ -123,6 +141,8 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'musyrif', 'santri', 'wali', 'kepala_kesiswaan', 'wali_kelas'],
         requiredPermission: Permission.VIEW_QUEST,
         requiredFeature: 'quest',
+        governanceDomain: 'kesiswaan',
+        operationalData: true,
       },
       {
         title: 'Monitoring',
@@ -131,6 +151,9 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_MONITORING,
         requiredFeature: 'monitoring',
+        governanceDomain: 'kesiswaan',
+        generatedData: true,
+        analyticsSource: true,
       },
     ],
   },
@@ -146,6 +169,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'Building2',
         roles: ['admin', 'musyrif', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_ASRAMA,
+        governanceDomain: 'asrama',
+        operationalData: true,
       },
     ],
   },
@@ -162,6 +187,8 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_UKS,
         requiredFeature: 'kesehatan',
+        governanceDomain: 'kesehatan',
+        operationalData: true,
       },
       {
         title: 'Izin Berobat',
@@ -170,11 +197,72 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_IZIN_BEROBAT,
         requiredFeature: 'kesehatan',
+        governanceDomain: 'kesehatan',
+        operationalData: true,
       },
     ],
   },
 
-  // ── 7. ANALYTICS ──────────────────────────────────────────────────────
+  // ── 7. ADMINISTRASI ─────────────────────────────────────────────────────
+  // New domain — route placeholders, feature-gated behind 'administrasi' flag
+  {
+    title: 'Administrasi',
+    icon: 'Megaphone',
+    items: [
+      {
+        title: 'Pengumuman',
+        href: '/dashboard/pengumuman',
+        icon: 'Megaphone',
+        roles: ['admin', 'kepala_kesiswaan', 'staff', 'musyrif', 'guru', 'wali_kelas'],
+        requiredPermission: Permission.VIEW_PENGUMUMAN,
+        requiredFeature: 'administrasi',
+        governanceDomain: 'administrasi',
+        operationalData: true,
+      },
+      {
+        title: 'Surat',
+        href: '/dashboard/surat',
+        icon: 'FileText',
+        roles: ['admin', 'kepala_kesiswaan'],
+        requiredPermission: Permission.VIEW_SURAT,
+        requiredFeature: 'administrasi',
+        governanceDomain: 'administrasi',
+        operationalData: true,
+      },
+      {
+        title: 'Arsip',
+        href: '/dashboard/arsip',
+        icon: 'Archive',
+        roles: ['admin', 'kepala_kesiswaan'],
+        requiredPermission: Permission.VIEW_ARSIP,
+        requiredFeature: 'administrasi',
+        governanceDomain: 'administrasi',
+        operationalData: true,
+      },
+      {
+        title: 'Kalender Kegiatan',
+        href: '/dashboard/kalender-kegiatan',
+        icon: 'Calendar',
+        roles: ['admin', 'kepala_kesiswaan', 'staff', 'musyrif'],
+        requiredPermission: Permission.VIEW_KALENDER_KEGIATAN,
+        requiredFeature: 'administrasi',
+        governanceDomain: 'administrasi',
+        operationalData: true,
+      },
+      {
+        title: 'Broadcast Informasi',
+        href: '/dashboard/broadcast',
+        icon: 'Radio',
+        roles: ['admin', 'kepala_kesiswaan'],
+        requiredPermission: Permission.VIEW_BROADCAST,
+        requiredFeature: 'administrasi',
+        governanceDomain: 'administrasi',
+        operationalData: true,
+      },
+    ],
+  },
+
+  // ── 8. ANALYTICS ──────────────────────────────────────────────────────
   // Generated analytics only — data aggregated from source domains
   {
     title: 'Analytics',
@@ -187,11 +275,13 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_MONITORING,
         requiredFeature: 'monitoring',
+        generatedData: true,
+        analyticsSource: true,
       },
     ],
   },
 
-  // ── 8. SISTEM ─────────────────────────────────────────────────────────
+  // ── 9. SISTEM ─────────────────────────────────────────────────────────
   {
     title: 'Sistem',
     icon: 'Settings',
@@ -203,6 +293,8 @@ export const navigationGroups: NavGroup[] = [
         roles: ['admin', 'musyrif', 'wali', 'santri', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
         requiredPermission: Permission.VIEW_NOTIFIKASI,
         requiredFeature: 'notifikasi',
+        notificationAware: true,
+        governanceDomain: 'sistem',
       },
       {
         title: 'Import Data',
@@ -210,6 +302,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'Upload',
         roles: ['admin', 'kepala_kesiswaan'],
         requiredPermission: Permission.VIEW_IMPORT,
+        operationalData: true,
+        governanceDomain: 'sistem',
       },
       {
         title: 'Pengaturan',
@@ -217,6 +311,8 @@ export const navigationGroups: NavGroup[] = [
         icon: 'Settings',
         roles: ['admin', 'musyrif', 'wali', 'santri', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
         requiredPermission: Permission.VIEW_PENGATURAN,
+        maintenanceAware: true,
+        governanceDomain: 'sistem',
       },
     ],
   },
@@ -265,9 +361,11 @@ function applyDynamicTitle(item: NavItem, role: UserRole): NavItem {
  * Returns navigation groups filtered for a specific role.
  *
  * Filtering logic per item:
- * 1. requiredPermission checked via centralized RBAC matrix (preferred)
- * 2. Falls back to roles array (backward compat)
- * 3. Feature flags (requiredFeature) apply on top — disabled items stay visible but greyed out
+ * 1. visualState 'hidden' → excluded entirely
+ * 2. requiredPermission checked via centralized RBAC matrix (preferred)
+ * 3. Falls back to roles array (backward compat)
+ * 4. Feature flags (requiredFeature) → disabled items stay visible but greyed out
+ * 5. visualState 'beta'/'internal' → badge applied, link stays active
  */
 export function getGroupedMenuForRole(
   role: UserRole,
@@ -278,11 +376,25 @@ export function getGroupedMenuForRole(
   return navigationGroups
     .map((group) => {
       const filteredItems = group.items
-        .filter((item) => isNavItemVisible(item, role))
+        .filter((item) => {
+          if (item.visualState === 'hidden') return false;
+          return isNavItemVisible(item, role);
+        })
         .map((item) => {
           const withTitle = applyDynamicTitle(item, role);
+          // Feature flag gating → disabled
           if (item.requiredFeature && flagCheck[item.requiredFeature] === false) {
             return { ...withTitle, disabled: true };
+          }
+          // Visual state → badge or disabled
+          if (withTitle.visualState === 'disabled') {
+            return { ...withTitle, disabled: true };
+          }
+          if (withTitle.visualState === 'beta') {
+            return { ...withTitle, badge: 'Beta' };
+          }
+          if (withTitle.visualState === 'internal') {
+            return { ...withTitle, badge: 'Internal' };
           }
           return withTitle;
         });

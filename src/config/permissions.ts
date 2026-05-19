@@ -74,6 +74,13 @@ export const Permission = {
   // Pengaturan
   VIEW_PENGATURAN: 'view_pengaturan',
   MANAGE_PENGATURAN: 'manage_pengaturan',
+
+  // Administrasi
+  VIEW_PENGUMUMAN: 'view_pengumuman',
+  VIEW_SURAT: 'view_surat',
+  VIEW_ARSIP: 'view_arsip',
+  VIEW_KALENDER_KEGIATAN: 'view_kalender_kegiatan',
+  VIEW_BROADCAST: 'view_broadcast',
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];
@@ -118,6 +125,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_IMPORT,
     Permission.MANAGE_IMPORT,
     Permission.VIEW_PENGATURAN,
+    Permission.VIEW_PENGUMUMAN,
+    Permission.VIEW_SURAT,
+    Permission.VIEW_ARSIP,
+    Permission.VIEW_KALENDER_KEGIATAN,
+    Permission.VIEW_BROADCAST,
   ]),
 
   musyrif: new Set([
@@ -135,6 +147,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_IZIN_BEROBAT,
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
+    Permission.VIEW_PENGUMUMAN,
+    Permission.VIEW_KALENDER_KEGIATAN,
   ]),
 
   staff: new Set([
@@ -151,6 +165,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_IZIN_BEROBAT,
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
+    Permission.VIEW_PENGUMUMAN,
+    Permission.VIEW_KALENDER_KEGIATAN,
   ]),
 
   guru: new Set([
@@ -162,6 +178,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_QUEST,
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
+    Permission.VIEW_PENGUMUMAN,
   ]),
 
   wali_kelas: new Set([
@@ -173,6 +190,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_QUEST,
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
+    Permission.VIEW_PENGUMUMAN,
   ]),
 
   wali: new Set([
@@ -181,6 +199,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_QUEST,
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
+    Permission.VIEW_PENGUMUMAN,
   ]),
 
   santri: new Set([
@@ -190,6 +209,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.CLAIM_QUEST,
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
+    Permission.VIEW_PENGUMUMAN,
   ]),
 
   alumni: new Set([

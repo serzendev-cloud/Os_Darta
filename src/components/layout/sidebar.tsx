@@ -15,6 +15,7 @@ import {
   Gavel, Trophy, Activity, Bell, Settings, ChevronLeft,
   ChevronRight, GraduationCap, X, UsersRound, School, Library,
   Stethoscope, FileText, Upload, Home, ChevronDown, PieChart,
+  Megaphone, Archive, Calendar, Radio,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Users, Building2, BookOpen, AlertTriangle,
   Gavel, Trophy, Activity, Bell, Settings, UsersRound,
   GraduationCap, School, Library, Stethoscope, FileText, Upload, Home, PieChart,
+  Megaphone, Archive, Calendar, Radio,
 };
 
 export function Sidebar() {
@@ -116,12 +118,16 @@ export function Sidebar() {
                         );
                         const linkContent = item.disabled ? (
                           <span className={itemClasses}>
-                            <Icon className="shrink-0 transition-colors duration-200 w-5 h-5 text-muted-foreground" />
+                            <div className="relative">
+                              <Icon className="shrink-0 transition-colors duration-200 w-5 h-5 text-muted-foreground" />
+                              {item.badge && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500" />}
+                            </div>
                           </span>
                         ) : (
                           <Link href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
-                            <div className={cn(isNotifItem ? 'relative' : '')}>
+                            <div className={cn(isNotifItem || item.badge ? 'relative' : '')}>
                               <Icon className={cn('shrink-0 transition-colors duration-200 w-5 h-5', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
+                              {item.badge && <span className={cn('absolute -top-1 -right-1 w-2 h-2 rounded-full', item.badge === 'Beta' ? 'bg-amber-500' : 'bg-muted-foreground')} />}
                               {isNotifItem && unreadCount > 0 && (
                                 <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full px-0.5">
                                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -187,11 +193,17 @@ export function Sidebar() {
                               <span key={item.href} className={itemClasses}>
                                 <Icon className="shrink-0 w-4 h-4 text-muted-foreground" />
                                 <span className="truncate">{item.title}</span>
+                                {item.badge && (
+                                  <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', item.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{item.badge}</span>
+                                )}
                               </span>
                             ) : (
                               <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
                                 <Icon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
                                 <span className="truncate">{item.title}</span>
+                                {item.badge && (
+                                  <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', item.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{item.badge}</span>
+                                )}
                                 {isNotifItem && unreadCount > 0 && (
                                   <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1.5">
                                     {unreadCount > 99 ? '99+' : unreadCount}
