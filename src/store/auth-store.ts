@@ -14,6 +14,7 @@ import { mockUsers } from '@/data/mock';
 
 interface AuthState {
   user: User | null;
+  firebaseUser?: unknown | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
