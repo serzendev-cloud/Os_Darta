@@ -6,8 +6,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantContext();
   const title = tenant.settings?.loginTitle || tenant.name || 'Ponpes Daruttahuid';
   return {
-    title: `${title} - Login`,
-    description: tenant.settings?.loginDescription || 'Platform tata kelola santri, pemantauan pelanggaran, pembinaan karakter, dan manajemen asrama — terintegrasi dalam satu sistem.',
+    title: `${title} | Madev — Serene Zeith Corp`,
+    description: tenant.settings?.loginDescription || 'Platform tata kelola santri, pemantauan pelanggaran, pembinaan karakter, dan manajemen asrama — Powered by Serene Zeith Corp (serzen_dev).',
   };
 }
 
@@ -17,6 +17,7 @@ export default async function LoginPage() {
   const loginTitle = tenant.settings?.loginTitle || tenant.name || 'Ponpes Daruttahuid';
   const loginSubtitle = tenant.settings?.loginSubtitle || 'Malang';
   const loginDescription = tenant.settings?.loginDescription || 'Platform tata kelola santri, pemantauan pelanggaran, pembinaan karakter, dan manajemen asrama — terintegrasi dalam satu sistem.';
+  const customLogoUrl = tenant.settings?.customLogoUrl || null;
 
   return (
     <LoginClient 
@@ -24,6 +25,7 @@ export default async function LoginPage() {
       loginTitle={loginTitle}
       loginSubtitle={loginSubtitle}
       loginDescription={loginDescription}
+      customLogoUrl={customLogoUrl}
     />
   );
 }

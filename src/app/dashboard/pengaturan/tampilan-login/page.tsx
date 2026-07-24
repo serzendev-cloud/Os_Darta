@@ -111,14 +111,26 @@ export default function TampilanLoginPage() {
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <ImageIcon className="w-5 h-5 text-emerald-600" /> Live Preview
               </h3>
-              <div className="rounded-2xl overflow-hidden border border-border/60 shadow-lg shadow-emerald-900/5 aspect-video bg-emerald-700 relative p-6 md:p-8 flex flex-col justify-center">
+              <div className="rounded-2xl overflow-hidden border border-border/60 shadow-lg shadow-emerald-900/5 bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-950 relative p-6 md:p-8 flex flex-col justify-between min-h-[300px] text-white">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.08),transparent_60%)]" />
-                <div className="absolute bottom-0 right-0 w-64 h-64 bg-emerald-600/30 rounded-full blur-[80px] translate-x-1/3 translate-y-1/3" />
+                <div className="absolute bottom-0 right-0 w-64 h-64 bg-emerald-600/20 rounded-full blur-[80px] translate-x-1/3 translate-y-1/3" />
                 
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
-                      <div className="w-4 h-4 bg-white/80 rounded-sm" />
+                <div className="relative z-10 space-y-4">
+                  {/* Company Badge Preview */}
+                  <div className="flex items-center justify-between">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-emerald-100 text-[10px] font-medium">
+                      <span className="font-semibold text-white">Serene Zeith Corp</span>
+                      <span className="text-white/40">•</span>
+                      <span className="text-emerald-200">serzen_dev</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 text-[10px] font-bold uppercase tracking-wider">
+                      Madev
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
+                      <div className="w-4 h-4 bg-emerald-300 rounded-sm" />
                     </div>
                     <div>
                       <h1 className="text-sm font-bold text-white tracking-tight">{title || 'Nama Pesantren'}</h1>
@@ -126,12 +138,19 @@ export default function TampilanLoginPage() {
                     </div>
                   </div>
 
-                  <h2 className="text-xl md:text-2xl font-bold text-white leading-snug">
-                    Ma&apos;had Manager
-                  </h2>
-                  <p className="text-emerald-200 text-xs mt-2 max-w-[80%] leading-relaxed">
-                    {description || 'Deskripsi aplikasi akan tampil di sini.'}
-                  </p>
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-white leading-snug">
+                      Madev — <span className="text-emerald-300">Ma&apos;had Manager</span>
+                    </h2>
+                    <p className="text-emerald-100/80 text-xs mt-1.5 leading-relaxed max-w-[90%]">
+                      {description || 'Deskripsi aplikasi akan tampil di sini.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative z-10 pt-4 border-t border-white/10 text-[10px] text-emerald-300/80 flex items-center justify-between">
+                  <span>Company: Serene Zeith Corp</span>
+                  <span>Produk: Madev</span>
                 </div>
               </div>
             </div>
