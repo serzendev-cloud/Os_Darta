@@ -9,32 +9,6 @@ import { Permission, hasPermission } from './permissions';
 import type { PermissionType } from './permissions';
 
 export const navigationGroups: NavGroup[] = [
-  // ── 0. SAAS PLATFORM CONTROL (Super Admin & Developer) ───────────────
-  {
-    title: 'SaaS Platform Control',
-    icon: 'ShieldAlert',
-    items: [
-      {
-        title: 'Manajemen Tenant & Multi-Pesantren',
-        href: '/dashboard/pengaturan/tenant-integrasi',
-        icon: 'Building2',
-        roles: ['super_admin', 'developer'],
-        requiredPermission: Permission.MANAGE_TENANTS,
-        visualState: 'beta',
-        governanceDomain: 'sistem',
-      },
-      {
-        title: 'Global Audit Log & System Health',
-        href: '/dashboard/audit-log',
-        icon: 'ScrollText',
-        roles: ['super_admin', 'developer'],
-        requiredPermission: Permission.MANAGE_SYSTEM_GLOBAL,
-        visualState: 'internal',
-        governanceDomain: 'sistem',
-      },
-    ],
-  },
-
   // ── 1. BERANDA ───────────────────────────────────────────────────────
   {
     title: 'Beranda',
@@ -563,18 +537,18 @@ export const navigationGroups: NavGroup[] = [
         governanceDomain: 'sistem',
       },
       {
-        title: 'Integrasi Tenant SaaS',
+        title: 'Integrasi Payment, WA & Drive',
         href: '/dashboard/pengaturan/tenant-integrasi',
         icon: 'Key',
-        roles: ['admin'],
+        roles: ['developer', 'super_admin', 'admin'],
         requiredPermission: Permission.MANAGE_PENGATURAN,
         governanceDomain: 'sistem',
       },
       {
-        title: 'Tampilan Login',
+        title: 'Tampilan Login (CMS)',
         href: '/dashboard/pengaturan/tampilan-login',
         icon: 'LayoutTemplate',
-        roles: ['admin'],
+        roles: ['developer', 'super_admin', 'admin'],
         requiredPermission: Permission.MANAGE_PENGATURAN,
         governanceDomain: 'sistem',
       },
