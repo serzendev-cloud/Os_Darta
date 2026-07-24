@@ -605,19 +605,13 @@ function DeveloperDashboard({ name, role }: { name: string; role: string }) {
                   </td>
                   <td className="py-3.5 px-4 font-semibold text-stone-700">{t.santriCount} Santri</td>
                   <td className="py-3.5 px-4">
-                    <StatusBadge variant={t.flipStatus === 'Connected' ? 'success' : 'warning'}>
-                      {t.flipStatus}
-                    </StatusBadge>
+                    <StatusBadge status={t.flipStatus} variant={t.flipStatus === 'Connected' ? 'success' : 'warning'} />
                   </td>
                   <td className="py-3.5 px-4">
-                    <StatusBadge variant={t.waStatus === 'Connected' ? 'success' : 'secondary'}>
-                      {t.waStatus}
-                    </StatusBadge>
+                    <StatusBadge status={t.waStatus} variant={t.waStatus === 'Connected' ? 'success' : 'neutral'} />
                   </td>
                   <td className="py-3.5 px-4">
-                    <StatusBadge variant={t.driveStatus === 'Connected' ? 'success' : 'secondary'}>
-                      {t.driveStatus}
-                    </StatusBadge>
+                    <StatusBadge status={t.driveStatus} variant={t.driveStatus === 'Connected' ? 'success' : 'neutral'} />
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${t.status === 'aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
