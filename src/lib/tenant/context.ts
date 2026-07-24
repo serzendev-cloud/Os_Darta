@@ -21,6 +21,9 @@ export interface TenantContext {
     flipValidationToken?: string | null;
     gdriveServiceAccountJson?: string | null;
     waGatewayApiKey?: string | null;
+    loginTitle?: string | null;
+    loginSubtitle?: string | null;
+    loginDescription?: string | null;
   };
 }
 
@@ -77,6 +80,9 @@ export async function getTenantContext(): Promise<TenantContext> {
             flipValidationToken: settingsDoc.flipValidationToken,
             gdriveServiceAccountJson: settingsDoc.gdriveServiceAccountJson,
             waGatewayApiKey: settingsDoc.waGatewayApiKey,
+            loginTitle: settingsDoc.loginTitle,
+            loginSubtitle: settingsDoc.loginSubtitle,
+            loginDescription: settingsDoc.loginDescription,
           }
         : DEFAULT_TENANT.settings,
     };

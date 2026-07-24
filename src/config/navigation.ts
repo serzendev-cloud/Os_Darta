@@ -545,6 +545,14 @@ export const navigationGroups: NavGroup[] = [
         governanceDomain: 'sistem',
       },
       {
+        title: 'Tampilan Login',
+        href: '/dashboard/pengaturan/tampilan-login',
+        icon: 'LayoutTemplate',
+        roles: ['admin'],
+        requiredPermission: Permission.MANAGE_PENGATURAN,
+        governanceDomain: 'sistem',
+      },
+      {
         title: 'Feature Toggle',
         href: '/dashboard/fitur',
         icon: 'SlidersHorizontal',

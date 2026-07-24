@@ -24,6 +24,10 @@ export const tenantSettings = pgTable('tenant_settings', {
   customBgUrl: text('custom_bg_url'),
   primaryColor: text('primary_color').default('#0F766E'),
   tagline: text('tagline').default('Sistem Informasi Pesantren Terpadu'),
+  // Login Banner Customization
+  loginTitle: text('login_title'),
+  loginSubtitle: text('login_subtitle'),
+  loginDescription: text('login_description'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
