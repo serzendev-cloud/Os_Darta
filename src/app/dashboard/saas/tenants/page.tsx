@@ -2,12 +2,22 @@
 
 import { useState } from 'react';
 import { PageCard } from '@/components/shared/page-header';
-import { StatusBadge } from '@/components/shared/status-badge';
 import { 
-  Building2, Plus, Search, CheckCircle2, XCircle, Clock, 
-  Key, ShieldCheck, CreditCard, Sparkles, ExternalLink, Filter, 
-  ArrowUpRight, Users, Check, AlertCircle, Edit3
+  Building2, Plus, Search, CheckCircle2, Clock, 
+  Key, ShieldCheck, CreditCard, Sparkles, ExternalLink, 
+  Users, Check, Sliders, Smartphone, HardDrive, ShoppingCart, 
+  Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power
 } from 'lucide-react';
+
+interface TenantModules {
+  paymentGateway: boolean;
+  waGateway: boolean;
+  rfidGate: boolean;
+  posKantin: boolean;
+  uksKesehatan: boolean;
+  gdriveStorage: boolean;
+  questKarakter: boolean;
+}
 
 interface ActiveTenant {
   id: string;
@@ -21,6 +31,7 @@ interface ActiveTenant {
   status: 'aktif' | 'trial' | 'suspended';
   santriCount: number;
   createdAt: string;
+  modules: TenantModules;
 }
 
 interface TrialRequest {
@@ -37,12 +48,87 @@ interface TrialRequest {
   status: 'pending' | 'approved' | 'rejected';
 }
 
+const defaultModules: TenantModules = {
+  paymentGateway: true,
+  waGateway: true,
+  rfidGate: true,
+  posKantin: true,
+  uksKesehatan: true,
+  gdriveStorage: true,
+  questKarakter: true,
+};
+
 const mockActiveTenants: ActiveTenant[] = [
-  { id: 't1', name: 'Ponpes Daruttahuid', subdomain: 'daruttahuid.madev.id', location: 'Malang, Jawa Timur', ownerName: 'Kyai Ahmad Fauzi', ownerEmail: 'admin@mahad.sch.id', ownerPhone: '081234567890', plan: 'Enterprise SaaS', status: 'aktif', santriCount: 340, createdAt: '2025-01-10' },
-  { id: 't2', name: 'Ponpes Al-Hikmah', subdomain: 'alhikmah.madev.id', location: 'Surabaya, Jawa Timur', ownerName: 'Ustadz Mahmud', ownerEmail: 'admin@alhikmah.sch.id', ownerPhone: '081298765432', plan: 'Pro SaaS', status: 'aktif', santriCount: 180, createdAt: '2025-02-01' },
-  { id: 't3', name: 'Ponpes An-Nisa', subdomain: 'annisa.madev.id', location: 'Jakarta Selatan, DKI', ownerName: 'Ustadzah Fatimah', ownerEmail: 'admin@annisa.sch.id', ownerPhone: '081311223344', plan: 'Pro SaaS', status: 'aktif', santriCount: 220, createdAt: '2025-02-15' },
-  { id: 't4', name: 'Ponpes Ar-Raudah', subdomain: 'arraudah.madev.id', location: 'Bandung, Jawa Barat', ownerName: 'Ustadz Ridwan', ownerEmail: 'admin@arraudah.sch.id', ownerPhone: '081544556677', plan: 'Starter SaaS', status: 'aktif', santriCount: 95, createdAt: '2025-03-01' },
-  { id: 't5', name: 'Ponpes Darul Quran', subdomain: 'dq.madev.id', location: 'Yogyakarta, DIY', ownerName: 'Ustadz Syarif', ownerEmail: 'admin@dq.sch.id', ownerPhone: '081788990011', plan: 'Trial 14 Hari', status: 'trial', santriCount: 45, createdAt: '2025-03-10' },
+  { 
+    id: 't1', 
+    name: 'Ponpes Daruttahuid', 
+    subdomain: 'daruttahuid.madev.id', 
+    location: 'Malang, Jawa Timur', 
+    ownerName: 'Kyai Ahmad Fauzi', 
+    ownerEmail: 'admin@mahad.sch.id', 
+    ownerPhone: '081234567890', 
+    plan: 'Enterprise SaaS', 
+    status: 'aktif', 
+    santriCount: 340, 
+    createdAt: '2025-01-10',
+    modules: { ...defaultModules }
+  },
+  { 
+    id: 't2', 
+    name: 'Ponpes Al-Hikmah', 
+    subdomain: 'alhikmah.madev.id', 
+    location: 'Surabaya, Jawa Timur', 
+    ownerName: 'Ustadz Mahmud', 
+    ownerEmail: 'admin@alhikmah.sch.id', 
+    ownerPhone: '081298765432', 
+    plan: 'Pro SaaS', 
+    status: 'aktif', 
+    santriCount: 180, 
+    createdAt: '2025-02-01',
+    modules: { ...defaultModules, posKantin: false, uksKesehatan: true }
+  },
+  { 
+    id: 't3', 
+    name: 'Ponpes An-Nisa', 
+    subdomain: 'annisa.madev.id', 
+    location: 'Jakarta Selatan, DKI', 
+    ownerName: 'Ustadzah Fatimah', 
+    ownerEmail: 'admin@annisa.sch.id', 
+    ownerPhone: '081311223344', 
+    plan: 'Pro SaaS', 
+    status: 'aktif', 
+    santriCount: 220, 
+    createdAt: '2025-02-15',
+    modules: { ...defaultModules, waGateway: true, paymentGateway: false }
+  },
+  { 
+    id: 't4', 
+    name: 'Ponpes Ar-Raudah', 
+    subdomain: 'arraudah.madev.id', 
+    location: 'Bandung, Jawa Barat', 
+    ownerName: 'Ustadz Ridwan', 
+    ownerEmail: 'admin@arraudah.sch.id', 
+    ownerPhone: '081544556677', 
+    plan: 'Starter SaaS', 
+    status: 'aktif', 
+    santriCount: 95, 
+    createdAt: '2025-03-01',
+    modules: { ...defaultModules, posKantin: false, paymentGateway: false, waGateway: false }
+  },
+  { 
+    id: 't5', 
+    name: 'Ponpes Darul Quran', 
+    subdomain: 'dq.madev.id', 
+    location: 'Yogyakarta, DIY', 
+    ownerName: 'Ustadz Syarif', 
+    ownerEmail: 'admin@dq.sch.id', 
+    ownerPhone: '081788990011', 
+    plan: 'Trial 14 Hari', 
+    status: 'trial', 
+    santriCount: 45, 
+    createdAt: '2025-03-10',
+    modules: { ...defaultModules, posKantin: false, uksKesehatan: false }
+  },
 ];
 
 const mockTrialRequests: TrialRequest[] = [
@@ -58,7 +144,7 @@ export default function SaasTenantsPage() {
   const [search, setSearch] = useState('');
   
   // New Tenant Modal State
-  const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTenantName, setNewTenantName] = useState('');
   const [newSubdomain, setNewSubdomain] = useState('');
   const [newLocation, setNewLocation] = useState('');
@@ -67,6 +153,11 @@ export default function SaasTenantsPage() {
   const [newOwnerPhone, setNewOwnerPhone] = useState('');
   const [newPlan, setNewPlan] = useState('Pro SaaS');
 
+  // Feature Toggle Modal State
+  const [editingTenant, setEditingTenant] = useState<ActiveTenant | null>(null);
+  const [tempModules, setTempModules] = useState<TenantModules>(defaultModules);
+  const [tempStatus, setTempStatus] = useState<'aktif' | 'trial' | 'suspended'>('aktif');
+
   const [toast, setToast] = useState('');
 
   const showNotification = (msg: string) => {
@@ -74,11 +165,49 @@ export default function SaasTenantsPage() {
     setTimeout(() => setToast(''), 4000);
   };
 
+  const handleOpenModuleModal = (tenant: ActiveTenant) => {
+    setEditingTenant(tenant);
+    setTempModules({ ...tenant.modules });
+    setTempStatus(tenant.status);
+  };
+
+  const handleToggleModule = (key: keyof TenantModules) => {
+    setTempModules(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSaveModules = () => {
+    if (!editingTenant) return;
+
+    setTenants(prev => prev.map(t => {
+      if (t.id === editingTenant.id) {
+        return {
+          ...t,
+          status: tempStatus,
+          modules: { ...tempModules }
+        };
+      }
+      return t;
+    }));
+
+    showNotification(`Modul Fitur & Status "${editingTenant.name}" Berhasil Diperbarui!`);
+    setEditingTenant(null);
+  };
+
+  const handleQuickStatusToggle = (tenantId: string) => {
+    setTenants(prev => prev.map(t => {
+      if (t.id === tenantId) {
+        const nextStatus = t.status === 'aktif' ? 'suspended' : 'aktif';
+        showNotification(`Status ${t.name} diubah menjadi ${nextStatus.toUpperCase()}`);
+        return { ...t, status: nextStatus };
+      }
+      return t;
+    }));
+  };
+
   const handleApproveRequest = (reqId: string) => {
     const req = requests.find(r => r.id === reqId);
     if (!req) return;
 
-    // Move to active tenants
     const newTenant: ActiveTenant = {
       id: `t_${Date.now()}`,
       name: req.name,
@@ -91,6 +220,7 @@ export default function SaasTenantsPage() {
       status: 'aktif',
       santriCount: 0,
       createdAt: new Date().toISOString().split('T')[0],
+      modules: { ...defaultModules },
     };
 
     setTenants([newTenant, ...tenants]);
@@ -119,10 +249,11 @@ export default function SaasTenantsPage() {
       status: 'aktif',
       santriCount: 0,
       createdAt: new Date().toISOString().split('T')[0],
+      modules: { ...defaultModules },
     };
 
     setTenants([created, ...tenants]);
-    setShowModal(false);
+    setShowCreateModal(false);
     setNewTenantName('');
     setNewSubdomain('');
     setNewLocation('');
@@ -157,18 +288,18 @@ export default function SaasTenantsPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>SaaS Tenant Provisioning Engine</span>
+              <span>SaaS Tenant & Feature Toggle Engine</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-              Manajemen Tenant & Pendaftaran SaaS Madev
+              Manajemen Tenant & Toggler Modul Fitur
             </h1>
             <p className="text-stone-300 text-xs md:text-sm max-w-xl">
-              Pusat kontrol Developer / SaaS Owner untuk pembuatan tenant baru, persetujuan pendaftaran trial pesantren, pengaturan paket langganan, dan manajemen subdomain.
+              Panel kontrol Developer untuk mengaktifkan/nonaktifkan status pesantren dan memilih modul fitur mana saja yang aktif untuk setiap tenant.
             </p>
           </div>
 
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-5 py-3 rounded-2xl shadow-lg transition-all active:scale-95 shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -207,11 +338,11 @@ export default function SaasTenantsPage() {
         </button>
       </div>
 
-      {/* TAB 1: TENANT AKTIF */}
+      {/* TAB 1: TENANT AKTIF & TOGGLER FITUR */}
       {activeTab === 'tenants' && (
         <PageCard
-          title="Daftar Tenant Pesantren Terdaftar"
-          description="Monitoring real-time pesantren yang berlangganan dan aktif menggunakan platform Madev"
+          title="Daftar Tenant Pesantren & Pengaktifan Modul"
+          description="Atur status aktif/nonaktif dan toggle pengaktifan modul fitur spesifik per-pesantren"
         >
           {/* Search bar */}
           <div className="mb-4 relative max-w-sm">
@@ -230,12 +361,10 @@ export default function SaasTenantsPage() {
               <thead className="bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-400 font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Pesantren & Subdomain</th>
-                  <th className="py-3 px-4">Kontak Pemilik / Kyai</th>
                   <th className="py-3 px-4">Paket SaaS</th>
-                  <th className="py-3 px-4">Total Santri</th>
-                  <th className="py-3 px-4">Tgl Terdaftar</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Aksi Developer</th>
+                  <th className="py-3 px-4">Modul Fitur Aktif</th>
+                  <th className="py-3 px-4">Status Tenant</th>
+                  <th className="py-3 px-4 text-right">Kelola Modul & Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 dark:divide-stone-800 text-stone-800 dark:text-stone-200 font-medium">
@@ -245,35 +374,52 @@ export default function SaasTenantsPage() {
                       <div className="font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
                         <span>{t.name}</span>
                         <a href={`https://${t.subdomain}`} target="_blank" rel="noreferrer" className="text-emerald-600 hover:text-emerald-700">
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
                       <div className="text-stone-400 text-[11px] font-mono">{t.subdomain} • {t.location}</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-stone-800 dark:text-stone-200">{t.ownerName}</div>
-                      <div className="text-stone-400 text-[11px]">{t.ownerEmail} • {t.ownerPhone}</div>
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         {t.plan}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-stone-700 dark:text-stone-300">{t.santriCount} Santri</td>
-                    <td className="py-3.5 px-4 text-stone-500 font-mono text-[11px]">{t.createdAt}</td>
+                    {/* Modul Badges */}
                     <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${t.status === 'aktif' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-amber-100 text-amber-800'}`}>
-                        {t.status}
-                      </span>
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {t.modules.paymentGateway && <span className="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-2 py-0.5 rounded">Payment</span>}
+                        {t.modules.waGateway && <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded">WA</span>}
+                        {t.modules.rfidGate && <span className="bg-purple-100 text-purple-800 text-[10px] font-semibold px-2 py-0.5 rounded">RFID</span>}
+                        {t.modules.posKantin && <span className="bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-0.5 rounded">POS Kantin</span>}
+                        {t.modules.gdriveStorage && <span className="bg-teal-100 text-teal-800 text-[10px] font-semibold px-2 py-0.5 rounded">Drive</span>}
+                        {t.modules.uksKesehatan && <span className="bg-rose-100 text-rose-800 text-[10px] font-semibold px-2 py-0.5 rounded">UKS</span>}
+                      </div>
+                    </td>
+                    {/* Quick Status Toggle Badge */}
+                    <td className="py-3.5 px-4">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStatusToggle(t.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all shadow-sm active:scale-95 ${
+                          t.status === 'aktif'
+                            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                            : t.status === 'trial'
+                            ? 'bg-amber-500 text-white hover:bg-amber-600'
+                            : 'bg-rose-600 text-white hover:bg-rose-700'
+                        }`}
+                      >
+                        <Power className="w-3 h-3" />
+                        <span>{t.status}</span>
+                      </button>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <a
-                        href="/dashboard/pengaturan/tenant-integrasi"
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800"
+                      <button
+                        onClick={() => handleOpenModuleModal(t)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-3.5 py-1.5 rounded-xl transition-all shadow-md active:scale-95"
                       >
-                        <Key className="w-3 h-3" />
-                        <span>Integrasi API</span>
-                      </a>
+                        <Sliders className="w-3.5 h-3.5" />
+                        <span>Toggle Fitur Modul</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -283,7 +429,7 @@ export default function SaasTenantsPage() {
         </PageCard>
       )}
 
-      {/* TAB 2: PENGAJUAN TRIAL & PENDAFTARAN BARU */}
+      {/* TAB 2: PENGAJUAN TRIAL */}
       {activeTab === 'requests' && (
         <PageCard
           title="Permintaan Pendaftaran & Trial Pesantren Baru"
@@ -359,8 +505,233 @@ export default function SaasTenantsPage() {
         </PageCard>
       )}
 
+      {/* MODAL TOGGLER MODUL FITUR TENANT */}
+      {editingTenant && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl border border-stone-200 dark:border-stone-800 space-y-6 animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600">
+                  <Sliders className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-white">Toggler Modul Fitur Tenant</h3>
+                  <p className="text-xs text-stone-500">{editingTenant.name} ({editingTenant.subdomain})</p>
+                </div>
+              </div>
+              <button onClick={() => setEditingTenant(null)} className="text-stone-400 hover:text-stone-600 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Status Tenant Radio / Toggle */}
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
+                Status Akun Tenant (Akses Sistem)
+              </label>
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setTempStatus('aktif')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    tempStatus === 'aktif' ? 'bg-emerald-600 text-white shadow-md' : 'bg-stone-200 text-stone-700'
+                  }`}
+                >
+                  🟢 AK TIF (Full Access)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempStatus('trial')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    tempStatus === 'trial' ? 'bg-amber-500 text-white shadow-md' : 'bg-stone-200 text-stone-700'
+                  }`}
+                >
+                  🟡 TRIAL (14 Hari)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempStatus('suspended')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    tempStatus === 'suspended' ? 'bg-rose-600 text-white shadow-md' : 'bg-stone-200 text-stone-700'
+                  }`}
+                >
+                  🔴 SUSPENDED (Nonaktif)
+                </button>
+              </div>
+            </div>
+
+            {/* List of Feature Module Switches */}
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-stone-500">
+                Daftar Pengaktifan Modul Fitur:
+              </h4>
+
+              {/* 1. Payment Gateway */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-white">Payment Gateway & Auto SPP (Flip)</div>
+                    <div className="text-[11px] text-stone-500">Pembuatan tagihan & otomatisasi callback callback pembayaran SPP</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('paymentGateway')}
+                  className={`p-1 rounded-full transition-all ${tempModules.paymentGateway ? 'text-emerald-600' : 'text-stone-300 dark:text-stone-600'}`}
+                >
+                  {tempModules.paymentGateway ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </button>
+              </div>
+
+              {/* 2. WhatsApp Gateway */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-white">WhatsApp Notification Gateway</div>
+                    <div className="text-[11px] text-stone-500">Pengiriman notifikasi presensi RFID & pengumuman ke WhatsApp Wali</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('waGateway')}
+                  className={`p-1 rounded-full transition-all ${tempModules.waGateway ? 'text-emerald-600' : 'text-stone-300 dark:text-stone-600'}`}
+                >
+                  {tempModules.waGateway ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </button>
+              </div>
+
+              {/* 3. RFID Gate */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-white">Absensi RFID & Gate Checkpoint</div>
+                    <div className="text-[11px] text-stone-500">Scan KTA RFID untuk perizinan keluar/masuk gerbang pesantren</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('rfidGate')}
+                  className={`p-1 rounded-full transition-all ${tempModules.rfidGate ? 'text-emerald-600' : 'text-stone-300 dark:text-stone-600'}`}
+                >
+                  {tempModules.rfidGate ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </button>
+              </div>
+
+              {/* 4. POS Kantin */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
+                    <ShoppingCart className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-white">POS Kantin Cashless RFID</div>
+                    <div className="text-[11px] text-stone-500">Manajemen dompet digital santri & kasir kantin pesantren</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('posKantin')}
+                  className={`p-1 rounded-full transition-all ${tempModules.posKantin ? 'text-emerald-600' : 'text-stone-300 dark:text-stone-600'}`}
+                >
+                  {tempModules.posKantin ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </button>
+              </div>
+
+              {/* 5. UKS Kesehatan */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600">
+                    <Stethoscope className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-white">Manajemen UKS & Kesehatan</div>
+                    <div className="text-[11px] text-stone-500">Pencatatan santri sakit, rekam medis, & rujukan rumah sakit</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('uksKesehatan')}
+                  className={`p-1 rounded-full transition-all ${tempModules.uksKesehatan ? 'text-emerald-600' : 'text-stone-300 dark:text-stone-600'}`}
+                >
+                  {tempModules.uksKesehatan ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </button>
+              </div>
+
+              {/* 6. Google Drive Storage */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600">
+                    <HardDrive className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-white">Google Drive Cloud Storage</div>
+                    <div className="text-[11px] text-stone-500">Penyimpanan cloud dokumen resmi & lampiran berkas pesantren</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('gdriveStorage')}
+                  className={`p-1 rounded-full transition-all ${tempModules.gdriveStorage ? 'text-emerald-600' : 'text-stone-300 dark:text-stone-600'}`}
+                >
+                  {tempModules.gdriveStorage ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </button>
+              </div>
+
+              {/* 7. Quest & Character */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600">
+                    <Trophy className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-white">Quest & Gamifikasi Karakter</div>
+                    <div className="text-[11px] text-stone-500">Sistem poin apresiasi kebaikan & pemutihan pelanggaran santri</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('questKarakter')}
+                  className={`p-1 rounded-full transition-all ${tempModules.questKarakter ? 'text-emerald-600' : 'text-stone-300 dark:text-stone-600'}`}
+                >
+                  {tempModules.questKarakter ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-4 flex items-center justify-end gap-3 border-t border-stone-100 dark:border-stone-800">
+              <button
+                type="button"
+                onClick={() => setEditingTenant(null)}
+                className="px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-100 text-xs font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveModules}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                <span>Simpan Perubahan Modul</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Buat Tenant Baru */}
-      {showModal && (
+      {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-stone-200 dark:border-stone-800 space-y-6">
             <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
@@ -370,7 +741,7 @@ export default function SaasTenantsPage() {
                 </div>
                 <h3 className="text-lg font-bold text-stone-900 dark:text-white">Provisi Tenant / Pesantren Baru</h3>
               </div>
-              <button onClick={() => setShowModal(false)} className="text-stone-400 hover:text-stone-600 text-lg font-bold">&times;</button>
+              <button onClick={() => setShowCreateModal(false)} className="text-stone-400 hover:text-stone-600 text-lg font-bold">&times;</button>
             </div>
 
             <form onSubmit={handleCreateTenantSubmit} className="space-y-4">
@@ -465,7 +836,7 @@ export default function SaasTenantsPage() {
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-stone-100 dark:border-stone-800">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-100 text-xs font-semibold"
                 >
                   Batal
