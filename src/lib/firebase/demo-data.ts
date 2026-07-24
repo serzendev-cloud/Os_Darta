@@ -9,10 +9,12 @@ import { mockKelasFormal, mockKelasDiniyah, mockKelasQuran } from '@/data/mock-k
 import { mockMapelFormal, mockMapelDiniyah, mockMapelQuran } from '@/data/mock-mapel';
 import type { GlobalTolerancePolicy, JenjangToleranceOverride } from '@/types';
 
-const isDemo = () => process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-
 export function isDemoMode(): boolean {
-  return isDemo();
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') return true;
+  // Fallback to demo mode if Firebase API key is missing or dummy
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!apiKey || apiKey.includes('DummyKey')) return true;
+  return false;
 }
 
 // ========================================
