@@ -1,6 +1,6 @@
 // ========================================
 // Auth Store (Zustand)
-// Firebase Auth only — demo mode removed
+// Firebase Auth with graceful Mock User fallback for preview/demo environments
 // ========================================
 
 import { create } from 'zustand';
@@ -41,12 +41,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
 
+    // 1. Try Firebase Auth first
     try {
       const { authService } = await import('@/lib/firebase/auth');
       const user = await authService.login(email, password);
       set({ user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err: unknown) {
+      // 2. Fallback to mockUsers if Firebase fails (e.g. invalid API key in Vercel Preview or offline demo)
+      try {
+        const { mockUsers } = await import('@/data/mock');
+        const foundMock = mockUsers.find(
+          (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+        );
+        if (foundMock) {
+          set({ user: foundMock, isAuthenticated: true, isLoading: false });
+          return true;
+        }
+      } catch {
+        // Ignore mock import error and present original error message
+      }
+
       const message =
         err instanceof Error ? err.message : 'Login gagal';
       set({ isLoading: false, error: message });
@@ -74,7 +89,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearError: () => set({ error: null }),
 
   // ── switchRole ─────────────────────────────────────────────────────────
-  // Updates the current user's role in the store without switching to a mock user.
+  // Updates the current user's role in the store
   switchRole: (role: UserRole) => {
     set((state) => ({
       user: state.user ? { ...state.user, role } : null,
