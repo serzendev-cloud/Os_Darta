@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { GraduationCap, Loader2, Mail, Lock, LogIn, Building2, Sparkles, ShieldCheck } from 'lucide-react';
+import { GraduationCap, Loader2, Mail, Lock, LogIn, Building2, Sparkles, ShieldCheck, UserCheck, Check } from 'lucide-react';
 import Image from 'next/image';
 
 interface LoginClientProps {
@@ -23,15 +23,34 @@ export default function LoginClient({
 }: LoginClientProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { login } = useAuthStore();
 
+  // Pre-fill remembered account from localStorage if available
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('madev_remember_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setPassword('password123');
+      setRememberMe(true);
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setIsSubmitting(true);
+
+    // Save or clear remembered email based on checkbox state
+    if (rememberMe) {
+      localStorage.setItem('madev_remember_email', email);
+    } else {
+      localStorage.removeItem('madev_remember_email');
+    }
+
     const success = await login(email, password);
     setIsSubmitting(false);
     if (success) {
@@ -40,6 +59,23 @@ export default function LoginClient({
       const err = useAuthStore.getState().error;
       setLoginError(err || 'Login gagal. Periksa email dan password.');
     }
+  };
+
+  // Quick preset account selector for fast testing & selection
+  const quickAccounts = [
+    { label: 'Developer (Owner)', email: 'dev@serzendev.com', role: 'developer', color: 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100' },
+    { label: 'Super Admin Platform', email: 'superadmin@madev.id', role: 'super_admin', color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' },
+    { label: 'Admin Pesantren', email: 'admin@mahad.sch.id', role: 'admin', color: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' },
+    { label: 'Musyrif Asrama', email: 'musyrif@mahad.sch.id', role: 'musyrif', color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' },
+    { label: 'Wali Santri', email: 'wali@mahad.sch.id', role: 'wali', color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' },
+    { label: 'Santri', email: 'santri@mahad.sch.id', role: 'santri', color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' },
+  ];
+
+  const handleSelectQuickAccount = (accountEmail: string) => {
+    setEmail(accountEmail);
+    setPassword('password123');
+    setRememberMe(true);
+    localStorage.setItem('madev_remember_email', accountEmail);
   };
 
   return (
@@ -215,6 +251,22 @@ export default function LoginClient({
               </div>
             </div>
 
+            {/* Checkbox Simpan Akun / Ingat Saya */}
+            <div className="flex items-center justify-between py-1">
+              <label className="flex items-center gap-2.5 text-xs text-stone-600 font-medium cursor-pointer select-none group">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500/30 accent-emerald-600 cursor-pointer transition-all"
+                />
+                <span className="group-hover:text-stone-900 transition-colors flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  Simpan & ingat akun di perangkat ini
+                </span>
+              </label>
+            </div>
+
             {loginError && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 text-xs text-red-600 font-medium">
                 {loginError}
@@ -234,9 +286,32 @@ export default function LoginClient({
               {isSubmitting ? 'Memproses Login...' : 'Masuk ke Sistem'}
             </button>
           </form>
+
+          {/* Quick Account Selector */}
+          <div className="mt-6 pt-5 border-t border-stone-100">
+            <p className="text-[11px] font-semibold text-stone-500 mb-2 flex items-center gap-1">
+              <span>Pilih Akun Instan (Pilih Role):</span>
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {quickAccounts.map((acc) => {
+                const isSelected = email.toLowerCase() === acc.email.toLowerCase();
+                return (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    onClick={() => handleSelectQuickAccount(acc.email)}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all flex items-center gap-1 ${acc.color} ${isSelected ? 'ring-2 ring-emerald-500/40 font-bold scale-[1.02]' : ''}`}
+                  >
+                    {isSelected && <Check className="w-3 h-3 text-emerald-600" />}
+                    <span>{acc.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           
           {/* Footer inside form card */}
-          <div className="mt-8 pt-6 border-t border-stone-100 text-center space-y-1.5">
+          <div className="mt-6 pt-5 border-t border-stone-100 text-center space-y-1">
             <p className="text-stone-600 text-xs font-semibold">
               Company: <span className="text-emerald-700 font-bold">Serene Zeith Corp</span> | Divisi: <span className="text-stone-800 font-medium">serzen_dev</span>
             </p>
