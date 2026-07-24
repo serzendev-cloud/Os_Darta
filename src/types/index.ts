@@ -2,7 +2,18 @@
 // Core Types for Ma'had Management System
 // ========================================
 
-export type UserRole = 'admin' | 'musyrif' | 'wali' | 'santri' | 'staff' | 'kepala_kesiswaan' | 'guru' | 'wali_kelas' | 'alumni';
+export type UserRole = 
+  | 'super_admin' 
+  | 'developer' 
+  | 'admin' 
+  | 'musyrif' 
+  | 'wali' 
+  | 'santri' 
+  | 'staff' 
+  | 'kepala_kesiswaan' 
+  | 'guru' 
+  | 'wali_kelas' 
+  | 'alumni';
 
 export type AcademicDomain = 'formal' | 'pesantren';
 

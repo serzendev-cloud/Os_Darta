@@ -1,6 +1,8 @@
 import type { UserRole } from '@/types';
 
 export const roleLabels: Record<UserRole, string> = {
+  developer: 'Developer / Owner SaaS',
+  super_admin: 'Super Admin (Platform)',
   admin: 'Administrator',
   musyrif: 'Musyrif',
   wali: 'Wali Santri',
@@ -13,6 +15,8 @@ export const roleLabels: Record<UserRole, string> = {
 };
 
 export const roleColors: Record<UserRole, string> = {
+  developer: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30',
+  super_admin: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30',
   admin: 'bg-red-500/10 text-red-700 dark:text-red-400',
   musyrif: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
   wali: 'bg-green-500/10 text-green-700 dark:text-green-400',

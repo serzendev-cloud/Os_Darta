@@ -9,6 +9,32 @@ import { Permission, hasPermission } from './permissions';
 import type { PermissionType } from './permissions';
 
 export const navigationGroups: NavGroup[] = [
+  // ── 0. SAAS PLATFORM CONTROL (Super Admin & Developer) ───────────────
+  {
+    title: 'SaaS Platform Control',
+    icon: 'ShieldAlert',
+    items: [
+      {
+        title: 'Manajemen Tenant & Multi-Pesantren',
+        href: '/dashboard/pengaturan/tenant-integrasi',
+        icon: 'Building2',
+        roles: ['super_admin', 'developer'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+        visualState: 'beta',
+        governanceDomain: 'sistem',
+      },
+      {
+        title: 'Global Audit Log & System Health',
+        href: '/dashboard/audit-log',
+        icon: 'ScrollText',
+        roles: ['super_admin', 'developer'],
+        requiredPermission: Permission.MANAGE_SYSTEM_GLOBAL,
+        visualState: 'internal',
+        governanceDomain: 'sistem',
+      },
+    ],
+  },
+
   // ── 1. BERANDA ───────────────────────────────────────────────────────
   {
     title: 'Beranda',
@@ -18,7 +44,7 @@ export const navigationGroups: NavGroup[] = [
         title: 'Dashboard',
         href: '/dashboard',
         icon: 'LayoutDashboard',
-        roles: ['admin', 'musyrif', 'wali', 'santri', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
+        roles: ['super_admin', 'developer', 'admin', 'musyrif', 'wali', 'santri', 'staff', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
         requiredPermission: Permission.VIEW_DASHBOARD,
       },
     ],

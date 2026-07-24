@@ -4,7 +4,9 @@ import { User, Santri, Alumni, Asrama, Kamar, MasterPelanggaran, Pelanggaran, Hu
 // Mock Users — wali user linked to santri ID '1'
 // ========================================
 export const mockUsers: User[] = [
-  { id: '1', name: 'Ahmad Fauzi', email: 'admin@mahad.sch.id', role: 'admin' },
+  { id: 'dev1', name: 'Serzen Dev (Owner SaaS)', email: 'dev@serzendev.com', role: 'developer' },
+  { id: 'sa1', name: 'Madev Super Admin Platform', email: 'superadmin@madev.id', role: 'super_admin' },
+  { id: '1', name: 'Ahmad Fauzi (Admin Pesantren)', email: 'admin@mahad.sch.id', role: 'admin' },
   { id: '2', name: 'Ustadz Hasan', email: 'musyrif@mahad.sch.id', role: 'musyrif' },
   { id: '3', name: 'Bapak Ridwan', email: 'wali@mahad.sch.id', role: 'wali', childSantriId: '1' },
   { id: 'w2', name: 'Bapak Surya', email: 'wali2@mahad.sch.id', role: 'wali', childSantriId: '2' },

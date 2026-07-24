@@ -79,6 +79,11 @@ export const Permission = {
   VIEW_PENGATURAN: 'view_pengaturan',
   MANAGE_PENGATURAN: 'manage_pengaturan',
 
+  // SaaS Platform / Super Admin / Developer
+  MANAGE_TENANTS: 'manage_tenants',
+  VIEW_SAAS_ANALYTICS: 'view_saas_analytics',
+  MANAGE_SYSTEM_GLOBAL: 'manage_system_global',
+
   // Administrasi
   VIEW_PENGUMUMAN: 'view_pengumuman',
   VIEW_SURAT: 'view_surat',
@@ -91,6 +96,8 @@ export type PermissionType = (typeof Permission)[keyof typeof Permission];
 
 // ─── Role → Permission Mapping ─────────────────────────────────────
 export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
+  developer: new Set(Object.values(Permission)),
+  super_admin: new Set(Object.values(Permission)),
   admin: new Set(Object.values(Permission)),
 
   kepala_kesiswaan: new Set([

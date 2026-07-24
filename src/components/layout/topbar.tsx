@@ -126,7 +126,7 @@ export function Topbar() {
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger><Shield className="w-4 h-4 mr-2" />Switch Role (Demo)</DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  {(['admin', 'kepala_kesiswaan', 'musyrif', 'wali_kelas', 'guru', 'staff', 'wali', 'santri', 'alumni'] as UserRole[]).map((role) => (
+                  {(['developer', 'super_admin', 'admin', 'kepala_kesiswaan', 'musyrif', 'wali_kelas', 'guru', 'staff', 'wali', 'santri', 'alumni'] as UserRole[]).map((role) => (
                     <DropdownMenuItem key={role} onClick={() => switchRole(role)} className="cursor-pointer">
                       <Badge variant="outline" className={cn('text-xs mr-2', roleColors[role])}>{roleLabels[role]}</Badge>
                       {user?.role === role && <span className="ml-auto text-xs text-primary">✓</span>}
