@@ -9,6 +9,43 @@ import { Permission, hasPermission } from './permissions';
 import type { PermissionType } from './permissions';
 
 export const navigationGroups: NavGroup[] = [
+  // ── 0. SAAS PLATFORM CONSOLE (Developer & Super Admin) ─────────────────
+  {
+    title: 'SaaS Platform Console',
+    icon: 'Shield',
+    items: [
+      {
+        title: 'Console Overview',
+        href: '/dashboard',
+        icon: 'LayoutDashboard',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+      },
+      {
+        title: 'Manajemen Tenant & Pendaftaran',
+        href: '/dashboard/saas/tenants',
+        icon: 'Building2',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+        badge: 'Utama',
+      },
+      {
+        title: 'Integrasi Payment, WA & Drive',
+        href: '/dashboard/pengaturan/tenant-integrasi',
+        icon: 'Key',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+      },
+      {
+        title: 'Global Audit Log & Keamanan',
+        href: '/dashboard/audit-log',
+        icon: 'ScrollText',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+      },
+    ],
+  },
+
   // ── 1. BERANDA ───────────────────────────────────────────────────────
   {
     title: 'Beranda',
@@ -609,6 +646,17 @@ export const navigationGroups: NavGroup[] = [
  * Priority: requiredPermission > roles array > true (always show).
  */
 function isNavItemVisible(item: NavItem, role: UserRole): boolean {
+  // Developer & Super Admin only see SaaS Platform Console items, not internal tenant operations!
+  if (role === 'developer' || role === 'super_admin') {
+    const platformHrefs = [
+      '/dashboard',
+      '/dashboard/saas/tenants',
+      '/dashboard/pengaturan/tenant-integrasi',
+      '/dashboard/audit-log',
+    ];
+    return platformHrefs.includes(item.href);
+  }
+
   if (item.requiredPermission) {
     return hasPermission(role, item.requiredPermission as PermissionType);
   }
