@@ -1,11 +1,40 @@
-import { pgTable, text, integer, boolean, timestamp, jsonb, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+
+// ── Multi-Tenant SaaS Tables ──────────────────────────────────────────────────
+export const tenants = pgTable('tenants', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(), // e.g. "Pesantren Al-Fatih"
+  slug: text('slug').notNull().unique(), // e.g. "al-fatih"
+  domain: text('domain'), // e.g. "alfatih.mahad-app.com"
+  status: text('status').default('active').notNull(), // 'active' | 'suspended' | 'trial'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const tenantSettings = pgTable('tenant_settings', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull().unique(),
+  // Integration Credentials
+  gdriveServiceAccountJson: text('gdrive_service_account_json'),
+  flipSecretKey: text('flip_secret_key'),
+  flipValidationToken: text('flip_validation_token'),
+  waGatewayApiKey: text('wa_gateway_api_key'),
+  // Branding Customization
+  customLogoUrl: text('custom_logo_url'),
+  customBgUrl: text('custom_bg_url'),
+  primaryColor: text('primary_color').default('#0F766E'),
+  tagline: text('tagline').default('Sistem Informasi Pesantren Terpadu'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 // ── Users Table ─────────────────────────────────────────────────────────────
 export const users = pgTable('users', {
-  id: text('id').primaryKey(), // Match Supabase auth user UUID / custom ID
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  role: text('role').notNull(), // 'admin' | 'guru' | 'musyrif' | 'orang_tua' | 'santri'
+  role: text('role').notNull(), // 'admin' | 'guru' | 'musyrif' | 'orang_tua' | 'santri' | 'super_admin'
   avatar: text('avatar'),
   childSantriId: text('child_santri_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -15,6 +44,7 @@ export const users = pgTable('users', {
 // ── Santri Table ────────────────────────────────────────────────────────────
 export const santri = pgTable('santri', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   nis: text('nis').notNull().unique(),
   name: text('name').notNull(),
   asrama: text('asrama').notNull(),
@@ -43,6 +73,7 @@ export const santri = pgTable('santri', {
 // ── Asrama & Kamar ──────────────────────────────────────────────────────────
 export const asrama = pgTable('asrama', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   musyrif: text('musyrif').notNull(),
   capacity: integer('capacity').notNull(),
@@ -55,6 +86,7 @@ export const asrama = pgTable('asrama', {
 
 export const kamar = pgTable('kamar', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   asramaId: text('asrama_id').notNull(),
   name: text('name').notNull(),
   capacity: integer('capacity').notNull(),
@@ -65,6 +97,7 @@ export const kamar = pgTable('kamar', {
 // ── Master Akademik & Pengajaran ───────────────────────────────────────────
 export const masterJenjang = pgTable('master_jenjang', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   namaJenjang: text('nama_jenjang').notNull(),
   instansi: text('instansi').notNull(),
   progressionIndexes: jsonb('progression_indexes'),
@@ -75,6 +108,7 @@ export const masterJenjang = pgTable('master_jenjang', {
 
 export const masterTingkat = pgTable('master_tingkat', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   instansi: text('instansi').notNull(),
   progressionIndex: integer('progression_index').notNull(),
   tingkatLabel: text('tingkat_label').notNull(),
@@ -86,6 +120,7 @@ export const masterTingkat = pgTable('master_tingkat', {
 
 export const kelas = pgTable('kelas', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   jenjang: text('jenjang').notNull(),
   tingkat: integer('tingkat').notNull(),
@@ -99,6 +134,7 @@ export const kelas = pgTable('kelas', {
 
 export const mapel = pgTable('mapel', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   code: text('code'),
   jenjang: text('jenjang').notNull(),
@@ -110,6 +146,7 @@ export const mapel = pgTable('mapel', {
 
 export const teacherAssignments = pgTable('teacher_assignments', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   mapelId: text('mapel_id').notNull(),
   kelasId: text('kelas_id').notNull(),
   kelasName: text('kelas_name').notNull(),
@@ -121,6 +158,7 @@ export const teacherAssignments = pgTable('teacher_assignments', {
 
 export const guru = pgTable('guru', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   nip: text('nip').notNull(),
   ranahInstansi: text('ranah_instansi').notNull(),
@@ -136,6 +174,7 @@ export const guru = pgTable('guru', {
 // ── Kedisiplinan & Pengasuhan ──────────────────────────────────────────────
 export const masterPelanggaran = pgTable('master_pelanggaran', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   code: text('code').notNull(),
   ranahInstansi: text('ranah_instansi').notNull(),
   kategori: text('kategori').notNull(),
@@ -149,6 +188,7 @@ export const masterPelanggaran = pgTable('master_pelanggaran', {
 
 export const pelanggaran = pgTable('pelanggaran', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   santriId: text('santri_id').notNull(),
   santriName: text('santri_name').notNull(),
   pelanggaranId: text('pelanggaran_id').notNull(),
@@ -172,6 +212,7 @@ export const pelanggaran = pgTable('pelanggaran', {
 
 export const masterHukuman = pgTable('master_hukuman', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   status: text('status').default('active').notNull(),
   severityScope: jsonb('severity_scope'),
@@ -183,6 +224,7 @@ export const masterHukuman = pgTable('master_hukuman', {
 
 export const hukuman = pgTable('hukuman', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   santriId: text('santri_id').notNull(),
   santriName: text('santri_name').notNull(),
   pelanggaranId: text('pelanggaran_id').notNull(),
@@ -199,6 +241,7 @@ export const hukuman = pgTable('hukuman', {
 
 export const governanceCases = pgTable('governance_cases', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   sourceType: text('source_type').notNull(),
   submittedBy: text('submitted_by').notNull(),
   submittedByRole: text('submitted_by_role'),
@@ -227,6 +270,7 @@ export const governanceCases = pgTable('governance_cases', {
 // ── Health / UKS ────────────────────────────────────────────────────────────
 export const healthVisits = pgTable('health_visits', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   santriId: text('santri_id').notNull(),
   santriName: text('santri_name').notNull(),
   keluhan: text('keluhan').notNull(),
@@ -242,6 +286,7 @@ export const healthVisits = pgTable('health_visits', {
 
 export const healthPermissions = pgTable('health_permissions', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   santriId: text('santri_id').notNull(),
   santriName: text('santri_name').notNull(),
   alasan: text('alasan').notNull(),
@@ -257,6 +302,7 @@ export const healthPermissions = pgTable('health_permissions', {
 // ── Quests, Policies & System ──────────────────────────────────────────────
 export const quests = pgTable('quests', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   santriId: text('santri_id').notNull(),
   santriName: text('santri_name').notNull(),
   title: text('title').notNull(),
@@ -274,6 +320,7 @@ export const quests = pgTable('quests', {
 
 export const tolerancePolicies = pgTable('tolerance_policies', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   type: text('type').notNull(),
   jenjang: text('jenjang'),
   isActive: boolean('is_active').default(true).notNull(),
@@ -284,6 +331,7 @@ export const tolerancePolicies = pgTable('tolerance_policies', {
 
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   title: text('title').notNull(),
   message: text('message').notNull(),
   type: text('type').notNull(), // 'info' | 'warning' | 'success' | 'error'
@@ -298,6 +346,7 @@ export const notifications = pgTable('notifications', {
 
 export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   action: text('action').notNull(),
   user: text('user').notNull(),
   userId: text('user_id'),
@@ -308,18 +357,23 @@ export const auditLogs = pgTable('audit_logs', {
   timestamp: timestamp('timestamp').defaultNow().notNull(),
 });
 
-// ── Google Drive Document Registry (Document Database) ──────────────────────
 export const gdriveDocuments = pgTable('gdrive_documents', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
   fileId: text('file_id').notNull().unique(),
   fileName: text('file_name').notNull(),
   mimeType: text('mime_type').notNull(),
   size: integer('size'),
   webViewLink: text('web_view_link'),
   downloadUrl: text('download_url'),
-  category: text('category').notNull(), // 'santri_doc' | 'uks_perm' | 'bukti_hukuman' | 'official_doc'
+  category: text('category').notNull(),
   relatedEntity: text('related_entity'),
   relatedId: text('related_id'),
   uploadedBy: text('uploaded_by'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// Re-export sub-schemas
+export * from './schema/finance';
+export * from './schema/rfid';
+export * from './schema/gate_pass';
