@@ -1,22 +1,43 @@
 // ========================================
-// RFID Canteen POS Payment API Endpoint
+// RFID Canteen POS Payment API Endpoint (Multi-Canteen & Catalog Supported)
 // ========================================
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { rfidCards, wallets, canteenTransactions, walletPockets, santri } from '@/lib/db/schema';
+import { rfidCards, wallets, canteenTransactions, walletPockets, santri, canteens } from '@/lib/db/schema';
 import { eq, and, gte } from 'drizzle-orm';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { cardUid, pin, amount, vendorName = 'Kantin Utama', posCashierId = 'POS-1', tenantId = 'default' } = body;
+    const {
+      cardUid,
+      pin,
+      amount,
+      canteenId,
+      vendorName: customVendorName = 'Kantin Utama',
+      itemsDescription,
+      posCashierId = 'POS-1',
+      tenantId = 'default',
+    } = body;
 
     if (!cardUid || !pin || !amount) {
       return NextResponse.json(
         { success: false, message: 'Card UID, PIN, dan Nominal Belanja wajib diisi' },
         { status: 400 }
       );
+    }
+
+    // Lookup Canteen details if canteenId is supplied
+    let resolvedVendorName = customVendorName;
+    if (canteenId) {
+      const canteenResult = await db
+        .select()
+        .from(canteens)
+        .where(and(eq(canteens.tenantId, tenantId), eq(canteens.id, canteenId)));
+      if (canteenResult[0]) {
+        resolvedVendorName = canteenResult[0].name;
+      }
     }
 
     // 1. Lookup RFID Card
@@ -40,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Verify Security PIN (Direct / Hashed match)
+    // 2. Verify Security PIN
     if (card.hashedPin !== pin && card.hashedPin !== `pin_${pin}`) {
       return NextResponse.json(
         { success: false, message: 'Kode PIN / Sandi Santri Salah' },
@@ -76,7 +97,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check Wali Kelas or Wali Freeze status
     if (wallet.canteenStatus === 'suspended_by_walikelas') {
       return NextResponse.json(
         { success: false, message: 'Transaksi Ditolak: Fitur Belanja Kartu Dinonaktifkan Sementara oleh Wali Kelas' },
@@ -98,7 +118,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Calculate Total Spent Today across ALL canteens (Centralized Limit Enforcement)
+    // 5. Calculate Total Spent Today across ALL canteens in this tenant (Centralized Limit Enforcement)
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -121,7 +141,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: `Transaksi Ditolak: Kartu Mencapai Limit Belanja Harian (Maks Rp ${dailyLimit.toLocaleString('id-ID')}/hari). Sisa limit hari ini: Rp ${remainingLimit.toLocaleString('id-ID')}`,
+          message: `Transaksi Ditolak: Kartu Mencapai Limit Belanja Harian di Seluruh Kantin (Maks Rp ${dailyLimit.toLocaleString('id-ID')}/hari). Sisa limit hari ini: Rp ${remainingLimit.toLocaleString('id-ID')}`,
         },
         { status: 400 }
       );
@@ -154,12 +174,13 @@ export async function POST(request: Request) {
     await db.insert(canteenTransactions).values({
       id: txId,
       tenantId,
+      canteenId: canteenId || null,
       santriId: card.santriId,
       santriName: santriObj.name,
       cardUid,
       amount,
-      itemsDescription: body.itemsDescription || 'Pembelian Kantin',
-      vendorName,
+      itemsDescription: itemsDescription || 'Pembelian Kantin',
+      vendorName: resolvedVendorName,
       posCashierId,
       status: 'SUCCESS',
     });
@@ -174,7 +195,7 @@ export async function POST(request: Request) {
       amount,
       balanceBefore: wallet.balanceUangSaku,
       balanceAfter: newBalance,
-      description: `Belanja di ${vendorName}`,
+      description: `Belanja di ${resolvedVendorName}`,
       referenceId: txId,
     });
 
@@ -194,7 +215,7 @@ export async function POST(request: Request) {
         totalSpentToday: newSpentToday,
         dailyLimit,
         remainingDailyLimit: remainingLimit,
-        vendorName,
+        vendorName: resolvedVendorName,
         timestamp: new Date().toISOString(),
       },
     });

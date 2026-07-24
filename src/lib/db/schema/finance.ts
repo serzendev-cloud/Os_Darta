@@ -51,10 +51,41 @@ export const invoices = pgTable('invoices', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// ── Canteens / Vendors Table (Multi-Kantin per Pesantren) ────────────────────
+export const canteens = pgTable('canteens', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  name: text('name').notNull(), // e.g. "Kantin Utama", "Kantin Asrama Putra", "Koperasi"
+  code: text('code').notNull(), // e.g. "KNT-01"
+  location: text('location').notNull(), // e.g. "Gedung Utama Lt. 1"
+  cashierUserId: text('cashier_user_id'),
+  status: text('status').default('active').notNull(), // 'active' | 'inactive'
+  operatingHours: text('operating_hours').default('06:00 - 17:00').notNull(),
+  receiptFooter: text('receipt_footer').default('Terima kasih telah berbelanja di Pesantren').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ── Canteen Item Catalog & Price List per Canteen ────────────────────────────
+export const canteenItems = pgTable('canteen_items', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  canteenId: text('canteen_id').notNull(), // Link to specific canteen
+  name: text('name').notNull(), // e.g. "Nasi Goreng Spesial"
+  code: text('code'), // e.g. "MKN-001"
+  category: text('category').default('makanan').notNull(), // 'makanan' | 'minuman' | 'snack' | 'alat_tulis'
+  price: integer('price').notNull(), // Harga barang di kantin ini (Rp)
+  stock: integer('stock').default(100).notNull(),
+  status: text('status').default('active').notNull(), // 'active' | 'out_of_stock'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // ── Canteen Internal Transactions Log ────────────────────────────────────────
 export const canteenTransactions = pgTable('canteen_transactions', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),
+  canteenId: text('canteen_id'),
   santriId: text('santri_id').notNull(),
   santriName: text('santri_name').notNull(),
   cardUid: text('card_uid').notNull(),

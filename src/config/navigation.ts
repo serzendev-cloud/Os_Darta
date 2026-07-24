@@ -86,6 +86,14 @@ export const navigationGroups: NavGroup[] = [
         requiredPermission: Permission.VIEW_SANTRI,
         operationalData: true,
       },
+      {
+        title: 'Manajemen Multi-Kantin',
+        href: '/dashboard/keuangan/kantin-management',
+        icon: 'Store',
+        roles: ['admin', 'staff'],
+        requiredPermission: Permission.VIEW_SANTRI,
+        operationalData: true,
+      },
     ],
   },
 
