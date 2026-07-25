@@ -88,6 +88,29 @@ export const navigationGroups: NavGroup[] = [
     icon: 'Building2',
     items: [
       {
+        title: 'Master Program Kurikulum',
+        href: '',
+        icon: 'BookMarked',
+        roles: ['admin', 'kepala_kesiswaan', 'staff'],
+        requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+        children: [
+          {
+            title: 'Pengaturan Kurikulum Utama',
+            href: '/dashboard/kurikulum/master',
+            icon: 'Settings',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+          },
+          {
+            title: 'Struktur Jenjang & Tingkat',
+            href: '/dashboard/struktur-akademik',
+            icon: 'GraduationCap',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+          },
+        ],
+      },
+      {
         title: 'Master Data',
         href: '',
         icon: 'Building2',
@@ -126,29 +149,6 @@ export const navigationGroups: NavGroup[] = [
             roles: ['admin', 'musyrif', 'staff', 'kepala_kesiswaan'],
             requiredPermission: Permission.VIEW_SANTRI,
             operationalData: true,
-          },
-        ],
-      },
-      {
-        title: 'Master Program Kurikulum',
-        href: '',
-        icon: 'BookMarked',
-        roles: ['admin', 'kepala_kesiswaan', 'staff'],
-        requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
-        children: [
-          {
-            title: 'Pengaturan Kurikulum Utama',
-            href: '/dashboard/kurikulum/master',
-            icon: 'Settings',
-            roles: ['admin', 'kepala_kesiswaan'],
-            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
-          },
-          {
-            title: 'Struktur Jenjang & Tingkat',
-            href: '/dashboard/struktur-akademik',
-            icon: 'GraduationCap',
-            roles: ['admin', 'kepala_kesiswaan'],
-            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
           },
         ],
       },
