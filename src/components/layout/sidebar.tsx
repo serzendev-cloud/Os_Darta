@@ -164,8 +164,7 @@ export function Sidebar() {
                 })}
               </div>
             ) : (
-              /* Accordion Groups for Tenant Operational Roles */
-            {menuGroups.map((group) => {
+              menuGroups.map((group) => {
               const GroupIcon = iconMap[group.icon];
               const isExpanded = expandedGroups[group.title] || false;
               const isActiveGroup = group.items.some(
@@ -346,7 +345,7 @@ export function Sidebar() {
                   )}
                 </div>
               );
-            }))}
+            })}
           </nav>
         </div>
 
