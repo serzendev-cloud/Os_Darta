@@ -230,13 +230,15 @@ export function Sidebar() {
                               )}
                             </button>
 
-                            {/* Submenu items container */}
+                            {/* Submenu items container with 3D Emboss & Neon Glow */}
                             {!isCollapsed && (
                               <div className={cn(
-                                'overflow-hidden transition-all duration-300 ease-in-out mt-1 mb-2 rounded-2xl',
-                                isExpanded ? 'max-h-[36rem] opacity-100 bg-stone-100/70 dark:bg-stone-900/60 border border-stone-200/70 dark:border-stone-800/80 p-2 shadow-inner' : 'max-h-0 opacity-0'
+                                'overflow-hidden transition-all duration-300 ease-in-out mt-1.5 mb-2.5 rounded-2xl',
+                                isExpanded 
+                                  ? 'max-h-[36rem] opacity-100 bg-white/95 dark:bg-stone-900/95 border-2 border-amber-500/40 dark:border-amber-500/50 p-2.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.08),0_4px_24px_rgba(249,115,22,0.25)] backdrop-blur-md' 
+                                  : 'max-h-0 opacity-0'
                               )}>
-                                <div className="space-y-1 pl-1 border-l-2 border-primary/20">
+                                <div className="space-y-1 pl-1.5 border-l-2 border-amber-500/70 dark:border-amber-400/70">
                                   {item.children?.map((child) => {
                                     const ChildIcon = iconMap[child.icon] || LayoutDashboard;
                                     const isChildActive = isPathActive(child.href);
@@ -244,12 +246,12 @@ export function Sidebar() {
                                       'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] font-medium',
                                       'transition-all duration-200 ease-out border',
                                       isChildActive
-                                        ? 'bg-primary text-primary-foreground font-bold border-primary shadow-md shadow-primary/20 scale-[1.01]'
-                                        : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200/70 dark:hover:bg-stone-800 border-transparent',
+                                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold border-amber-400 shadow-md shadow-amber-500/30 scale-[1.01]'
+                                        : 'text-stone-700 dark:text-stone-300 hover:bg-amber-500/10 dark:hover:bg-amber-500/20 hover:text-amber-700 dark:hover:text-amber-300 border-transparent',
                                     );
                                     return (
                                       <Link key={child.href} href={child.href} onClick={() => setMobileOpen(false)} className={childClasses}>
-                                        <ChildIcon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isChildActive ? 'text-primary-foreground' : 'text-stone-500 dark:text-stone-400 group-hover:text-foreground')} />
+                                        <ChildIcon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isChildActive ? 'text-white' : 'text-stone-500 dark:text-stone-400 group-hover:text-amber-600')} />
                                         <span className="truncate">{child.title}</span>
                                       </Link>
                                     );
