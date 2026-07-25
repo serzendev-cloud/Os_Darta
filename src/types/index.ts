@@ -15,7 +15,7 @@ export type UserRole =
   | 'wali_kelas' 
   | 'alumni';
 
-export type AcademicDomain = 'formal' | 'pesantren';
+export type AcademicDomain = 'formal' | 'pesantren' | 'quran';
 
 export type SantriStatus = 'aktif' | 'cuti' | 'skors';
 export type AlumniStatus = 'Lulus' | 'Keluar';
