@@ -18,6 +18,7 @@ import {
   Megaphone, Archive, Calendar, Radio,
   SlidersHorizontal, Wrench, ScrollText, Link2,
   BookMarked, ClipboardCheck, FileSpreadsheet, FileSearch,
+  Shield, Sliders, CreditCard, Key
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Megaphone, Archive, Calendar, Radio,
   SlidersHorizontal, Wrench, ScrollText, Link2,
   BookMarked, ClipboardCheck, FileSpreadsheet, FileSearch,
+  Shield, Sliders, CreditCard, Key
 };
 
 export function Sidebar() {
@@ -68,6 +70,8 @@ export function Sidebar() {
     : allNotifs;
   const unreadCount = filteredNotifs.filter((n) => !n.read).length;
 
+  const isDevOrSuperAdmin = user?.role === 'developer' || user?.role === 'super_admin';
+
   return (
     <TooltipProvider delay={0}>
       {isMobileOpen && (
@@ -81,14 +85,30 @@ export function Sidebar() {
       )}>
         {/* Logo */}
         <div className={cn('flex items-center h-16 border-b border-sidebar-border px-4 shrink-0', isCollapsed ? 'justify-center' : 'gap-3')}>
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary shrink-0 shadow-[0_0_12px_rgba(251,146,60,0.35)] dark:shadow-[0_0_16px_rgba(251,146,60,0.4)]">
-            <GraduationCap className="w-5 h-5 text-primary-foreground" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-bold text-sidebar-foreground truncate">Ma&apos;had Manager</span>
-              <span className="text-[10px] text-muted-foreground truncate">Sistem Manajemen Pesantren</span>
-            </div>
+          {isDevOrSuperAdmin ? (
+            <>
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-600 shrink-0 shadow-[0_0_12px_rgba(225,29,72,0.35)] text-white">
+                <Shield className="w-5 h-5" />
+              </div>
+              {!isCollapsed && (
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-sm font-extrabold text-sidebar-foreground truncate">SaaS Platform Console</span>
+                  <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 truncate">Serene Zeith Corp • serzen_dev</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary shrink-0 shadow-[0_0_12px_rgba(251,146,60,0.35)] dark:shadow-[0_0_16px_rgba(251,146,60,0.4)]">
+                <GraduationCap className="w-5 h-5 text-primary-foreground" />
+              </div>
+              {!isCollapsed && (
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-sm font-bold text-sidebar-foreground truncate">Ma&apos;had Manager</span>
+                  <span className="text-[10px] text-muted-foreground truncate">Sistem Manajemen Pesantren</span>
+                </div>
+              )}
+            </>
           )}
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} className="lg:hidden ml-auto text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
@@ -98,6 +118,53 @@ export function Sidebar() {
         {/* Nav */}
         <div className="flex-1 overflow-y-auto py-3">
           <nav className="px-2 space-y-1">
+            {isDevOrSuperAdmin ? (
+              /* Flat Menu Items for Developer & Super Admin Console */
+              <div className="space-y-1">
+                {!isCollapsed && (
+                  <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                    Menu Utama Platform SaaS
+                  </div>
+                )}
+                {menuGroups.flatMap(g => g.items).map((item) => {
+                  const Icon = iconMap[item.icon] || LayoutDashboard;
+                  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+                  const itemClasses = cn(
+                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200',
+                    'border border-transparent',
+                    isActive
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 font-bold shadow-sm'
+                      : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                    isCollapsed && 'justify-center px-2',
+                  );
+
+                  const link = (
+                    <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
+                      <Icon className={cn('shrink-0 w-4 h-4 transition-colors', isActive ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground group-hover:text-foreground')} />
+                      {!isCollapsed && (
+                        <span className="flex-1 truncate">{item.title}</span>
+                      )}
+                      {!isCollapsed && item.badge && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-600 dark:text-rose-300">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+
+                  if (isCollapsed) {
+                    return (
+                      <Tooltip key={item.href}>
+                        <TooltipTrigger asChild>{link}</TooltipTrigger>
+                        <TooltipContent side="right">{item.title}</TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+                  return link;
+                })}
+              </div>
+            ) : (
+              /* Accordion Groups for Tenant Operational Roles */
             {menuGroups.map((group) => {
               const GroupIcon = iconMap[group.icon];
               const isExpanded = expandedGroups[group.title] || false;
@@ -279,7 +346,7 @@ export function Sidebar() {
                   )}
                 </div>
               );
-            })}
+            }))}
           </nav>
         </div>
 
