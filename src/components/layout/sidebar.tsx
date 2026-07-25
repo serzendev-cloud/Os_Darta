@@ -165,194 +165,120 @@ export function Sidebar() {
               </div>
             ) : (
               menuGroups.map((group) => {
-              const GroupIcon = iconMap[group.icon];
-              const isExpanded = expandedGroups[group.title] || false;
-              const isActiveGroup = group.items.some(
-                (item) => {
-                  const check = (i: typeof item) => pathname === i.href || pathname?.startsWith(i.href + '/');
-                  if (check(item)) return true;
-                  return item.children?.some((c) => check(c)) ?? false;
-                }
-              );
+                return (
+                  <div key={group.title} className="space-y-1">
+                    {/* Section Header Title with Horizontal Line */}
+                    {!isCollapsed && group.title !== 'Beranda' && group.title !== 'SaaS Platform Console' && (
+                      <div className="flex items-center gap-2 px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+                        <span className="shrink-0">{group.title}</span>
+                        <div className="flex-1 h-[1px] bg-stone-300/70 dark:bg-stone-700/70" />
+                      </div>
+                    )}
 
-              return (
-                <div key={group.title}>
-                  {/* Group header — clickable accordion trigger */}
-                  {isCollapsed ? (
-                    /* Collapsed: show items directly with tooltips, no group header */
-                    <div className="space-y-1">
-                      {group.items.flatMap((item) => {
-                        if (item.children?.length) {
-                          return item.children.map((child) => ({ ...child, _parent: item.title }));
-                        }
-                        return [item];
-                      }).map((item) => {
-                        const parentLabel = (item as unknown as { _parent?: string })._parent;
-                        const Icon = iconMap[item.icon] || LayoutDashboard;
-                        const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-                        const isNotifItem = item.icon === 'Bell';
-                        const itemClasses = cn(
-                          'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                          'border border-transparent',
-                          isActive
-                            ? 'bg-primary/5 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.06)]'
-                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/10',
-                          'justify-center px-2',
-                          item.disabled && 'opacity-40 pointer-events-none',
-                        );
-                        const linkContent = item.disabled ? (
-                          <span className={itemClasses}>
-                            <div className="relative">
-                              <Icon className="shrink-0 transition-colors duration-200 w-5 h-5 text-muted-foreground" />
-                              {item.badge && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500" />}
-                            </div>
-                          </span>
-                        ) : (
-                          <Link href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
-                            <div className={cn(isNotifItem || item.badge ? 'relative' : '')}>
-                              <Icon className={cn('shrink-0 transition-colors duration-200 w-5 h-5', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
-                              {item.badge && <span className={cn('absolute -top-1 -right-1 w-2 h-2 rounded-full', item.badge === 'Beta' ? 'bg-amber-500' : 'bg-muted-foreground')} />}
-                              {isNotifItem && unreadCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full px-0.5">
-                                  {unreadCount > 9 ? '9+' : unreadCount}
-                                </span>
-                              )}
-                            </div>
-                          </Link>
-                        );
+                    {/* Group Items */}
+                    {group.items.map((item) => {
+                      const itemHasChildren = Boolean(item.children && item.children.length > 0);
+                      const isExpanded = expandedGroups[item.title] || false;
+                      const isActiveItem = itemHasChildren
+                        ? item.children?.some((c) => pathname === c.href || pathname?.startsWith(c.href + '/'))
+                        : (pathname === item.href || pathname?.startsWith(item.href + '/'));
+                      const ItemIcon = iconMap[item.icon] || LayoutDashboard;
+
+                      if (itemHasChildren) {
                         return (
-                          <Tooltip key={parentLabel ? `${parentLabel}-${item.href}` : item.href}>
-                            <TooltipTrigger>
-                              {linkContent}
-                            </TooltipTrigger>
-                            <TooltipContent side="right" sideOffset={8}>{parentLabel ? `${parentLabel} › ${item.title}` : item.title}</TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    /* Expanded sidebar: accordion groups */
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => toggleGroup(group.title)}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13px] font-extrabold',
-                          'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
-                          'border',
-                          isActiveGroup || isExpanded
-                            ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
-                            : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md'
-                        )}
-                      >
-                        {GroupIcon && (
-                          <div className={cn(
-                            'p-1.5 rounded-xl transition-all duration-300 shrink-0',
-                            isActiveGroup || isExpanded
-                              ? 'bg-white/20 text-white shadow-inner'
-                              : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
-                          )}>
-                            <GroupIcon className="w-4 h-4" />
-                          </div>
-                        )}
-                        <span className="flex-1 text-left truncate">{group.title}</span>
-                        <ChevronDown className={cn(
-                          'w-4 h-4 shrink-0 transition-transform duration-300',
-                          isActiveGroup || isExpanded ? 'text-white' : 'text-orange-500/70',
-                          isExpanded && 'rotate-180'
-                        )} />
-                      </button>
+                          <div key={item.title} className="space-y-1">
+                            {/* Metallic Orange Container Button Trigger */}
+                            <button
+                              type="button"
+                              onClick={() => toggleGroup(item.title)}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13px] font-extrabold',
+                                'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
+                                'border',
+                                isActiveItem || isExpanded
+                                  ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
+                                  : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md'
+                              )}
+                            >
+                              <div className={cn(
+                                'p-1.5 rounded-xl transition-all duration-300 shrink-0',
+                                isActiveItem || isExpanded
+                                  ? 'bg-white/20 text-white shadow-inner'
+                                  : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                              )}>
+                                <ItemIcon className="w-4 h-4" />
+                              </div>
+                              {!isCollapsed && <span className="flex-1 text-left truncate">{item.title}</span>}
+                              {!isCollapsed && (
+                                <ChevronDown className={cn(
+                                  'w-4 h-4 shrink-0 transition-transform duration-300',
+                                  isActiveItem || isExpanded ? 'text-white' : 'text-orange-500/70',
+                                  isExpanded && 'rotate-180'
+                                )} />
+                              )}
+                            </button>
 
-                      {/* Submenu items container with distinct background & tree border */}
-                      <div className={cn(
-                        'overflow-hidden transition-all duration-300 ease-in-out mt-1 mb-2 rounded-2xl',
-                        isExpanded ? 'max-h-[36rem] opacity-100 bg-stone-100/70 dark:bg-stone-900/60 border border-stone-200/70 dark:border-stone-800/80 p-2 shadow-inner' : 'max-h-0 opacity-0'
-                      )}>
-                        <div className="space-y-1 pl-1 border-l-2 border-primary/20">
-                          {group.items.map((item) => {
-                            // ── Items with children → sub-header + indented children ──
-                            if (item.children && item.children.length > 0) {
-                              const ParentIcon = iconMap[item.icon] || LayoutDashboard;
-                              return (
-                                <div key={item.title} className="space-y-1">
-                                  <div className="flex items-center gap-2 px-2.5 py-1 text-[10px] font-extrabold text-stone-500 dark:text-stone-400 uppercase tracking-wider bg-stone-200/50 dark:bg-stone-800/60 rounded-md my-1">
-                                    <ParentIcon className="w-3.5 h-3.5 shrink-0 text-stone-600 dark:text-stone-300" />
-                                    <span className="truncate">{item.title}</span>
-                                  </div>
-                                  {item.children.map((child) => {
-                                    const Icon = iconMap[child.icon] || LayoutDashboard;
-                                    const isActive = pathname === child.href || pathname?.startsWith(child.href + '/');
+                            {/* Submenu items container */}
+                            {!isCollapsed && (
+                              <div className={cn(
+                                'overflow-hidden transition-all duration-300 ease-in-out mt-1 mb-2 rounded-2xl',
+                                isExpanded ? 'max-h-[36rem] opacity-100 bg-stone-100/70 dark:bg-stone-900/60 border border-stone-200/70 dark:border-stone-800/80 p-2 shadow-inner' : 'max-h-0 opacity-0'
+                              )}>
+                                <div className="space-y-1 pl-1 border-l-2 border-primary/20">
+                                  {item.children?.map((child) => {
+                                    const ChildIcon = iconMap[child.icon] || LayoutDashboard;
+                                    const isChildActive = pathname === child.href || pathname?.startsWith(child.href + '/');
                                     const childClasses = cn(
                                       'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] font-medium',
                                       'transition-all duration-200 ease-out border',
-                                      isActive
+                                      isChildActive
                                         ? 'bg-primary text-primary-foreground font-bold border-primary shadow-md shadow-primary/20 scale-[1.01]'
                                         : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200/70 dark:hover:bg-stone-800 border-transparent',
-                                      child.disabled && 'opacity-40 pointer-events-none',
                                     );
-                                    return child.disabled ? (
-                                      <span key={child.href} className={childClasses}>
-                                        <Icon className="shrink-0 w-3.5 h-3.5 text-muted-foreground" />
-                                        <span className="truncate">{child.title}</span>
-                                        {child.badge && (
-                                          <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', child.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{child.badge}</span>
-                                        )}
-                                      </span>
-                                    ) : (
+                                    return (
                                       <Link key={child.href} href={child.href} onClick={() => setMobileOpen(false)} className={childClasses}>
-                                        <Icon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isActive ? 'text-primary-foreground' : 'text-stone-500 dark:text-stone-400 group-hover:text-foreground')} />
+                                        <ChildIcon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isChildActive ? 'text-primary-foreground' : 'text-stone-500 dark:text-stone-400 group-hover:text-foreground')} />
                                         <span className="truncate">{child.title}</span>
-                                        {child.badge && (
-                                          <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', child.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{child.badge}</span>
-                                        )}
                                       </Link>
                                     );
                                   })}
                                 </div>
-                              );
-                            }
-                            // ── Regular item (no children) ──
-                            const Icon = iconMap[item.icon] || LayoutDashboard;
-                            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-                            const isNotifItem = item.icon === 'Bell';
-                            const itemClasses = cn(
-                              'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] font-medium',
-                              'transition-all duration-200 ease-out border',
-                              isActive
-                                ? 'bg-primary text-primary-foreground font-bold border-primary shadow-md shadow-primary/20 scale-[1.01]'
-                                : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200/70 dark:hover:bg-stone-800 border-transparent',
-                              item.disabled && 'opacity-40 pointer-events-none',
-                            );
-                            return item.disabled ? (
-                              <span key={item.href} className={itemClasses}>
-                                <Icon className="shrink-0 w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="truncate">{item.title}</span>
-                                {item.badge && (
-                                  <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', item.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{item.badge}</span>
-                                )}
-                              </span>
-                            ) : (
-                              <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
-                                <Icon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isActive ? 'text-primary-foreground' : 'text-stone-500 dark:text-stone-400 group-hover:text-foreground')} />
-                                <span className="truncate">{item.title}</span>
-                                {isNotifItem && unreadCount > 0 && (
-                                  <span className="ml-auto flex items-center justify-center min-w-[18px] h-4.5 text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
-                                    {unreadCount > 99 ? '99+' : unreadCount}
-                                  </span>
-                                )}
-                                {item.badge && (
-                                  <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', item.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{item.badge}</span>
-                                )}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            }))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Flat single menu link (e.g. Manajemen User & Role, Dashboard)
+                      const linkClasses = cn(
+                        'group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all duration-200 border',
+                        isActiveItem
+                          ? 'bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-500/20'
+                          : 'text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 border-transparent',
+                        isCollapsed && 'justify-center px-2',
+                      );
+
+                      const link = (
+                        <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={linkClasses}>
+                          <ItemIcon className={cn('shrink-0 w-4 h-4 transition-colors', isActiveItem ? 'text-white' : 'text-stone-500 group-hover:text-foreground')} />
+                          {!isCollapsed && <span className="flex-1 truncate">{item.title}</span>}
+                        </Link>
+                      );
+
+                      if (isCollapsed) {
+                        return (
+                          <Tooltip key={item.href}>
+                            <TooltipTrigger>{link}</TooltipTrigger>
+                            <TooltipContent side="right">{item.title}</TooltipContent>
+                          </Tooltip>
+                        );
+                      }
+                      return link;
+                    })}
+                  </div>
+                );
+              })
+            )}
           </nav>
         </div>
 
