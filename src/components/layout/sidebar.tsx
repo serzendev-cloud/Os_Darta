@@ -254,37 +254,36 @@ export function Sidebar() {
                         )} />
                       </button>
 
-                      {/* Submenu items */}
+                      {/* Submenu items container with distinct background & tree border */}
                       <div className={cn(
-                        'overflow-hidden transition-all duration-200 ease-in-out',
-                        isExpanded ? 'max-h-[32rem] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0'
+                        'overflow-hidden transition-all duration-300 ease-in-out mt-1 mb-2 rounded-2xl',
+                        isExpanded ? 'max-h-[36rem] opacity-100 bg-stone-100/70 dark:bg-stone-900/60 border border-stone-200/70 dark:border-stone-800/80 p-2 shadow-inner' : 'max-h-0 opacity-0'
                       )}>
-                        <div className="space-y-0.5 pt-0.5 pb-1">
+                        <div className="space-y-1 pl-1 border-l-2 border-primary/20">
                           {group.items.map((item) => {
                             // ── Items with children → sub-header + indented children ──
                             if (item.children && item.children.length > 0) {
                               const ParentIcon = iconMap[item.icon] || LayoutDashboard;
                               return (
-                                <div key={item.title} className="space-y-0.5">
-                                  <div className="flex items-center gap-2.5 px-3 py-1.5 ml-2.5 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                                    <ParentIcon className="w-3.5 h-3.5 shrink-0" />
+                                <div key={item.title} className="space-y-1">
+                                  <div className="flex items-center gap-2 px-2.5 py-1 text-[10px] font-extrabold text-stone-500 dark:text-stone-400 uppercase tracking-wider bg-stone-200/50 dark:bg-stone-800/60 rounded-md my-1">
+                                    <ParentIcon className="w-3.5 h-3.5 shrink-0 text-stone-600 dark:text-stone-300" />
                                     <span className="truncate">{item.title}</span>
                                   </div>
                                   {item.children.map((child) => {
                                     const Icon = iconMap[child.icon] || LayoutDashboard;
                                     const isActive = pathname === child.href || pathname?.startsWith(child.href + '/');
                                     const childClasses = cn(
-                                      'flex items-center gap-3 rounded-lg px-3 py-2 ml-5 text-[13px] font-medium',
-                                      'transition-all duration-200 ease-out',
-                                      'border border-transparent',
+                                      'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] font-medium',
+                                      'transition-all duration-200 ease-out border',
                                       isActive
-                                        ? 'bg-primary/8 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.05)]'
-                                        : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/8',
+                                        ? 'bg-primary text-primary-foreground font-bold border-primary shadow-md shadow-primary/20 scale-[1.01]'
+                                        : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200/70 dark:hover:bg-stone-800 border-transparent',
                                       child.disabled && 'opacity-40 pointer-events-none',
                                     );
                                     return child.disabled ? (
                                       <span key={child.href} className={childClasses}>
-                                        <Icon className="shrink-0 w-4 h-4 text-muted-foreground" />
+                                        <Icon className="shrink-0 w-3.5 h-3.5 text-muted-foreground" />
                                         <span className="truncate">{child.title}</span>
                                         {child.badge && (
                                           <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', child.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{child.badge}</span>
@@ -292,7 +291,7 @@ export function Sidebar() {
                                       </span>
                                     ) : (
                                       <Link key={child.href} href={child.href} onClick={() => setMobileOpen(false)} className={childClasses}>
-                                        <Icon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
+                                        <Icon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isActive ? 'text-primary-foreground' : 'text-stone-500 dark:text-stone-400 group-hover:text-foreground')} />
                                         <span className="truncate">{child.title}</span>
                                         {child.badge && (
                                           <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', child.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{child.badge}</span>
@@ -308,17 +307,16 @@ export function Sidebar() {
                             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                             const isNotifItem = item.icon === 'Bell';
                             const itemClasses = cn(
-                              'flex items-center gap-3 rounded-lg px-3 py-2 ml-2.5 text-[13px] font-medium',
-                              'transition-all duration-200 ease-out',
-                              'border border-transparent',
+                              'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] font-medium',
+                              'transition-all duration-200 ease-out border',
                               isActive
-                                ? 'bg-primary/8 text-primary border-primary/15 shadow-[0_0_16px_rgba(251,146,60,0.05)]'
-                                : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:border-primary/8',
+                                ? 'bg-primary text-primary-foreground font-bold border-primary shadow-md shadow-primary/20 scale-[1.01]'
+                                : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200/70 dark:hover:bg-stone-800 border-transparent',
                               item.disabled && 'opacity-40 pointer-events-none',
                             );
                             return item.disabled ? (
                               <span key={item.href} className={itemClasses}>
-                                <Icon className="shrink-0 w-4 h-4 text-muted-foreground" />
+                                <Icon className="shrink-0 w-3.5 h-3.5 text-muted-foreground" />
                                 <span className="truncate">{item.title}</span>
                                 {item.badge && (
                                   <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', item.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{item.badge}</span>
@@ -326,15 +324,15 @@ export function Sidebar() {
                               </span>
                             ) : (
                               <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={itemClasses}>
-                                <Icon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
+                                <Icon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isActive ? 'text-primary-foreground' : 'text-stone-500 dark:text-stone-400 group-hover:text-foreground')} />
                                 <span className="truncate">{item.title}</span>
-                                {item.badge && (
-                                  <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', item.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{item.badge}</span>
-                                )}
                                 {isNotifItem && unreadCount > 0 && (
-                                  <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1.5">
+                                  <span className="ml-auto flex items-center justify-center min-w-[18px] h-4.5 text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
                                     {unreadCount > 99 ? '99+' : unreadCount}
                                   </span>
+                                )}
+                                {item.badge && (
+                                  <span className={cn('ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full', item.badge === 'Beta' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted-foreground/15 text-muted-foreground')}>{item.badge}</span>
                                 )}
                               </Link>
                             );
