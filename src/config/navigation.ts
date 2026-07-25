@@ -15,14 +15,14 @@ export const navigationGroups: NavGroup[] = [
     icon: 'Shield',
     items: [
       {
-        title: 'Console Overview',
+        title: 'Dasbor Utama (Helicopter View)',
         href: '/dashboard',
         icon: 'LayoutDashboard',
         roles: ['developer', 'super_admin'],
         requiredPermission: Permission.MANAGE_TENANTS,
       },
       {
-        title: 'Manajemen Tenant & Pendaftaran',
+        title: 'Manajemen Tenant & Impersonation',
         href: '/dashboard/saas/tenants',
         icon: 'Building2',
         roles: ['developer', 'super_admin'],
@@ -30,16 +30,37 @@ export const navigationGroups: NavGroup[] = [
         badge: 'Utama',
       },
       {
-        title: 'Integrasi Payment, WA & Drive',
-        href: '/dashboard/pengaturan/tenant-integrasi',
-        icon: 'Key',
+        title: 'Manajemen Modul & Feature Flags',
+        href: '/dashboard/saas/modul-fitur',
+        icon: 'Sliders',
         roles: ['developer', 'super_admin'],
         requiredPermission: Permission.MANAGE_TENANTS,
       },
       {
-        title: 'Global Audit Log & Keamanan',
-        href: '/dashboard/audit-log',
-        icon: 'ScrollText',
+        title: 'Paket & Penagihan (Billing)',
+        href: '/dashboard/saas/paket-billing',
+        icon: 'CreditCard',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+      },
+      {
+        title: 'Infrastruktur & Log Pemantauan',
+        href: '/dashboard/saas/infrastruktur-log',
+        icon: 'Activity',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+      },
+      {
+        title: 'Pengaturan Global & Broadcast',
+        href: '/dashboard/saas/pengaturan-global',
+        icon: 'Settings',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+      },
+      {
+        title: 'Integrasi Gateway Mandiri',
+        href: '/dashboard/pengaturan/tenant-integrasi',
+        icon: 'Key',
         roles: ['developer', 'super_admin'],
         requiredPermission: Permission.MANAGE_TENANTS,
       },
@@ -648,13 +669,12 @@ export const navigationGroups: NavGroup[] = [
 function isNavItemVisible(item: NavItem, role: UserRole): boolean {
   // Developer & Super Admin only see SaaS Platform Console items, not internal tenant operations!
   if (role === 'developer' || role === 'super_admin') {
-    const platformHrefs = [
-      '/dashboard',
-      '/dashboard/saas/tenants',
-      '/dashboard/pengaturan/tenant-integrasi',
-      '/dashboard/audit-log',
-    ];
-    return platformHrefs.includes(item.href);
+    const isPlatformItem = 
+      item.href === '/dashboard' ||
+      item.href.startsWith('/dashboard/saas') ||
+      item.href.startsWith('/dashboard/pengaturan/tenant-integrasi') ||
+      item.href.startsWith('/dashboard/audit-log');
+    return isPlatformItem;
   }
 
   if (item.requiredPermission) {
