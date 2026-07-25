@@ -88,14 +88,14 @@ export const navigationGroups: NavGroup[] = [
     icon: 'Building2',
     items: [
       {
-        title: 'Master Program Kurikulum',
+        title: 'Program Madrasah',
         href: '',
         icon: 'BookMarked',
         roles: ['admin', 'kepala_kesiswaan', 'staff'],
         requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
         children: [
           {
-            title: 'Pengaturan Kurikulum Utama',
+            title: 'Master Madrasah',
             href: '/dashboard/kurikulum/master',
             icon: 'Settings',
             roles: ['admin', 'kepala_kesiswaan'],

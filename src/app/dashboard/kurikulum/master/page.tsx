@@ -119,7 +119,7 @@ export default function MasterCurriculumSettingsPage() {
             <span>Pusat Pengaturan Kurikulum & Template Program</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-            Pengaturan Kurikulum Utama & Penerbitan Menu Kontainer
+            Master Madrasah & Penerbitan Menu Kontainer
           </h1>
           <p className="text-stone-300 text-xs md:text-sm max-w-3xl leading-relaxed">
             Buat hingga <strong className="text-white">5+ Program Kurikulum Mandiri</strong> (misal: Kitab Kuning, Sorogan, Bahasa). Setiap program yang dibuat di sini secara otomatis akan <strong className="text-white">menerbitkan Menu Kontainer tersendiri di Sidebar</strong> di bawah judul <em>PROGRAM KURIKULUM</em> dengan template pengaturan mapel & jenjang terpisah.
