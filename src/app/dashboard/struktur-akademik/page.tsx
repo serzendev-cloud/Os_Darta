@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { LoadingState } from '@/components/shared/loading-state';
@@ -10,10 +10,16 @@ import { useCollection } from '@/hooks';
 import { masterJenjangService, masterTingkatService } from '@/lib/firebase/services';
 import type { MasterJenjang, MasterTingkat } from '@/types';
 import { cn } from '@/lib/utils';
+import { 
+  CurriculumProgram, 
+  getStoredCurriculums, 
+  CURRICULUM_STORE_CHANGE_EVENT 
+} from '@/lib/store/curriculum-store';
+import { Building2, GraduationCap, Layers, Sparkles } from 'lucide-react';
 
-const TABS = [
-  { id: 'jenjang' as const, label: 'Master Jenjang' },
-  { id: 'tingkat' as const, label: 'Master Tingkat' },
+const SECONDARY_TABS = [
+  { id: 'jenjang' as const, label: 'Master Jenjang', icon: GraduationCap },
+  { id: 'tingkat' as const, label: 'Master Tingkat', icon: Layers },
 ];
 
 export default function StrukturAkademikPage() {
@@ -29,15 +35,53 @@ export default function StrukturAkademikPage() {
     error: tingkatError,
   } = useCollection<MasterTingkat>('masterTingkat', [], { realtime: true });
 
+  // ── Dynamic Madrasah Store State ──────────────────────────────────────────
+  const [madrasahPrograms, setMadrasahPrograms] = useState<CurriculumProgram[]>([]);
+  const [selectedMadrasahId, setSelectedMadrasahId] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'jenjang' | 'tingkat'>('jenjang');
+
+  useEffect(() => {
+    const syncMadrasahs = () => {
+      const active = getStoredCurriculums().filter(p => p.status === 'active');
+      setMadrasahPrograms(active);
+    };
+    syncMadrasahs();
+    window.addEventListener(CURRICULUM_STORE_CHANGE_EVENT, syncMadrasahs);
+    return () => window.removeEventListener(CURRICULUM_STORE_CHANGE_EVENT, syncMadrasahs);
+  }, []);
 
   const loading = jenjangLoading || tingkatLoading;
   const error = jenjangError || tingkatError;
 
+  // Filtered Jenjang & Tingkat based on selected Madrasah
+  const filteredJenjangList = useMemo(() => {
+    if (selectedMadrasahId === 'all') return jenjangList;
+    const prog = madrasahPrograms.find(p => p.id === selectedMadrasahId);
+    if (!prog) return jenjangList;
+
+    // Match by instansi category mapping
+    let instansiTarget = 'madin';
+    if (prog.typeCategory === 'quran' || prog.code.includes('QUR')) instansiTarget = 'madqur';
+    else if (prog.typeCategory === 'formal' || prog.code.includes('FORMAL')) instansiTarget = 'depag';
+
+    return jenjangList.filter(j => j.instansi === instansiTarget);
+  }, [jenjangList, selectedMadrasahId, madrasahPrograms]);
+
+  const filteredTingkatList = useMemo(() => {
+    if (selectedMadrasahId === 'all') return tingkatList;
+    const prog = madrasahPrograms.find(p => p.id === selectedMadrasahId);
+    if (!prog) return tingkatList;
+
+    let instansiTarget = 'madin';
+    if (prog.typeCategory === 'quran' || prog.code.includes('QUR')) instansiTarget = 'madqur';
+    else if (prog.typeCategory === 'formal' || prog.code.includes('FORMAL')) instansiTarget = 'depag';
+
+    return tingkatList.filter(t => t.instansi === instansiTarget);
+  }, [tingkatList, selectedMadrasahId, madrasahPrograms]);
+
   // ── CRUD: Jenjang ──────────────────────────────────────────────────────
   const handleCreateJenjang = useCallback(
     async (data: Partial<MasterJenjang>) => {
-      console.log('[handleCreateJenjang] Received data:', JSON.stringify(data, null, 2));
       try {
         const newId = await masterJenjangService.create({
           namaJenjang: data.namaJenjang ?? '',
@@ -45,10 +89,9 @@ export default function StrukturAkademikPage() {
           progressionIndexes: data.progressionIndexes ?? [],
           status: data.status ?? 'active',
         });
-        console.log('[handleCreateJenjang] Created with id:', newId);
         toast.success(`Jenjang "${data.namaJenjang}" berhasil dibuat.`);
       } catch (err) {
-        console.error('[handleCreateJenjang] Gagal membuat jenjang:', err);
+        console.error('[handleCreateJenjang] Error:', err);
         toast.error('Gagal membuat jenjang. Silakan coba lagi.');
       }
     },
@@ -131,42 +174,108 @@ export default function StrukturAkademikPage() {
   if (error) return <ErrorState message="Gagal memuat data struktur akademik." onRetry={() => window.location.reload()} />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       <PageHeader
-        title="Master Struktur Akademik"
-        description="Pusat konfigurasi jenjang dan tingkat — sumber utama seluruh hirarki akademik"
+        title="Master Struktur Akademik (Jenjang & Tingkat)"
+        description="Pusat konfigurasi hirarki jenjang dan tingkat yang diterbitkan dari Master Madrasah"
       />
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-fit border border-border/60">
-        {TABS.map((tab) => (
+      {/* ── 1. PRIMARY LEVEL TABS: DYNAMIC MADRASAH PROGRAM TABS ── */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs font-bold text-stone-500 uppercase tracking-wider">
+          <Building2 className="w-3.5 h-3.5 text-amber-500" />
+          <span>Pilih Program Madrasah:</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-stone-200/70 dark:bg-stone-900 border border-stone-300/80 dark:border-stone-800 shadow-inner">
           <button
-            key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setSelectedMadrasahId('all')}
             className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-              activeTab === tab.id
-                ? 'bg-background text-foreground shadow-sm border border-border/60'
-                : 'text-muted-foreground hover:text-foreground',
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-200',
+              selectedMadrasahId === 'all'
+                ? 'bg-gradient-to-r from-stone-900 to-amber-950 text-white shadow-md border border-amber-500/30 scale-[1.02]'
+                : 'text-stone-700 dark:text-stone-300 hover:bg-stone-300/50 dark:hover:bg-stone-800'
             )}
           >
-            {tab.label}
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Semua Program Madrasah</span>
+            <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] bg-stone-700 text-stone-200">
+              {jenjangList.length}
+            </span>
           </button>
-        ))}
+
+          {madrasahPrograms.map((prog) => {
+            const isSelected = selectedMadrasahId === prog.id;
+            return (
+              <button
+                key={prog.id}
+                type="button"
+                onClick={() => setSelectedMadrasahId(prog.id)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-200',
+                  isSelected
+                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md border border-amber-300/40 scale-[1.02]'
+                    : 'text-stone-800 dark:text-stone-200 bg-white/80 dark:bg-stone-800/80 hover:bg-amber-500/10 border border-stone-200 dark:border-stone-700'
+                )}
+              >
+                <Building2 className={cn('w-3.5 h-3.5', isSelected ? 'text-white' : 'text-amber-600')} />
+                <span>{prog.name}</span>
+                <span className={cn(
+                  'ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono',
+                  isSelected ? 'bg-amber-700 text-white' : 'bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300'
+                )}>
+                  {prog.code}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Content */}
+      {/* ── 2. SECONDARY LEVEL TABS: MASTER JENJANG & MASTER TINGKAT ── */}
+      <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-stone-800">
+        <div className="flex gap-2 bg-stone-100 dark:bg-stone-900 p-1 rounded-2xl border border-stone-200 dark:border-stone-800">
+          {SECONDARY_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200',
+                  isActive
+                    ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm border border-stone-200 dark:border-stone-700'
+                    : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                )}
+              >
+                <Icon className={cn('w-4 h-4', isActive ? 'text-amber-600' : 'text-stone-400')} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <span className="text-xs font-medium text-stone-500 hidden sm:inline">
+          Menampilkan hirarki untuk: <strong className="text-stone-900 dark:text-white">
+            {selectedMadrasahId === 'all' ? 'Semua Madrasah' : madrasahPrograms.find(p => p.id === selectedMadrasahId)?.name}
+          </strong>
+        </span>
+      </div>
+
+      {/* ── 3. CONTENT TAB TABLES ── */}
       {activeTab === 'jenjang' ? (
         <MasterJenjangTab
-          data={jenjangList}
+          data={filteredJenjangList}
           onCreate={handleCreateJenjang}
           onUpdate={handleUpdateJenjang}
           onDelete={handleDeleteJenjang}
         />
       ) : (
         <MasterTingkatTab
-          data={tingkatList}
+          data={filteredTingkatList}
           jenjangList={jenjangList}
           onCreate={handleCreateTingkat}
           onUpdate={handleUpdateTingkat}
