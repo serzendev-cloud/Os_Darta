@@ -237,19 +237,28 @@ export function Sidebar() {
                         type="button"
                         onClick={() => toggleGroup(group.title)}
                         className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold',
-                          'transition-all duration-300 ease-out',
-                          'border border-transparent',
-                          isActiveGroup
-                            ? 'bg-primary/5 border-primary/15 text-primary shadow-[0_0_20px_rgba(251,146,60,0.06)]'
-                            : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground hover:shadow-[0_2px_12px_rgba(251,146,60,0.04)] hover:border-primary/10'
+                          'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13px] font-extrabold',
+                          'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
+                          'border',
+                          isActiveGroup || isExpanded
+                            ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
+                            : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md'
                         )}
                       >
-                        {GroupIcon && <GroupIcon className={cn('w-4 h-4 shrink-0 transition-colors duration-300', isActiveGroup ? 'text-primary' : 'text-muted-foreground')} />}
+                        {GroupIcon && (
+                          <div className={cn(
+                            'p-1.5 rounded-xl transition-all duration-300 shrink-0',
+                            isActiveGroup || isExpanded
+                              ? 'bg-white/20 text-white shadow-inner'
+                              : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                          )}>
+                            <GroupIcon className="w-4 h-4" />
+                          </div>
+                        )}
                         <span className="flex-1 text-left truncate">{group.title}</span>
                         <ChevronDown className={cn(
-                          'w-3.5 h-3.5 shrink-0 transition-transform duration-300',
-                          isActiveGroup ? 'text-primary/60' : 'text-muted-foreground/40',
+                          'w-4 h-4 shrink-0 transition-transform duration-300',
+                          isActiveGroup || isExpanded ? 'text-white' : 'text-orange-500/70',
                           isExpanded && 'rotate-180'
                         )} />
                       </button>
