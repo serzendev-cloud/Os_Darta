@@ -595,6 +595,14 @@ export const navigationGroups: NavGroup[] = [
         governanceDomain: 'sistem',
       },
       {
+        title: 'Manajemen User & Role',
+        href: '/dashboard/pengaturan/manajemen-user-role',
+        icon: 'UsersRound',
+        roles: ['admin', 'kepala_kesiswaan', 'staff'],
+        requiredPermission: Permission.VIEW_PENGATURAN,
+        governanceDomain: 'sistem',
+      },
+      {
         title: 'Integrasi Payment, WA & Drive',
         href: '/dashboard/pengaturan/tenant-integrasi',
         icon: 'Key',
