@@ -79,7 +79,7 @@ export function Sidebar() {
       )}
       <aside className={cn(
         'fixed top-0 left-0 z-50 h-full flex flex-col transition-all duration-300 ease-in-out',
-        'bg-sidebar border-r border-sidebar-border dark:backdrop-blur-xl',
+        'bg-gradient-to-b from-slate-200 via-stone-200 to-zinc-300 dark:from-slate-900 dark:via-zinc-900 dark:to-stone-900 border-r border-slate-300/80 dark:border-slate-800 shadow-xl',
         isCollapsed ? 'w-[var(--sidebar-width-collapsed)]' : 'w-[var(--sidebar-width)]',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
@@ -209,14 +209,14 @@ export function Sidebar() {
                                 'border',
                                 isActiveItem
                                   ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
-                                  : 'bg-gradient-to-r from-slate-200 via-stone-100 to-zinc-200 dark:from-slate-800 dark:via-zinc-800 dark:to-stone-800 text-slate-800 dark:text-slate-100 border-slate-300/80 dark:border-slate-700 hover:from-slate-300 hover:to-zinc-300 dark:hover:from-slate-700 dark:hover:to-zinc-700 hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md'
+                                  : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md'
                               )}
                             >
                               <div className={cn(
                                 'p-1.5 rounded-xl transition-all duration-300 shrink-0',
                                 isActiveItem
                                   ? 'bg-white/20 text-white shadow-inner'
-                                  : 'bg-slate-300/70 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200'
+                                  : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
                               )}>
                                 <ItemIcon className="w-4 h-4" />
                               </div>
@@ -224,7 +224,7 @@ export function Sidebar() {
                               {!isCollapsed && (
                                 <ChevronDown className={cn(
                                   'w-4 h-4 shrink-0 transition-transform duration-300',
-                                  isActiveItem ? 'text-white' : 'text-slate-500 dark:text-slate-400',
+                                  isActiveItem ? 'text-white' : 'text-orange-500/70',
                                   isExpanded && 'rotate-180'
                                 )} />
                               )}
@@ -261,14 +261,14 @@ export function Sidebar() {
                         );
                       }
 
-                      // Flat single menu link (e.g. User & Role, Dashboard) - UNIFIED SILVER METALLIC STYLING
+                      // Flat single menu link (e.g. User & Role, Dashboard) - UNIFIED METALLIC ORANGE STYLING
                       const flatLinkClasses = cn(
                         'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13px] font-extrabold',
                         'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
                         'border',
                         isActiveItem
                           ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
-                          : 'bg-gradient-to-r from-slate-200 via-stone-100 to-zinc-200 dark:from-slate-800 dark:via-zinc-800 dark:to-stone-800 text-slate-800 dark:text-slate-100 border-slate-300/80 dark:border-slate-700 hover:from-slate-300 hover:to-zinc-300 dark:hover:from-slate-700 dark:hover:to-zinc-700 hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md',
+                          : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md',
                         isCollapsed && 'justify-center px-2',
                       );
 
@@ -278,7 +278,7 @@ export function Sidebar() {
                             'p-1.5 rounded-xl transition-all duration-300 shrink-0',
                             isActiveItem
                               ? 'bg-white/20 text-white shadow-inner'
-                              : 'bg-slate-300/70 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200'
+                              : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
                           )}>
                             <ItemIcon className="w-4 h-4" />
                           </div>
