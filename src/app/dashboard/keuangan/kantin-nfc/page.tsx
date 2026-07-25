@@ -1,8 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageCard } from '@/components/shared/page-header';
 import { ShoppingBag, CreditCard, Lock, AlertCircle, CheckCircle2, RefreshCw, UserCheck, Plus, Trash2, Tag, Store } from 'lucide-react';
+import { 
+  CanteenUnit, 
+  CanteenCatalogItem, 
+  getStoredCanteenUnits, 
+  getStoredCanteenItems 
+} from '@/lib/store/canteen-store';
 
 interface CartItem {
   id: string;
@@ -11,44 +17,11 @@ interface CartItem {
   qty: number;
 }
 
-const canteenCatalogs: Record<string, { name: string; items: { id: string; name: string; price: number }[] }> = {
-  'cnt-1': {
-    name: 'Kantin Utama Pesantren',
-    items: [
-      { id: 'itm-1', name: 'Nasi Goreng Spesial', price: 12000 },
-      { id: 'itm-2', name: 'Es Teh Manis', price: 3000 },
-      { id: 'itm-3', name: 'Ayam Geprek Nasi', price: 15000 },
-      { id: 'itm-4', name: 'Jus Alpukat', price: 8000 },
-    ],
-  },
-  'cnt-2': {
-    name: 'Kantin Asrama Putra',
-    items: [
-      { id: 'itm-5', name: 'Nasi Rames Asrama', price: 10000 },
-      { id: 'itm-6', name: 'Kopi Susu Warmindo', price: 4000 },
-      { id: 'itm-7', name: 'Indomie Telur Kornet', price: 9000 },
-    ],
-  },
-  'cnt-3': {
-    name: 'Kantin Asrama Putri',
-    items: [
-      { id: 'itm-8', name: 'Seblak Pedas Asrama', price: 10000 },
-      { id: 'itm-9', name: 'Boba Milk Tea', price: 8000 },
-      { id: 'itm-10', name: 'Nasi Soto Ayam', price: 12000 },
-    ],
-  },
-  'cnt-4': {
-    name: 'Koperasi Pesantren',
-    items: [
-      { id: 'itm-11', name: 'Buku Tulis 50 Lembar', price: 5000 },
-      { id: 'itm-12', name: 'Pulpen Gel Hitam', price: 3500 },
-      { id: 'itm-13', name: 'Kitab Jurumiyah', price: 15000 },
-    ],
-  },
-};
-
 export default function KantinNfcPage() {
+  const [canteenUnits, setCanteenUnits] = useState<CanteenUnit[]>([]);
+  const [canteenItems, setCanteenItems] = useState<CanteenCatalogItem[]>([]);
   const [selectedCanteenId, setSelectedCanteenId] = useState<string>('cnt-1');
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customAmount, setCustomAmount] = useState<string>('');
   
@@ -58,7 +31,22 @@ export default function KantinNfcPage() {
   const [result, setResult] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const currentCatalog = canteenCatalogs[selectedCanteenId] || canteenCatalogs['cnt-1'];
+  // Synchronize with Canteen Store on Load
+  useEffect(() => {
+    const units = getStoredCanteenUnits();
+    const items = getStoredCanteenItems();
+    setCanteenUnits(units);
+    setCanteenItems(items);
+    if (units.length > 0) {
+      setSelectedCanteenId(units[0].id);
+    }
+  }, []);
+
+  const activeUnits = canteenUnits.filter(u => u.status === 'active');
+  const selectedCanteen = canteenUnits.find(u => u.id === selectedCanteenId) || activeUnits[0] || { id: 'cnt-1', name: 'Kantin Utama Pesantren' };
+
+  // Filter Catalog Items assigned specifically to selected Canteen Unit
+  const currentCatalogItems = canteenItems.filter(item => item.canteenId === selectedCanteenId);
 
   const addToCart = (item: { id: string; name: string; price: number }) => {
     setCart((prev) => {
@@ -98,7 +86,7 @@ export default function KantinNfcPage() {
           pin,
           amount: finalAmount,
           canteenId: selectedCanteenId,
-          vendorName: currentCatalog.name,
+          vendorName: selectedCanteen.name,
           itemsDescription: itemsSummary,
           posCashierId: 'POS-KANTIN-1',
           tenantId: 'default',
@@ -126,227 +114,225 @@ export default function KantinNfcPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       <PageCard
         title="POS Kantin & Koperasi — Pembayaran RFID & Katalog Harga Per-Kantin"
-        description="Terminal Kasir Kantin dengan Pemilihan Katalog Harga Spesifik Kantin, Verifikasi Kode PIN, Freeze Wali Kelas, & Limit Belanja Harian Terpusat"
+        description="Terminal Kasir Kantin dengan Pemilihan Katalog Harga Spesifik Kantin (Disinkronkan dengan Manajemen Multi-Kantin), Verifikasi Kode PIN, Freeze Wali Kelas, & Limit Belanja Harian Terpusat"
       >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Canteen Selector & Catalog */}
+          {/* Canteen Selector & Dynamic Catalog Grid */}
           <div className="p-5 rounded-2xl bg-muted/30 border border-border/60 space-y-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5 text-muted-foreground">Pilih Unit Kantin Active</label>
+              <label className="block text-xs font-bold mb-1.5 text-stone-700 dark:text-stone-300">
+                Pilih Unit Kantin Active (Disinkronkan)
+              </label>
               <select
                 value={selectedCanteenId}
                 onChange={(e) => {
                   setSelectedCanteenId(e.target.value);
                   setCart([]);
                 }}
-                className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm font-semibold text-foreground"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-900 border-2 border-emerald-500/40 text-xs font-bold text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer"
               >
-                {Object.entries(canteenCatalogs).map(([id, c]) => (
-                  <option key={id} value={id}>
-                    {c.name}
+                {activeUnits.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code})
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="pt-2 border-t border-border/60">
-              <h4 className="font-semibold text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-emerald-600" /> Katalog Barang & Harga ({currentCatalog.name})
-              </h4>
+            <div className="pt-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                Katalog Barang & Harga ({selectedCanteen.name})
+              </span>
+              <p className="text-[10px] text-stone-400">Klik item untuk memasukkan ke keranjang belanja</p>
+            </div>
 
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                {currentCatalog.items.map((item) => (
-                  <button
+            {/* Dynamic Catalog Items Grid for Selected Canteen */}
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {currentCatalogItems.length === 0 ? (
+                <div className="p-6 text-center rounded-2xl bg-stone-100 dark:bg-stone-800 text-stone-500 text-xs">
+                  Belum ada barang di katalog unit ini.<br />
+                  <span className="text-[10px] text-stone-400">Tambahkan barang dari menu Manajemen Multi-Kantin.</span>
+                </div>
+              ) : (
+                currentCatalogItems.map((item) => (
+                  <div
                     key={item.id}
-                    type="button"
                     onClick={() => addToCart(item)}
-                    className="w-full p-2.5 rounded-xl bg-background border border-border/60 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-left flex items-center justify-between group"
+                    className="p-3 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-between hover:border-emerald-500/50 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 cursor-pointer transition-all active:scale-[0.98] shadow-sm"
                   >
                     <div>
-                      <div className="text-xs font-semibold text-foreground group-hover:text-emerald-700 dark:group-hover:text-emerald-400">
-                        {item.name}
-                      </div>
-                      <div className="text-[11px] font-bold text-emerald-600">
+                      <div className="font-bold text-xs text-stone-900 dark:text-white">{item.name}</div>
+                      <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         Rp {item.price.toLocaleString('id-ID')}
                       </div>
                     </div>
-                    <span className="p-1 rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                      <Plus className="w-3.5 h-3.5" />
-                    </span>
-                  </button>
-                ))}
-              </div>
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* POS Payment Form & Cart */}
-          <div className="p-6 rounded-2xl bg-muted/30 border border-border/60 space-y-4">
-            <h3 className="font-semibold text-foreground pb-2 border-b border-border/60 flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-emerald-600" /> Keranjang & Terminal Pembayaran
-            </h3>
+          {/* Cart & Checkout Terminal */}
+          <div className="p-5 rounded-2xl bg-muted/30 border border-border/60 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-xs flex items-center gap-2 text-stone-900 dark:text-white">
+                <ShoppingBag className="w-4 h-4 text-emerald-600" /> Keranjang & Terminal Pembayaran
+              </h3>
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCart([])}
+                  className="text-[10px] text-rose-600 font-bold hover:underline"
+                >
+                  Kosongkan
+                </button>
+              )}
+            </div>
 
-            {/* Cart Items */}
+            {/* Cart Items List */}
             {cart.length > 0 ? (
-              <div className="space-y-2 p-3 rounded-xl bg-background border border-border/60 text-xs">
-                {cart.map((i) => (
-                  <div key={i.id} className="flex justify-between items-center">
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {cart.map((item) => (
+                  <div key={item.id} className="p-2.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-between text-xs">
                     <div>
-                      <span className="font-semibold">{i.name}</span>
-                      <span className="text-muted-foreground ml-1">x{i.qty}</span>
+                      <div className="font-bold text-stone-900 dark:text-white">{item.name}</div>
+                      <div className="text-[10px] text-stone-400">
+                        Rp {item.price.toLocaleString('id-ID')} x {item.qty}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">Rp {(i.price * i.qty).toLocaleString('id-ID')}</span>
+                      <span className="font-extrabold text-emerald-600">
+                        Rp {(item.price * item.qty).toLocaleString('id-ID')}
+                      </span>
                       <button
-                        type="button"
-                        onClick={() => removeFromCart(i.id)}
-                        className="text-red-500 hover:text-red-700"
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-stone-400 hover:text-rose-600 p-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
                 ))}
-                <div className="pt-2 border-t border-border flex justify-between font-bold text-sm text-emerald-600">
-                  <span>Total Belanja:</span>
-                  <span>Rp {cartTotal.toLocaleString('id-ID')}</span>
-                </div>
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-medium mb-1 text-muted-foreground">Nominal Manual (Jika tanpa katalog)</label>
+                <label className="block text-xs font-bold text-stone-600 dark:text-stone-400 mb-1">
+                  Nominal Manual (Jika tanpa katalog)
+                </label>
                 <input
                   type="number"
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-background border border-emerald-500/40 text-emerald-600 font-bold text-base"
-                  placeholder="10000"
+                  placeholder="Masukkan nominal Rp..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-xs font-bold text-stone-900 dark:text-white"
                 />
               </div>
             )}
 
-            <form onSubmit={handlePayment} className="space-y-3 pt-2 border-t border-border/60">
-              <div className="grid grid-cols-2 gap-3">
+            {/* Payment Form */}
+            <form onSubmit={handlePayment} className="space-y-3 pt-2 border-t border-stone-200 dark:border-stone-800">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium mb-1 text-muted-foreground">Tap RFID Card UID</label>
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase">Tap RFID Card UID</label>
                   <input
                     type="text"
                     value={cardUid}
                     onChange={(e) => setCardUid(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-background border border-border text-xs font-mono"
-                    placeholder="RFID-1001"
-                    required
+                    className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-xs font-mono font-bold"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-xs font-medium mb-1 text-muted-foreground">PIN Santri</label>
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase">PIN Santri</label>
                   <input
                     type="password"
-                    maxLength={6}
+                    maxLength={4}
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-background border border-border text-xs font-mono text-center tracking-widest"
-                    placeholder="****"
-                    required
+                    className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-xs font-mono font-bold text-center"
                   />
                 </div>
               </div>
 
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  {errorMsg}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading || finalAmount <= 0}
-                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
               >
-                {loading ? (
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-5 h-5" />
-                    Bayar Rp {finalAmount.toLocaleString('id-ID')}
-                  </>
-                )}
+                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                <span>Bayar Rp {finalAmount.toLocaleString('id-ID')}</span>
               </button>
             </form>
           </div>
 
-          {/* POS Status & Receipt Display */}
-          <div className="p-6 rounded-2xl bg-muted/20 border border-border/60 flex flex-col justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">Struk POS ({currentCatalog.name})</h3>
+          {/* Struk POS Section */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-md flex flex-col justify-between">
+            <div className="space-y-3">
+              <h3 className="font-extrabold text-xs text-stone-900 dark:text-white pb-2 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between">
+                <span>Struk POS ({selectedCanteen.name})</span>
+                <Store className="w-4 h-4 text-emerald-600" />
+              </h3>
 
-              {errorMsg && (
-                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 space-y-2">
-                  <div className="flex items-center gap-2 font-bold text-sm">
-                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-                    Transaksi Ditolak!
+              {result ? (
+                <div className="space-y-3 animate-in fade-in duration-200">
+                  <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>Transaksi Berhasil!</span>
                   </div>
-                  <p className="text-xs leading-relaxed">{errorMsg}</p>
+
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between text-stone-500">
+                      <span>No. Struk:</span>
+                      <span className="font-mono font-bold text-stone-800 dark:text-stone-200">{result.receiptNo}</span>
+                    </div>
+                    <div className="flex justify-between text-stone-500">
+                      <span>Santri:</span>
+                      <span className="font-bold text-stone-800 dark:text-stone-200">{result.santriName}</span>
+                    </div>
+                    <div className="flex justify-between text-stone-500">
+                      <span>Kantin:</span>
+                      <span className="font-bold text-stone-800 dark:text-stone-200">{result.vendorName}</span>
+                    </div>
+                    <div className="flex justify-between text-stone-500">
+                      <span>Items:</span>
+                      <span className="font-medium text-stone-800 dark:text-stone-200 max-w-[180px] text-right truncate">{result.itemsDescription}</span>
+                    </div>
+                    <div className="pt-2 border-t border-dashed border-stone-300 dark:border-stone-700 flex justify-between font-extrabold text-sm">
+                      <span>Total Belanja:</span>
+                      <span className="text-emerald-600">Rp {result.amount?.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="flex justify-between text-stone-400 text-[11px]">
+                      <span>Sisa Saldo Wallet:</span>
+                      <span>Rp {result.newBalance?.toLocaleString('id-ID')}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleReset}
+                    className="w-full py-2.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-bold hover:bg-stone-200"
+                  >
+                    Transaksi Baru
+                  </button>
                 </div>
-              )}
-
-              {result && (
-                <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-200 space-y-4">
-                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
-                    <div className="flex items-center gap-2 font-bold text-sm text-emerald-700 dark:text-emerald-400">
-                      <CheckCircle2 className="w-5 h-5" />
-                      Pembayaran Berhasil
-                    </div>
-                    <span className="text-xs font-mono opacity-70">
-                      {new Date(result.timestamp).toLocaleTimeString('id-ID')}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-emerald-600/20 flex items-center justify-center font-bold text-emerald-700 dark:text-emerald-300 text-lg">
-                      <UserCheck className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm">{result.santriName}</h4>
-                      <p className="text-xs opacity-75">Kelas: {result.kelas} | {result.vendorName}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 pt-2 border-t border-emerald-500/20 text-xs">
-                    <div className="flex justify-between">
-                      <span className="opacity-75">Nominal Belanja:</span>
-                      <span className="font-bold">Rp {result.amountDeducted?.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-75">Sisa Saldo Uang Saku:</span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        Rp {result.remainingBalanceUangSaku?.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-75">Sisa Limit Harian Sentral:</span>
-                      <span className="font-bold text-amber-600 dark:text-amber-400">
-                        Rp {result.remainingDailyLimit?.toLocaleString('id-ID')} / hari
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!errorMsg && !result && (
-                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground space-y-2">
-                  <ShoppingBag className="w-12 h-12 opacity-30" />
-                  <p className="text-xs">Pilih menu dari katalog kantin aktif lalu tap kartu RFID santri untuk transaksi.</p>
+              ) : (
+                <div className="p-8 text-center text-stone-400 text-xs space-y-2">
+                  <ShoppingBag className="w-10 h-10 mx-auto text-stone-300 dark:text-stone-700" />
+                  <p>Pilih menu dari katalog kantin aktif lalu tap kartu RFID santri untuk transaksi.</p>
                 </div>
               )}
             </div>
-
-            {(result || errorMsg) && (
-              <button
-                type="button"
-                onClick={handleReset}
-                className="mt-6 w-full py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-medium text-xs transition-colors"
-              >
-                Transaksi Selanjutnya (Reset POS)
-              </button>
-            )}
           </div>
         </div>
       </PageCard>
