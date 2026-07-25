@@ -155,7 +155,7 @@ export function Sidebar() {
                   if (isCollapsed) {
                     return (
                       <Tooltip key={item.href}>
-                        <TooltipTrigger asChild>{link}</TooltipTrigger>
+                        <TooltipTrigger>{link}</TooltipTrigger>
                         <TooltipContent side="right">{item.title}</TooltipContent>
                       </Tooltip>
                     );
