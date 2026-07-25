@@ -525,7 +525,7 @@ export const navigationGroups: NavGroup[] = [
         ],
       },
       {
-        title: 'Manajemen User & Role',
+        title: 'User & Role',
         href: '/dashboard/pengaturan/manajemen-user-role',
         icon: 'UsersRound',
         roles: ['admin', 'kepala_kesiswaan', 'staff'],

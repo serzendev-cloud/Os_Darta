@@ -179,9 +179,21 @@ export function Sidebar() {
                     {group.items.map((item) => {
                       const itemHasChildren = Boolean(item.children && item.children.length > 0);
                       const isExpanded = expandedGroups[item.title] || false;
+                      
+                      const isPathActive = (targetHref: string) => {
+                        if (!pathname) return false;
+                        if (pathname === targetHref) return true;
+                        // Avoid matching /dashboard/pengaturan for subroutes like /dashboard/pengaturan/manajemen-user-role
+                        if (targetHref === '/dashboard/pengaturan') {
+                          return pathname === '/dashboard/pengaturan';
+                        }
+                        return pathname.startsWith(targetHref + '/');
+                      };
+
                       const isActiveItem = itemHasChildren
-                        ? item.children?.some((c) => pathname === c.href || pathname?.startsWith(c.href + '/'))
-                        : (pathname === item.href || pathname?.startsWith(item.href + '/'));
+                        ? item.children?.some((c) => isPathActive(c.href)) ?? false
+                        : isPathActive(item.href);
+
                       const ItemIcon = iconMap[item.icon] || LayoutDashboard;
 
                       if (itemHasChildren) {
@@ -195,14 +207,14 @@ export function Sidebar() {
                                 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13px] font-extrabold',
                                 'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
                                 'border',
-                                isActiveItem || isExpanded
+                                isActiveItem
                                   ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
                                   : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md'
                               )}
                             >
                               <div className={cn(
                                 'p-1.5 rounded-xl transition-all duration-300 shrink-0',
-                                isActiveItem || isExpanded
+                                isActiveItem
                                   ? 'bg-white/20 text-white shadow-inner'
                                   : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
                               )}>
@@ -212,7 +224,7 @@ export function Sidebar() {
                               {!isCollapsed && (
                                 <ChevronDown className={cn(
                                   'w-4 h-4 shrink-0 transition-transform duration-300',
-                                  isActiveItem || isExpanded ? 'text-white' : 'text-orange-500/70',
+                                  isActiveItem ? 'text-white' : 'text-orange-500/70',
                                   isExpanded && 'rotate-180'
                                 )} />
                               )}
@@ -227,7 +239,7 @@ export function Sidebar() {
                                 <div className="space-y-1 pl-1 border-l-2 border-primary/20">
                                   {item.children?.map((child) => {
                                     const ChildIcon = iconMap[child.icon] || LayoutDashboard;
-                                    const isChildActive = pathname === child.href || pathname?.startsWith(child.href + '/');
+                                    const isChildActive = isPathActive(child.href);
                                     const childClasses = cn(
                                       'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] font-medium',
                                       'transition-all duration-200 ease-out border',
