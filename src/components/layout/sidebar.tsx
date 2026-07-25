@@ -33,12 +33,81 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Shield, Sliders, CreditCard, Key
 };
 
+import { 
+  CurriculumProgram, 
+  getStoredCurriculums, 
+  CURRICULUM_STORE_CHANGE_EVENT 
+} from '@/lib/store/curriculum-store';
+import { Permission } from '@/config/permissions';
+
 export function Sidebar() {
   const pathname = usePathname();
   const { isCollapsed, isMobileOpen, toggle, setMobileOpen } = useSidebarStore();
   const { user } = useAuthStore();
   const flags = Object.fromEntries(featureFlags.map((f) => [f.key, f.enabled]));
-  const menuGroups = getGroupedMenuForRole(user?.role ?? 'admin', flags);
+
+  // Dynamic Curriculum Programs State
+  const [curriculumPrograms, setCurriculumPrograms] = useState<CurriculumProgram[]>([]);
+
+  useEffect(() => {
+    const syncPrograms = () => {
+      setCurriculumPrograms(getStoredCurriculums().filter((p) => p.status === 'active'));
+    };
+    syncPrograms();
+    window.addEventListener(CURRICULUM_STORE_CHANGE_EVENT, syncPrograms);
+    return () => window.removeEventListener(CURRICULUM_STORE_CHANGE_EVENT, syncPrograms);
+  }, []);
+
+  const rawMenuGroups = getGroupedMenuForRole(user?.role ?? 'admin', flags);
+
+  // Dynamically replace items in 'Program Kurikulum' section based on active curriculums store
+  const menuGroups = rawMenuGroups.map((group) => {
+    if (group.title.toLowerCase() === 'program kurikulum') {
+      const dynamicItems = curriculumPrograms.map((prog) => ({
+        title: prog.name,
+        href: `/dashboard/kurikulum/program/${prog.id}`,
+        icon: 'GraduationCap',
+        roles: ['admin', 'kepala_kesiswaan', 'staff', 'guru'] as const,
+        requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+        children: [
+          {
+            title: 'Struktur Akademik',
+            href: `/dashboard/struktur-akademik?prog=${prog.id}`,
+            icon: 'GraduationCap',
+            roles: ['admin', 'kepala_kesiswaan'] as const,
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+          },
+          {
+            title: 'Mata Pelajaran',
+            href: `/dashboard/mapel?prog=${prog.id}`,
+            icon: 'BookOpen',
+            roles: ['admin', 'kepala_kesiswaan', 'guru'] as const,
+            requiredPermission: Permission.VIEW_MAPEL,
+          },
+          {
+            title: 'Distribusi Guru',
+            href: `/dashboard/distribusi-guru?prog=${prog.id}`,
+            icon: 'Users',
+            roles: ['admin', 'kepala_kesiswaan'] as const,
+            requiredPermission: Permission.MANAGE_MAPEL,
+          },
+          {
+            title: 'Evaluasi & Raport',
+            href: `/dashboard/raport?prog=${prog.id}`,
+            icon: 'FileSpreadsheet',
+            roles: ['admin', 'kepala_kesiswaan', 'guru'] as const,
+            requiredPermission: Permission.VIEW_RAPORT,
+          },
+        ],
+      }));
+
+      return {
+        ...group,
+        items: dynamicItems.length > 0 ? (dynamicItems as unknown as typeof group.items) : group.items,
+      };
+    }
+    return group;
+  });
 
   // Accordion: track which groups are expanded
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});

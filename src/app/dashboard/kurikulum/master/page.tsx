@@ -9,62 +9,22 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-export interface CurriculumProgram {
-  id: string;
-  code: string;
-  name: string;
-  typeCategory: 'formal' | 'pesantren' | 'quran' | 'custom';
-  description: string;
-  status: 'active' | 'draft';
-  totalJenjang: number;
-  totalMapel: number;
-  totalGuru: number;
-  iconBg: string;
-}
-
-const defaultCurriculumsList: CurriculumProgram[] = [
-  {
-    id: 'prog-formal',
-    code: 'FORMAL-DEPAG',
-    name: 'Akademik Formal (Kemenag / Diknas)',
-    typeCategory: 'formal',
-    description: 'Kurikulum pendidikan formal berijazah negara (MTs, MA, SMA, SMP)',
-    status: 'active',
-    totalJenjang: 3,
-    totalMapel: 16,
-    totalGuru: 12,
-    iconBg: 'bg-blue-600',
-  },
-  {
-    id: 'prog-madin',
-    code: 'PESANTREN-MADIN',
-    name: 'Akademik Pesantren (Madrasah Diniyah)',
-    typeCategory: 'pesantren',
-    description: 'Kurikulum diniyah pesantren (Jenjang Tamhidi, Ibtida’i, Tsanawiyah, Aliyah)',
-    status: 'active',
-    totalJenjang: 4,
-    totalMapel: 24,
-    totalGuru: 18,
-    iconBg: 'bg-amber-600',
-  },
-  {
-    id: 'prog-madqur',
-    code: 'TAHFIDZ-MADQUR',
-    name: 'Akademik Qur’an (Madrasatul Qur’an)',
-    typeCategory: 'quran',
-    description: 'Program khusus tahsin, ziyadah hafalan 30 juz, murojaah, & matan tajwid',
-    status: 'active',
-    totalJenjang: 2,
-    totalMapel: 8,
-    totalGuru: 8,
-    iconBg: 'bg-emerald-600',
-  },
-];
+import { useEffect } from 'react';
+import { 
+  CurriculumProgram, 
+  getStoredCurriculums, 
+  saveStoredCurriculums 
+} from '@/lib/store/curriculum-store';
 
 export default function MasterCurriculumSettingsPage() {
-  const [curriculums, setCurriculums] = useState<CurriculumProgram[]>(defaultCurriculumsList);
+  const [curriculums, setCurriculums] = useState<CurriculumProgram[]>([]);
   const [toast, setToast] = useState('');
   const [search, setSearch] = useState('');
+
+  // Synchronize state from store on mount
+  useEffect(() => {
+    setCurriculums(getStoredCurriculums());
+  }, []);
 
   // Modal State for New Curriculum Program
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -98,7 +58,10 @@ export default function MasterCurriculumSettingsPage() {
       iconBg: 'bg-indigo-600',
     };
 
-    setCurriculums(prev => [...prev, newProgram]);
+    const updated = [...curriculums, newProgram];
+    setCurriculums(updated);
+    saveStoredCurriculums(updated);
+
     showNotification(`Program Kurikulum Baru "${newProgram.name}" BERHASIL DIBUAT! Menu Kontainer Baru telah ditambahkan di Sidebar.`);
 
     // Reset Form
@@ -110,8 +73,10 @@ export default function MasterCurriculumSettingsPage() {
 
   const handleDeleteProgram = (id: string, name: string) => {
     if (confirm(`Apakah Anda yakin ingin membuang/menghapus Program Kurikulum "${name}" dari sistem?`)) {
-      setCurriculums(prev => prev.filter(c => c.id !== id));
-      showNotification(`Program Kurikulum "${name}" telah berhasil dihapus dari sistem.`);
+      const updated = curriculums.filter(c => c.id !== id);
+      setCurriculums(updated);
+      saveStoredCurriculums(updated);
+      showNotification(`Program Kurikulum "${name}" telah berhasil dihapus dari sistem & Sidebar.`);
     }
   };
 
@@ -119,7 +84,10 @@ export default function MasterCurriculumSettingsPage() {
     e.preventDefault();
     if (!configModalProgram) return;
 
-    setCurriculums(prev => prev.map(c => c.id === configModalProgram.id ? configModalProgram : c));
+    const updated = curriculums.map(c => c.id === configModalProgram.id ? configModalProgram : c);
+    setCurriculums(updated);
+    saveStoredCurriculums(updated);
+
     showNotification(`Konfigurasi Program Kurikulum "${configModalProgram.name}" BERHASIL DISIMPAN & DIPERBARUI!`);
     setConfigModalProgram(null);
   };
