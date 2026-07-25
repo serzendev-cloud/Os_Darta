@@ -76,7 +76,7 @@ export function MasterJenjangTab({ data, onCreate, onUpdate, onDelete }: Props) 
             onChange={(e) => setFilterInstansi(e.target.value as typeof filterInstansi)}
             className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <option value="all">Semua Instansi</option>
+            <option value="all">Semua Madrasah</option>
             {INSTANSI_ORDER.map((i) => (
               <option key={i} value={i}>{INSTANSI_LABEL[i]}</option>
             ))}
@@ -107,7 +107,7 @@ export function MasterJenjangTab({ data, onCreate, onUpdate, onDelete }: Props) 
           <thead>
             <tr className="bg-muted/50 text-muted-foreground">
               <th className="text-left px-4 py-3 font-medium">Nama Jenjang</th>
-              <th className="text-left px-4 py-3 font-medium">Instansi</th>
+              <th className="text-left px-4 py-3 font-medium">Madrasah</th>
               <th className="text-left px-4 py-3 font-medium">Progression Indexes</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
               <th className="text-right px-4 py-3 font-medium">Aksi</th>
@@ -286,7 +286,7 @@ function JenjangFormModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label htmlFor="jj-instansi" className="text-sm font-medium">Instansi</label>
+                <label htmlFor="jj-instansi" className="text-sm font-medium">Program Madrasah</label>
                 <select
                   id="jj-instansi"
                   name="instansi"

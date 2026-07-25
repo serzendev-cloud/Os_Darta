@@ -97,7 +97,7 @@ export function MasterTingkatTab({ data, jenjangList, onCreate, onUpdate, onDele
             }}
             className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <option value="all">Semua Instansi</option>
+            <option value="all">Semua Madrasah</option>
             {INSTANSI_ORDER.map((i) => (
               <option key={i} value={i}>{INSTANSI_LABEL[i]}</option>
             ))}
@@ -139,7 +139,7 @@ export function MasterTingkatTab({ data, jenjangList, onCreate, onUpdate, onDele
             <tr className="bg-muted/50 text-muted-foreground">
               <th className="text-center px-4 py-3 font-medium w-20">Prog. Index</th>
               <th className="text-left px-4 py-3 font-medium">Label Tingkat</th>
-              <th className="text-left px-4 py-3 font-medium">Instansi</th>
+              <th className="text-left px-4 py-3 font-medium">Madrasah</th>
               <th className="text-left px-4 py-3 font-medium">Jenjang</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
               <th className="text-right px-4 py-3 font-medium">Aksi</th>

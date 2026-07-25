@@ -329,9 +329,9 @@ export type Instansi = 'madin' | 'madqur' | 'depag';
 export const INSTANSI_ORDER: Instansi[] = ['madin', 'madqur', 'depag'];
 
 export const INSTANSI_LABEL: Record<Instansi, string> = {
-  madin: 'Madin',
-  madqur: 'Madqur',
-  depag: 'Depag',
+  madin: 'Madrasah Diniyah (Madin)',
+  madqur: 'Madrasatul Qur’an (Madqur)',
+  depag: 'Madrasah Formal (Depag)',
 };
 
 // ── Master Struktur Akademik ──────────────────────────────────────────────
