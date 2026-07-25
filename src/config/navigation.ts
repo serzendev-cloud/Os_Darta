@@ -724,6 +724,7 @@ export function getGroupedMenuForRole(
   flags?: Record<string, boolean>,
 ): NavGroup[] {
   const flagCheck = flags ?? {};
+  const isDevOrSuperAdmin = role === 'developer' || role === 'super_admin';
 
   const processItem = (item: NavItem): NavItem | null => {
     if (item.visualState === 'hidden') return null;
@@ -760,6 +761,15 @@ export function getGroupedMenuForRole(
 
   return navigationGroups
     .map((group) => {
+      // Developer / Super Admin ONLY get the SaaS Platform Console group!
+      if (isDevOrSuperAdmin && group.title !== 'SaaS Platform Console') {
+        return null;
+      }
+      // Tenant roles (admin, musyrif, santri, etc.) NEVER get the SaaS Platform Console group!
+      if (!isDevOrSuperAdmin && group.title === 'SaaS Platform Console') {
+        return null;
+      }
+
       const filteredItems = group.items
         .map((item) => processItem(item))
         .filter((i): i is NavItem => i !== null);
