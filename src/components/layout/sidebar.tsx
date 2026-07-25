@@ -169,9 +169,11 @@ export function Sidebar() {
                   <div key={group.title} className="space-y-1">
                     {/* Section Header Title with Horizontal Line */}
                     {!isCollapsed && group.title !== 'Beranda' && group.title !== 'SaaS Platform Console' && (
-                      <div className="flex items-center gap-2 px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-                        <span className="shrink-0">{group.title}</span>
-                        <div className="flex-1 h-[1px] bg-stone-300/70 dark:bg-stone-700/70" />
+                      <div className="flex items-center gap-2 px-3 pt-3.5 pb-1 text-[10px] font-black uppercase tracking-wider">
+                        <span className="shrink-0 text-white bg-stone-900/85 dark:bg-stone-950 px-2 py-0.5 rounded-md shadow-sm border border-white/20 tracking-widest">
+                          {group.title}
+                        </span>
+                        <div className="flex-1 h-[1.5px] bg-white/70 dark:bg-white/50 shadow-sm" />
                       </div>
                     )}
 
