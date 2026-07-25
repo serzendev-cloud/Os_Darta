@@ -345,7 +345,7 @@ export function Sidebar() {
                   )}
                 </div>
               );
-            })}
+            }))}
           </nav>
         </div>
 
