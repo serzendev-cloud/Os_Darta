@@ -249,19 +249,28 @@ export function Sidebar() {
                         );
                       }
 
-                      // Flat single menu link (e.g. Manajemen User & Role, Dashboard)
-                      const linkClasses = cn(
-                        'group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all duration-200 border',
+                      // Flat single menu link (e.g. Manajemen User & Role, Dashboard) - UNIFIED METALLIC ORANGE STYLING
+                      const flatLinkClasses = cn(
+                        'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13px] font-extrabold',
+                        'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
+                        'border',
                         isActiveItem
-                          ? 'bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                          : 'text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 border-transparent',
+                          ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
+                          : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md',
                         isCollapsed && 'justify-center px-2',
                       );
 
                       const link = (
-                        <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={linkClasses}>
-                          <ItemIcon className={cn('shrink-0 w-4 h-4 transition-colors', isActiveItem ? 'text-white' : 'text-stone-500 group-hover:text-foreground')} />
-                          {!isCollapsed && <span className="flex-1 truncate">{item.title}</span>}
+                        <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={flatLinkClasses}>
+                          <div className={cn(
+                            'p-1.5 rounded-xl transition-all duration-300 shrink-0',
+                            isActiveItem
+                              ? 'bg-white/20 text-white shadow-inner'
+                              : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                          )}>
+                            <ItemIcon className="w-4 h-4" />
+                          </div>
+                          {!isCollapsed && <span className="flex-1 text-left truncate">{item.title}</span>}
                         </Link>
                       );
 
