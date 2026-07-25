@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { PageCard } from '@/components/shared/page-header';
 import { 
   GraduationCap, BookMarked, BookOpen, Trophy, Plus, Settings, 
-  Copy, Edit3, Trash2, CheckCircle2, ChevronRight, Layers, 
-  Library, UsersRound, Calendar, FileSpreadsheet, Sparkles, Filter, Search
+  Trash2, CheckCircle2, ChevronRight, Layers, 
+  Library, UsersRound, Calendar, FileSpreadsheet, Sparkles, Filter, Search, Edit3
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -20,7 +20,6 @@ export interface CurriculumProgram {
   totalMapel: number;
   totalGuru: number;
   iconBg: string;
-  isTemplateDefault?: boolean;
 }
 
 const defaultCurriculumsList: CurriculumProgram[] = [
@@ -35,7 +34,6 @@ const defaultCurriculumsList: CurriculumProgram[] = [
     totalMapel: 16,
     totalGuru: 12,
     iconBg: 'bg-blue-600',
-    isTemplateDefault: true,
   },
   {
     id: 'prog-madin',
@@ -48,7 +46,6 @@ const defaultCurriculumsList: CurriculumProgram[] = [
     totalMapel: 24,
     totalGuru: 18,
     iconBg: 'bg-amber-600',
-    isTemplateDefault: true,
   },
   {
     id: 'prog-madqur',
@@ -61,7 +58,6 @@ const defaultCurriculumsList: CurriculumProgram[] = [
     totalMapel: 8,
     totalGuru: 8,
     iconBg: 'bg-emerald-600',
-    isTemplateDefault: true,
   },
 ];
 
@@ -75,37 +71,19 @@ export default function MasterCurriculumSettingsPage() {
   const [newProgName, setNewProgName] = useState('');
   const [newProgCode, setNewProgCode] = useState('');
   const [newProgCategory, setNewProgCategory] = useState<'formal' | 'pesantren' | 'quran' | 'custom'>('custom');
-  const [cloneTemplateId, setCloneTemplateId] = useState('prog-madin');
   const [newProgDesc, setNewProgDesc] = useState('');
+
+  // Modal State for Active Configuration Modal
+  const [configModalProgram, setConfigModalProgram] = useState<CurriculumProgram | null>(null);
 
   const showNotification = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 4000);
   };
 
-  const handleDuplicateProgram = (program: CurriculumProgram) => {
-    const duplicated: CurriculumProgram = {
-      id: `prog-custom-${Date.now()}`,
-      code: `${program.code}-COPY`,
-      name: `${program.name} (Salinan)`,
-      typeCategory: 'custom',
-      description: `Salinan dari template ${program.name}. Siap dikonfigurasi mapel & jenjangnya secara terpisah.`,
-      status: 'active',
-      totalJenjang: program.totalJenjang,
-      totalMapel: program.totalMapel,
-      totalGuru: program.totalGuru,
-      iconBg: 'bg-purple-600',
-    };
-
-    setCurriculums(prev => [...prev, duplicated]);
-    showNotification(`Program Kurikulum Baru "${duplicated.name}" BERHASIL DIDUPLIKASI & DITERBITKAN KE MENU SIDEBAR!`);
-  };
-
   const handleCreateNewProgram = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProgName || !newProgCode) return;
-
-    const sourceTemplate = curriculums.find(c => c.id === cloneTemplateId);
 
     const newProgram: CurriculumProgram = {
       id: `prog-custom-${Date.now()}`,
@@ -114,9 +92,9 @@ export default function MasterCurriculumSettingsPage() {
       typeCategory: newProgCategory,
       description: newProgDesc || `Program Kurikulum Khusus ${newProgName}`,
       status: 'active',
-      totalJenjang: sourceTemplate ? sourceTemplate.totalJenjang : 1,
-      totalMapel: sourceTemplate ? sourceTemplate.totalMapel : 5,
-      totalGuru: sourceTemplate ? sourceTemplate.totalGuru : 3,
+      totalJenjang: 2,
+      totalMapel: 10,
+      totalGuru: 5,
       iconBg: 'bg-indigo-600',
     };
 
@@ -131,10 +109,19 @@ export default function MasterCurriculumSettingsPage() {
   };
 
   const handleDeleteProgram = (id: string, name: string) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus Program Kurikulum "${name}"?`)) {
+    if (confirm(`Apakah Anda yakin ingin membuang/menghapus Program Kurikulum "${name}" dari sistem?`)) {
       setCurriculums(prev => prev.filter(c => c.id !== id));
-      showNotification(`Program Kurikulum "${name}" telah dihapus.`);
+      showNotification(`Program Kurikulum "${name}" telah berhasil dihapus dari sistem.`);
     }
+  };
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!configModalProgram) return;
+
+    setCurriculums(prev => prev.map(c => c.id === configModalProgram.id ? configModalProgram : c));
+    showNotification(`Konfigurasi Program Kurikulum "${configModalProgram.name}" BERHASIL DISIMPAN & DIPERBARUI!`);
+    setConfigModalProgram(null);
   };
 
   const filteredCurriculums = curriculums.filter(c => 
@@ -175,7 +162,7 @@ export default function MasterCurriculumSettingsPage() {
       {/* Main Section */}
       <PageCard
         title="Pustaka Program Kurikulum Active (Curriculum Program Library)"
-        description="Kelola program kurikulum yang berjalan di pesantren. Klik 'Duplikasi Template' untuk membuat program baru secara instan"
+        description="Kelola program kurikulum yang berjalan di pesantren. Klik '+ Buat Program Kurikulum Baru' atau 'Konfigurasi Program' untuk mengubah pengaturan."
       >
         {/* Controls */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 pb-4 border-b border-stone-200 dark:border-stone-800">
@@ -224,8 +211,12 @@ export default function MasterCurriculumSettingsPage() {
                     </div>
                   </div>
 
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
-                    🟢 AKTIF
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                    prog.status === 'active' 
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300' 
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
+                  }`}>
+                    {prog.status === 'active' ? '🟢 AKTIF' : '🟡 DRAFT'}
                   </span>
                 </div>
 
@@ -256,42 +247,159 @@ export default function MasterCurriculumSettingsPage() {
                 </div>
               </div>
 
-              {/* Action Toolbar */}
+              {/* Action Toolbar: Active Konfigurasi Button & Trash Delete Button */}
               <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => handleDuplicateProgram(prog)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 text-[11px] font-bold border border-amber-300/60 transition-all active:scale-95"
+                  onClick={() => setConfigModalProgram(prog)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95"
                 >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Duplikasi</span>
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Konfigurasi Program</span>
                 </button>
 
-                <div className="flex items-center gap-1.5">
-                  <Link
-                    href={`/dashboard/struktur-akademik?prog=${prog.id}`}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm transition-all active:scale-95"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>Konfigurasi Mapel</span>
-                  </Link>
-
-                  {!prog.isTemplateDefault && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteProgram(prog.id, prog.name)}
-                      className="p-1.5 rounded-xl bg-stone-100 text-stone-400 hover:text-rose-600 dark:bg-stone-800 transition-colors"
-                      title="Hapus Program"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteProgram(prog.id, prog.name)}
+                  className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white font-bold text-xs border border-rose-200 dark:border-rose-800 transition-all active:scale-95"
+                  title="Hapus / Buang Program Kurikulum Ini"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus</span>
+                </button>
               </div>
             </div>
           ))}
         </div>
       </PageCard>
+
+      {/* INTERACTIVE CONFIGURATION MODAL (TOMBOL KONFIGURASI AKTIF) */}
+      {configModalProgram && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 dark:border-stone-800 space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800">
+              <div className="flex items-center gap-2 text-emerald-600">
+                <Settings className="w-5 h-5 animate-spin" />
+                <h3 className="text-base font-extrabold text-stone-900 dark:text-white">
+                  Konfigurasi Program: {configModalProgram.name}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setConfigModalProgram(null)} 
+                className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 font-bold text-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveConfig} className="space-y-4">
+              {/* Program Name */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
+                  Nama Program Kurikulum:
+                </label>
+                <input
+                  type="text"
+                  value={configModalProgram.name}
+                  onChange={(e) => setConfigModalProgram({ ...configModalProgram, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-bold text-stone-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              {/* Status & Code */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
+                    Kode Unique ID:
+                  </label>
+                  <input
+                    type="text"
+                    value={configModalProgram.code}
+                    onChange={(e) => setConfigModalProgram({ ...configModalProgram, code: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-mono font-bold text-stone-900 dark:text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
+                    Status Operasional:
+                  </label>
+                  <select
+                    value={configModalProgram.status}
+                    onChange={(e) => setConfigModalProgram({ ...configModalProgram, status: e.target.value as 'active' | 'draft' })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-bold text-stone-900 dark:text-white"
+                  >
+                    <option value="active">🟢 Aktif (Terbit Di Sidebar)</option>
+                    <option value="draft">🟡 Draft (Sembunyikan)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Metrics Configuration */}
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-stone-100/70 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700">
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">Total Jenjang:</label>
+                  <input
+                    type="number"
+                    value={configModalProgram.totalJenjang}
+                    onChange={(e) => setConfigModalProgram({ ...configModalProgram, totalJenjang: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-stone-900 border text-xs font-bold text-center"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">Total Mapel:</label>
+                  <input
+                    type="number"
+                    value={configModalProgram.totalMapel}
+                    onChange={(e) => setConfigModalProgram({ ...configModalProgram, totalMapel: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-stone-900 border text-xs font-bold text-center"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">Total Guru:</label>
+                  <input
+                    type="number"
+                    value={configModalProgram.totalGuru}
+                    onChange={(e) => setConfigModalProgram({ ...configModalProgram, totalGuru: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-stone-900 border text-xs font-bold text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
+                  Deskripsi Program:
+                </label>
+                <textarea
+                  rows={2}
+                  value={configModalProgram.description}
+                  onChange={(e) => setConfigModalProgram({ ...configModalProgram, description: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-medium text-stone-900 dark:text-white"
+                />
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200 dark:border-stone-800">
+                <button
+                  type="button"
+                  onClick={() => setConfigModalProgram(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95"
+                >
+                  💾 Simpan Konfigurasi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* CREATE NEW PROGRAM MODAL */}
       {isAddModalOpen && (
@@ -341,22 +449,6 @@ export default function MasterCurriculumSettingsPage() {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-mono font-bold text-stone-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                   required
                 />
-              </div>
-
-              {/* Clone Template Source */}
-              <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Salin Struktur Dari Template Kurikulum:
-                </label>
-                <select
-                  value={cloneTemplateId}
-                  onChange={(e) => setCloneTemplateId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-bold text-stone-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                >
-                  <option value="prog-madin">📖 Template Akademik Pesantren (Madin)</option>
-                  <option value="prog-formal">🎓 Template Akademik Formal (Kemenag)</option>
-                  <option value="prog-madqur">🏆 Template Akademik Qur’an (Madqur)</option>
-                </select>
               </div>
 
               {/* Description */}
