@@ -171,6 +171,8 @@ export default function MasterKelasPage() {
         onClose={() => setIsAddModalOpen(false)}
         activeInstansi={activeInstansi}
         jenjangOptions={instansiJenjang}
+        jenjangList={jenjangList}
+        tingkatList={tingkatList}
         newClassData={newClassData}
         setNewClassData={setNewClassData}
         onSubmit={handleAddClass}
@@ -189,6 +191,8 @@ export default function MasterKelasPage() {
         kelas={selectedKelas}
         activeInstansi={activeInstansi}
         jenjangOptions={instansiJenjang}
+        jenjangList={jenjangList}
+        tingkatList={tingkatList}
         onClose={() => { setIsEditModalOpen(false); setSelectedKelas(null); }}
         onSave={handleSaveEdit}
       />

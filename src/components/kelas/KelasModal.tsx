@@ -63,16 +63,30 @@ function Field({ label, htmlFor, required, fullWidth, className, children }: Fie
 
 // ── Edit Kelas Modal ──────────────────────────────────────────────────────────
 
+import type { MasterJenjang, MasterTingkat } from '@/types';
+import { useMemo } from 'react';
+
 interface EditKelasModalProps {
   open: boolean;
   kelas: Kelas | null;
   activeInstansi: Instansi;
   jenjangOptions: string[];
+  jenjangList?: MasterJenjang[];
+  tingkatList?: MasterTingkat[];
   onClose: () => void;
   onSave: (updated: Kelas) => void;
 }
 
-export function EditKelasModal({ open, kelas, activeInstansi, jenjangOptions, onClose, onSave }: EditKelasModalProps) {
+export function EditKelasModal({
+  open,
+  kelas,
+  activeInstansi,
+  jenjangOptions,
+  jenjangList = [],
+  tingkatList = [],
+  onClose,
+  onSave,
+}: EditKelasModalProps) {
   const [form, setForm] = useState<Kelas | null>(null);
 
   useEffect(() => {
@@ -92,6 +106,29 @@ export function EditKelasModal({ open, kelas, activeInstansi, jenjangOptions, on
     e.preventDefault();
     if (form) onSave(form);
   };
+
+  // Resolve selected MasterJenjang object
+  const selectedJenjangObj = useMemo(() => {
+    if (!form?.jenjang) return null;
+    return jenjangList.find((j) => j.namaJenjang === form.jenjang);
+  }, [jenjangList, form?.jenjang]);
+
+  // Filter available MasterTingkat list specifically for selected Jenjang
+  const availableTingkatOptions = useMemo(() => {
+    if (!form?.jenjang) return [];
+    if (!tingkatList || tingkatList.length === 0) return [];
+
+    return tingkatList
+      .filter((t) => {
+        if (t.status === 'inactive') return false;
+        if (selectedJenjangObj) {
+          if (t.jenjangId === selectedJenjangObj.id) return true;
+          if (selectedJenjangObj.progressionIndexes?.includes(t.progressionIndex)) return true;
+        }
+        return false;
+      })
+      .sort((a, b) => a.progressionIndex - b.progressionIndex);
+  }, [form?.jenjang, selectedJenjangObj, tingkatList]);
 
   if (!form) return null;
 
@@ -142,17 +179,23 @@ export function EditKelasModal({ open, kelas, activeInstansi, jenjangOptions, on
           </Field>
 
           <Field label="Tingkat" htmlFor="kelas-edit-tingkat" required>
-            <input
+            <select
               id="kelas-edit-tingkat"
-              type="number"
-              min={1}
-              max={99}
               className={inputCls}
               value={form.tingkat}
               onChange={e => handleChange('tingkat', Number(e.target.value))}
-              placeholder="1"
               required
-            />
+            >
+              {availableTingkatOptions.length === 0 ? (
+                <option value={form.tingkat}>Progression Index {form.tingkat}</option>
+              ) : (
+                availableTingkatOptions.map((t) => (
+                  <option key={t.id || t.progressionIndex} value={t.progressionIndex}>
+                    {t.tingkatLabel}
+                  </option>
+                ))
+              )}
+            </select>
           </Field>
 
           <Field label="Wali Kelas" htmlFor="kelas-edit-wali" fullWidth>

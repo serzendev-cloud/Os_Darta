@@ -1,7 +1,8 @@
+import { useMemo, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { X, School } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Instansi } from '@/types';
+import type { Instansi, MasterJenjang, MasterTingkat } from '@/types';
 import { INSTANSI_LABEL } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,8 @@ interface AddKelasModalProps {
   onClose: () => void;
   activeInstansi: Instansi;
   jenjangOptions: string[];
+  jenjangList?: MasterJenjang[];
+  tingkatList?: MasterTingkat[];
   newClassData: NewClassData;
   setNewClassData: (data: NewClassData) => void;
   onSubmit: (e: FormEvent) => void;
@@ -45,10 +48,57 @@ function Field({ label, htmlFor, required, children }: {
   );
 }
 
-export function AddKelasModal({ isOpen, onClose, activeInstansi, jenjangOptions, newClassData, setNewClassData, onSubmit }: AddKelasModalProps) {
+export function AddKelasModal({
+  isOpen,
+  onClose,
+  activeInstansi,
+  jenjangOptions,
+  jenjangList = [],
+  tingkatList = [],
+  newClassData,
+  setNewClassData,
+  onSubmit
+}: AddKelasModalProps) {
   if (!isOpen) return null;
 
   const tabLabel = INSTANSI_LABEL[activeInstansi];
+
+  // Resolve selected MasterJenjang object
+  const selectedJenjangObj = useMemo(() => {
+    return jenjangList.find((j) => j.namaJenjang === newClassData.jenjang);
+  }, [jenjangList, newClassData.jenjang]);
+
+  // Filter available MasterTingkat list specifically for selected Jenjang
+  const availableTingkatOptions = useMemo(() => {
+    if (!newClassData.jenjang) return [];
+    if (!tingkatList || tingkatList.length === 0) return [];
+
+    return tingkatList
+      .filter((t) => {
+        if (t.status === 'inactive') return false;
+        if (selectedJenjangObj) {
+          if (t.jenjangId === selectedJenjangObj.id) return true;
+          if (selectedJenjangObj.progressionIndexes?.includes(t.progressionIndex)) return true;
+        }
+        return false;
+      })
+      .sort((a, b) => a.progressionIndex - b.progressionIndex);
+  }, [newClassData.jenjang, selectedJenjangObj, tingkatList]);
+
+  // Auto pre-select first valid Tingkat when Jenjang changes
+  useEffect(() => {
+    if (availableTingkatOptions.length > 0) {
+      const isCurrentValid = availableTingkatOptions.some(
+        (t) => String(t.progressionIndex) === String(newClassData.tingkat)
+      );
+      if (!isCurrentValid) {
+        setNewClassData({
+          ...newClassData,
+          tingkat: String(availableTingkatOptions[0].progressionIndex),
+        });
+      }
+    }
+  }, [availableTingkatOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -97,7 +147,7 @@ export function AddKelasModal({ isOpen, onClose, activeInstansi, jenjangOptions,
               placeholder="Contoh: 5A, Halaqah Ali, Tamhidi B"
               className={inputCls}
               value={newClassData.name}
-              onChange={e => setNewClassData({ ...newClassData, name: e.target.value })}
+              onChange={(e) => setNewClassData({ ...newClassData, name: e.target.value })}
               autoFocus
             />
           </Field>
@@ -109,27 +159,39 @@ export function AddKelasModal({ isOpen, onClose, activeInstansi, jenjangOptions,
                 required
                 className={inputCls}
                 value={newClassData.jenjang}
-                onChange={e => setNewClassData({ ...newClassData, jenjang: e.target.value })}
+                onChange={(e) => setNewClassData({ ...newClassData, jenjang: e.target.value })}
               >
                 <option value="" disabled>Pilih Jenjang</option>
-                {jenjangOptions.map(j => (
+                {jenjangOptions.map((j) => (
                   <option key={j} value={j}>{j}</option>
                 ))}
               </select>
             </Field>
 
+            {/* Dynamic Filtered Tingkat Select Dropdown displaying Tingkat Label */}
             <Field label="Tingkat" htmlFor="kelas-tingkat" required>
-              <input
+              <select
                 id="kelas-tingkat"
                 required
-                type="number"
-                min="1"
-                max="99"
-                placeholder="1"
                 className={inputCls}
                 value={newClassData.tingkat}
-                onChange={e => setNewClassData({ ...newClassData, tingkat: e.target.value })}
-              />
+                onChange={(e) => setNewClassData({ ...newClassData, tingkat: e.target.value })}
+              >
+                {!newClassData.jenjang ? (
+                  <option value="" disabled>Pilih Jenjang Dahulu</option>
+                ) : availableTingkatOptions.length === 0 ? (
+                  <option value="" disabled>Tidak Ada Tingkat</option>
+                ) : (
+                  <>
+                    <option value="" disabled>Pilih Tingkat</option>
+                    {availableTingkatOptions.map((t) => (
+                      <option key={t.id || t.progressionIndex} value={t.progressionIndex}>
+                        {t.tingkatLabel}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
             </Field>
           </div>
 
@@ -140,7 +202,7 @@ export function AddKelasModal({ isOpen, onClose, activeInstansi, jenjangOptions,
               placeholder="Ketik nama ustadz..."
               className={inputCls}
               value={newClassData.waliKelas}
-              onChange={e => setNewClassData({ ...newClassData, waliKelas: e.target.value })}
+              onChange={(e) => setNewClassData({ ...newClassData, waliKelas: e.target.value })}
             />
           </Field>
 
