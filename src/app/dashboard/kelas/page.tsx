@@ -10,7 +10,7 @@ import { Plus } from 'lucide-react';
 import { useCollection } from '@/hooks';
 import { kelasService } from '@/lib/firebase/services';
 import { getJenjangByInstansi } from '@/lib/academic-structure';
-import type { Instansi, MasterJenjang, MasterTingkat } from '@/types';
+import type { Instansi, MasterJenjang, MasterTingkat, Guru } from '@/types';
 import { INSTANSI_ORDER, INSTANSI_LABEL } from '@/types';
 
 import type { Kelas, JenjangGroup } from '@/types/academic';
@@ -44,6 +44,7 @@ export default function MasterKelasPage() {
   const { data: allKelas, loading: kelasLoading, error: kelasError } = useCollection<Kelas>('kelas', [], { realtime: true });
   const { data: jenjangList, loading: jenjangLoading, error: jenjangError } = useCollection<MasterJenjang>('masterJenjang');
   const { data: tingkatList } = useCollection<MasterTingkat>('masterTingkat');
+  const { data: guruList } = useCollection<Guru>('guru', [], { realtime: true });
 
   const loading = kelasLoading || jenjangLoading;
   const error = kelasError || jenjangError;
@@ -173,6 +174,7 @@ export default function MasterKelasPage() {
         jenjangOptions={instansiJenjang}
         jenjangList={jenjangList}
         tingkatList={tingkatList}
+        guruList={guruList}
         newClassData={newClassData}
         setNewClassData={setNewClassData}
         onSubmit={handleAddClass}
@@ -193,6 +195,7 @@ export default function MasterKelasPage() {
         jenjangOptions={instansiJenjang}
         jenjangList={jenjangList}
         tingkatList={tingkatList}
+        guruList={guruList}
         onClose={() => { setIsEditModalOpen(false); setSelectedKelas(null); }}
         onSave={handleSaveEdit}
       />

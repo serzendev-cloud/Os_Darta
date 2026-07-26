@@ -2,7 +2,7 @@ import { useMemo, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { X, School } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Instansi, MasterJenjang, MasterTingkat } from '@/types';
+import type { Instansi, MasterJenjang, MasterTingkat, Guru } from '@/types';
 import { INSTANSI_LABEL } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,7 @@ interface AddKelasModalProps {
   jenjangOptions: string[];
   jenjangList?: MasterJenjang[];
   tingkatList?: MasterTingkat[];
+  guruList?: Guru[];
   newClassData: NewClassData;
   setNewClassData: (data: NewClassData) => void;
   onSubmit: (e: FormEvent) => void;
@@ -55,6 +56,7 @@ export function AddKelasModal({
   jenjangOptions,
   jenjangList = [],
   tingkatList = [],
+  guruList = [],
   newClassData,
   setNewClassData,
   onSubmit
@@ -196,14 +198,19 @@ export function AddKelasModal({
           </div>
 
           <Field label="Wali Kelas (Opsional)" htmlFor="kelas-wali">
-            <input
+            <select
               id="kelas-wali"
-              type="text"
-              placeholder="Ketik nama ustadz..."
               className={inputCls}
               value={newClassData.waliKelas}
               onChange={(e) => setNewClassData({ ...newClassData, waliKelas: e.target.value })}
-            />
+            >
+              <option value="Belum Diatur">-- Pilih Wali Kelas (Dari Data Guru) --</option>
+              {guruList.map((g) => (
+                <option key={g.id || g.nip || g.name} value={g.name}>
+                  {g.name} {g.nip ? `(NIP: ${g.nip})` : ''}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <div className="pt-4 flex items-center justify-end gap-3 border-t border-border/60 mt-2">

@@ -63,7 +63,7 @@ function Field({ label, htmlFor, required, fullWidth, className, children }: Fie
 
 // ── Edit Kelas Modal ──────────────────────────────────────────────────────────
 
-import type { MasterJenjang, MasterTingkat } from '@/types';
+import type { MasterJenjang, MasterTingkat, Guru } from '@/types';
 import { useMemo } from 'react';
 
 interface EditKelasModalProps {
@@ -73,6 +73,7 @@ interface EditKelasModalProps {
   jenjangOptions: string[];
   jenjangList?: MasterJenjang[];
   tingkatList?: MasterTingkat[];
+  guruList?: Guru[];
   onClose: () => void;
   onSave: (updated: Kelas) => void;
 }
@@ -84,6 +85,7 @@ export function EditKelasModal({
   jenjangOptions,
   jenjangList = [],
   tingkatList = [],
+  guruList = [],
   onClose,
   onSave,
 }: EditKelasModalProps) {
@@ -199,13 +201,19 @@ export function EditKelasModal({
           </Field>
 
           <Field label="Wali Kelas" htmlFor="kelas-edit-wali" fullWidth>
-            <input
+            <select
               id="kelas-edit-wali"
               className={inputCls}
               value={form.waliKelas}
               onChange={e => handleChange('waliKelas', e.target.value)}
-              placeholder="Nama wali kelas"
-            />
+            >
+              <option value="Belum Diatur">-- Pilih Wali Kelas (Dari Data Guru) --</option>
+              {guruList.map((g) => (
+                <option key={g.id || g.nip || g.name} value={g.name}>
+                  {g.name} {g.nip ? `(NIP: ${g.nip})` : ''}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Status" htmlFor="kelas-edit-status" fullWidth>
