@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   GraduationCap, BookMarked, Settings, CheckCircle2, ArrowLeft, 
   Save, ShieldCheck, Sparkles, Layers, BookOpen, Users, 
-  Award, FileText, UserCheck, Palette, AlertCircle
+  Award, FileText, UserCheck, Palette, AlertCircle, Plus
 } from 'lucide-react';
 import { PageCard } from '@/components/shared/page-header';
 import { 
@@ -14,6 +14,11 @@ import {
   getStoredCurriculums, 
   saveStoredCurriculums 
 } from '@/lib/store/curriculum-store';
+
+import { MasterJenjangTab, MasterTingkatTab } from '@/components/struktur-akademik';
+import { useCollection } from '@/hooks';
+import { masterJenjangService, masterTingkatService } from '@/lib/firebase/services';
+import type { MasterJenjang, MasterTingkat, Instansi } from '@/types';
 
 export function CurriculumConfigClient() {
   const params = useParams();
@@ -23,7 +28,12 @@ export function CurriculumConfigClient() {
   const [program, setProgram] = useState<CurriculumProgram | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
-  const [activeTab, setActiveTab] = useState<'general' | 'metrics' | 'grading' | 'admin'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'structure' | 'metrics' | 'grading' | 'admin'>('general');
+  const [structureSubTab, setStructureSubTab] = useState<'jenjang' | 'tingkat'>('jenjang');
+
+  // Fetch Jenjang & Tingkat
+  const { data: jenjangList } = useCollection<MasterJenjang>('masterJenjang', [], { realtime: true });
+  const { data: tingkatList } = useCollection<MasterTingkat>('masterTingkat', [], { realtime: true });
 
   useEffect(() => {
     const list = getStoredCurriculums();
@@ -62,6 +72,96 @@ export function CurriculumConfigClient() {
 
     saveStoredCurriculums(updatedList);
     showNotification(`Pengaturan Program "${program.name}" BERHASIL DISIMPAN & DIPERBARUI!`);
+  };
+
+  // Determine Instansi mapping for current program
+  const getInstansiForProgram = (): Instansi => {
+    if (!program) return 'madin';
+    if (program.typeCategory === 'quran' || program.code.includes('QUR')) return 'madqur';
+    if (program.typeCategory === 'formal' || program.code.includes('FORMAL')) return 'depag';
+    return 'madin';
+  };
+
+  // Filtered Jenjang & Tingkat for this specific program
+  const filteredJenjangList = jenjangList.filter(j => {
+    if (!program) return true;
+    const currentInstansi = getInstansiForProgram();
+    return j.instansi === currentInstansi;
+  });
+
+  const filteredTingkatList = tingkatList.filter(t => {
+    if (!program) return true;
+    const currentInstansi = getInstansiForProgram();
+    return t.instansi === currentInstansi;
+  });
+
+  // Handlers for Jenjang
+  const handleCreateJenjang = async (d: Partial<MasterJenjang>) => {
+    try {
+      const currentInstansi = getInstansiForProgram();
+      await masterJenjangService.create({
+        namaJenjang: d.namaJenjang || 'Jenjang Baru',
+        instansi: currentInstansi,
+        progressionIndexes: d.progressionIndexes || [1],
+        status: d.status || 'active',
+      });
+      showNotification('Jenjang Baru Berhasil Ditambahkan!');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateJenjang = async (id: string, d: Partial<MasterJenjang>) => {
+    try {
+      await masterJenjangService.update(id, d);
+      showNotification('Jenjang Berhasil Diperbarui!');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteJenjang = async (id: string) => {
+    try {
+      await masterJenjangService.delete(id);
+      showNotification('Jenjang Berhasil Dihapus!');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Handlers for Tingkat
+  const handleCreateTingkat = async (d: Partial<MasterTingkat & { labelTingkat?: string }>) => {
+    try {
+      const currentInstansi = getInstansiForProgram();
+      await masterTingkatService.create({
+        tingkatLabel: d.tingkatLabel || d.labelTingkat || 'Tingkat Baru',
+        instansi: currentInstansi,
+        jenjangId: d.jenjangId || '',
+        progressionIndex: d.progressionIndex || 1,
+        status: d.status || 'active',
+      });
+      showNotification('Tingkat Baru Berhasil Ditambahkan!');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateTingkat = async (id: string, d: Partial<MasterTingkat>) => {
+    try {
+      await masterTingkatService.update(id, d);
+      showNotification('Tingkat Berhasil Diperbarui!');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteTingkat = async (id: string) => {
+    try {
+      await masterTingkatService.delete(id);
+      showNotification('Tingkat Berhasil Dihapus!');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (loading) {
@@ -170,24 +270,24 @@ export function CurriculumConfigClient() {
         <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10">
           <div className="text-center px-3 border-r border-white/20">
             <div className="text-[10px] font-semibold text-stone-300 uppercase">Jenjang</div>
-            <div className="text-lg font-black text-amber-300">{program.totalJenjang}</div>
+            <div className="text-lg font-black text-amber-300">{filteredJenjangList.length || program.totalJenjang}</div>
           </div>
           <div className="text-center px-3 border-r border-white/20">
-            <div className="text-[10px] font-semibold text-stone-300 uppercase">Mapel</div>
-            <div className="text-lg font-black text-amber-300">{program.totalMapel}</div>
+            <div className="text-[10px] font-semibold text-stone-300 uppercase">Tingkat</div>
+            <div className="text-lg font-black text-amber-300">{filteredTingkatList.length || program.totalJenjang}</div>
           </div>
           <div className="text-center px-3">
-            <div className="text-[10px] font-semibold text-stone-300 uppercase">Guru</div>
-            <div className="text-lg font-black text-amber-300">{program.totalGuru}</div>
+            <div className="text-[10px] font-semibold text-stone-300 uppercase">Mapel</div>
+            <div className="text-lg font-black text-amber-300">{program.totalMapel}</div>
           </div>
         </div>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-stone-200 dark:border-stone-800 space-x-2">
+      <div className="flex border-b border-stone-200 dark:border-stone-800 space-x-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('general')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all ${
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
             activeTab === 'general'
               ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
               : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
@@ -198,8 +298,20 @@ export function CurriculumConfigClient() {
         </button>
 
         <button
+          onClick={() => setActiveTab('structure')}
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
+            activeTab === 'structure'
+              ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
+              : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+          }`}
+        >
+          <GraduationCap className="w-4 h-4" />
+          <span>Struktur Jenjang & Tingkat</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('metrics')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all ${
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
             activeTab === 'metrics'
               ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
               : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
@@ -211,7 +323,7 @@ export function CurriculumConfigClient() {
 
         <button
           onClick={() => setActiveTab('grading')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all ${
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
             activeTab === 'grading'
               ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
               : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
@@ -223,7 +335,7 @@ export function CurriculumConfigClient() {
 
         <button
           onClick={() => setActiveTab('admin')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all ${
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
             activeTab === 'admin'
               ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
               : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
@@ -335,7 +447,62 @@ export function CurriculumConfigClient() {
           </PageCard>
         )}
 
-        {/* TAB 2: METRICS */}
+        {/* TAB 2: STRUCTURE (JENJANG & TINGKAT) */}
+        {activeTab === 'structure' && (
+          <PageCard
+            title={`Pengelolaan Jenjang & Tingkat: ${program.name}`}
+            description="Atur hirarki jenjang pendidikan (misal: Tamhidi, Ibtida'i) dan tingkat kelas khusus untuk program madrasah ini."
+          >
+            <div className="space-y-6">
+              {/* Sub Tab Switcher */}
+              <div className="flex items-center gap-2 p-1 bg-stone-100 dark:bg-stone-800 rounded-2xl w-fit">
+                <button
+                  type="button"
+                  onClick={() => setStructureSubTab('jenjang')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    structureSubTab === 'jenjang'
+                      ? 'bg-white dark:bg-stone-900 text-amber-600 dark:text-amber-400 shadow-sm'
+                      : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>Master Jenjang ({filteredJenjangList.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStructureSubTab('tingkat')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    structureSubTab === 'tingkat'
+                      ? 'bg-white dark:bg-stone-900 text-amber-600 dark:text-amber-400 shadow-sm'
+                      : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  }`}
+                >
+                  <Layers className="w-4 h-4" />
+                  <span>Master Tingkat ({filteredTingkatList.length})</span>
+                </button>
+              </div>
+
+              {structureSubTab === 'jenjang' ? (
+                <MasterJenjangTab
+                  data={filteredJenjangList}
+                  onCreate={handleCreateJenjang}
+                  onUpdate={handleUpdateJenjang}
+                  onDelete={handleDeleteJenjang}
+                />
+              ) : (
+                <MasterTingkatTab
+                  data={filteredTingkatList}
+                  jenjangList={filteredJenjangList}
+                  onCreate={handleCreateTingkat}
+                  onUpdate={handleUpdateTingkat}
+                  onDelete={handleDeleteTingkat}
+                />
+              )}
+            </div>
+          </PageCard>
+        )}
+
+        {/* TAB 3: METRICS */}
         {activeTab === 'metrics' && (
           <PageCard
             title="Target Metrik & Kuota Kontainer"
@@ -399,7 +566,7 @@ export function CurriculumConfigClient() {
           </PageCard>
         )}
 
-        {/* TAB 3: GRADING */}
+        {/* TAB 4: GRADING */}
         {activeTab === 'grading' && (
           <PageCard
             title="Sistem Penilaian & Format Raport"
@@ -453,7 +620,7 @@ export function CurriculumConfigClient() {
           </PageCard>
         )}
 
-        {/* TAB 4: ADMIN */}
+        {/* TAB 5: ADMIN */}
         {activeTab === 'admin' && (
           <PageCard
             title="Penanggung Jawab & Catatan Internal"

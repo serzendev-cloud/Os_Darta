@@ -16,7 +16,8 @@ import {
   getStoredCurriculums, 
   CURRICULUM_STORE_CHANGE_EVENT 
 } from '@/lib/store/curriculum-store';
-import { Building2, GraduationCap, Layers, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, GraduationCap, Layers, Sparkles, Settings } from 'lucide-react';
 
 const SECONDARY_TABS = [
   { id: 'jenjang' as const, label: 'Master Jenjang', icon: GraduationCap },
@@ -212,9 +213,28 @@ export default function StrukturAkademikPage() {
   return (
     <div className="space-y-6 font-sans">
       <PageHeader
-        title="Master Struktur Akademik (Jenjang & Tingkat)"
-        description="Pusat konfigurasi hirarki jenjang dan tingkat yang diterbitkan dari Master Madrasah"
+        title="Master Struktur Akademik (Jenjang & Tingkat Overview)"
+        description="Pusat matriks overview hirarki jenjang dan tingkat seluruh Program Madrasah"
       />
+
+      {/* Helper Banner for Isolated Program Management */}
+      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-stone-800 dark:text-stone-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 font-medium">
+          <Sparkles className="w-5 h-5 text-amber-500 shrink-0" />
+          <span>
+            <strong>Pengelolaan Terisolasi Per-Program:</strong> Struktur Jenjang & Tingkat kini dapat dikelola langsung secara spesifik dari Halaman Konfigurasi Setiap Program Madrasah.
+          </span>
+        </div>
+        {selectedMadrasahId !== 'all' && (
+          <Link
+            href={`/dashboard/kurikulum/master/${selectedMadrasahId}`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shrink-0 transition-all shadow-sm"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Buka Konfigurasi Program Ini</span>
+          </Link>
+        )}
+      </div>
 
       {/* ── 1. PRIMARY LEVEL TABS: DYNAMIC MADRASAH PROGRAM TABS ── */}
       <div className="space-y-2">
