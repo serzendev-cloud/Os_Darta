@@ -284,64 +284,69 @@ export function CurriculumConfigClient() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-stone-200 dark:border-stone-800 space-x-2 overflow-x-auto">
+      <div className="bg-white/90 dark:bg-stone-900/90 p-2 rounded-2xl border border-stone-200/90 dark:border-stone-800 shadow-lg shadow-sky-900/5 backdrop-blur-md flex items-center space-x-2 overflow-x-auto">
         <button
+          type="button"
           onClick={() => setActiveTab('general')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'general'
-              ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
-              : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
           }`}
         >
-          <Settings className="w-4 h-4" />
+          <Settings className={`w-4 h-4 ${activeTab === 'general' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
           <span>Informasi Utama & Identitas</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('structure')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'structure'
-              ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
-              : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
           }`}
         >
-          <GraduationCap className="w-4 h-4" />
+          <GraduationCap className={`w-4 h-4 ${activeTab === 'structure' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
           <span>Struktur Jenjang & Tingkat</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('metrics')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'metrics'
-              ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
-              : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
           }`}
         >
-          <Layers className="w-4 h-4" />
+          <Layers className={`w-4 h-4 ${activeTab === 'metrics' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
           <span>Target Metrik Kontainer</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('grading')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'grading'
-              ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
-              : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
           }`}
         >
-          <Award className="w-4 h-4" />
+          <Award className={`w-4 h-4 ${activeTab === 'grading' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
           <span>Sistem Penilaian & Raport</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('admin')}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'admin'
-              ? 'border-amber-600 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30 rounded-t-xl'
-              : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
           }`}
         >
-          <UserCheck className="w-4 h-4" />
+          <UserCheck className={`w-4 h-4 ${activeTab === 'admin' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
           <span>Penanggung Jawab & Catatan</span>
         </button>
       </div>
