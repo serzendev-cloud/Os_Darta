@@ -128,20 +128,41 @@ export function Sidebar() {
     return null;
   }, [searchParams]);
 
-  // Path active checker with strict query parameter isolation & trailing slash normalization
+  const normalizeProgId = (prog: string | null) => {
+    if (!prog) return 'prog-madin';
+    const p = prog.toLowerCase();
+    if (p === 'formal' || p === 'prog-formal') return 'prog-formal';
+    if (p === 'quran' || p === 'madqur' || p === 'prog-madqur') return 'prog-madqur';
+    if (p === 'pesantren' || p === 'madin' || p === 'prog-madin') return 'prog-madin';
+    return p;
+  };
+
+  // Universal Path active checker for all submenus across Kurikulum & Madrasah
   const isPathActive = useCallback((targetHref: string) => {
     if (!pathname) return false;
+    if (!targetHref) return false;
 
     const currentPath = normalizePath(pathname);
-    const targetPath = normalizePath(targetHref);
+    let targetPath = normalizePath(targetHref);
+
+    // Normalize path aliases for Evaluasi & Raport
+    if ((currentPath === '/dashboard/evaluasi' || currentPath === '/dashboard/raport') &&
+        (targetPath === '/dashboard/evaluasi' || targetPath === '/dashboard/raport')) {
+      targetPath = currentPath;
+    }
 
     if (targetHref.includes('?')) {
-      if (currentPath !== targetPath) return false;
+      if (currentPath !== targetPath && !currentPath.startsWith(targetPath + '/')) return false;
+
       const targetQuery = targetHref.split('?')[1] || '';
-      const params = new URLSearchParams(targetQuery);
-      for (const [key, val] of params.entries()) {
-        const actualVal = getQueryParam(key);
-        if (actualVal !== val) return false;
+      const targetParams = new URLSearchParams(targetQuery);
+      
+      const targetProg = targetParams.get('prog') || targetParams.get('type');
+      if (targetProg) {
+        const currentProg = getQueryParam('prog') || getQueryParam('type');
+        const normCurrent = normalizeProgId(currentProg);
+        const normTarget = normalizeProgId(targetProg);
+        if (normCurrent !== normTarget) return false;
       }
       return true;
     }
