@@ -84,7 +84,7 @@ export default function MasterCurriculumSettingsPage() {
   );
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="-m-4 lg:-m-6 p-4 lg:p-6 bg-gradient-to-br from-sky-100/60 via-sky-50 to-blue-50/40 min-h-[calc(100vh-4rem)] space-y-6 font-sans">
       {/* Toast Notification */}
       {toast && (
         <div className="p-4 rounded-2xl bg-emerald-700 text-white font-medium text-xs flex items-center justify-between shadow-xl animate-bounce">
@@ -97,21 +97,17 @@ export default function MasterCurriculumSettingsPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white rounded-3xl p-6 md:p-8 shadow-xl shadow-sky-500/15 border border-sky-400/30 relative overflow-hidden">
-        {/* Decorative Background Glows */}
-        <div className="absolute -top-12 -right-12 w-64 h-64 bg-sky-300/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl pointer-events-none" />
-
+      <div className="bg-gradient-to-r from-stone-900 via-amber-950 to-stone-900 text-white rounded-3xl p-6 md:p-8 shadow-xl border border-amber-500/20 relative overflow-hidden">
         <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-semibold shadow-sm">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-semibold">
             <BookMarked className="w-3.5 h-3.5" />
             <span>Pusat Pengaturan Kurikulum & Template Program</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
             Master Madrasah & Penerbitan Menu Kontainer
           </h1>
-          <p className="text-sky-100 text-xs md:text-sm max-w-3xl leading-relaxed">
-            Buat hingga <strong className="text-white font-bold">5+ Program Kurikulum Mandiri</strong> (misal: Kitab Kuning, Sorogan, Bahasa). Setiap program yang dibuat di sini secara otomatis akan <strong className="text-white font-bold">menerbitkan Menu Kontainer tersendiri di Sidebar</strong> di bawah judul <em>PROGRAM KURIKULUM</em> dengan template pengaturan mapel & jenjang terpisah.
+          <p className="text-stone-300 text-xs md:text-sm max-w-3xl leading-relaxed">
+            Buat hingga <strong className="text-white">5+ Program Kurikulum Mandiri</strong> (misal: Kitab Kuning, Sorogan, Bahasa). Setiap program yang dibuat di sini secara otomatis akan <strong className="text-white">menerbitkan Menu Kontainer tersendiri di Sidebar</strong> di bawah judul <em>PROGRAM KURIKULUM</em> dengan template pengaturan mapel & jenjang terpisah.
           </p>
         </div>
       </div>
