@@ -117,6 +117,17 @@ export function Sidebar() {
     return clean.length > 1 && clean.endsWith('/') ? clean.slice(0, -1) : clean;
   };
 
+  // Safe query param getter with window.location.search fallback for Next.js static export
+  const getQueryParam = useCallback((key: string) => {
+    const val = searchParams?.get(key);
+    if (val) return val;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(key);
+    }
+    return null;
+  }, [searchParams]);
+
   // Path active checker with strict query parameter isolation & trailing slash normalization
   const isPathActive = useCallback((targetHref: string) => {
     if (!pathname) return false;
@@ -129,7 +140,8 @@ export function Sidebar() {
       const targetQuery = targetHref.split('?')[1] || '';
       const params = new URLSearchParams(targetQuery);
       for (const [key, val] of params.entries()) {
-        if (searchParams.get(key) !== val) return false;
+        const actualVal = getQueryParam(key);
+        if (actualVal !== val) return false;
       }
       return true;
     }
@@ -139,7 +151,7 @@ export function Sidebar() {
       return currentPath === '/dashboard/pengaturan';
     }
     return targetPath !== '/dashboard' && currentPath.startsWith(targetPath + '/');
-  }, [pathname, searchParams]);
+  }, [pathname, getQueryParam]);
 
   // Accordion: track which groups are expanded
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
