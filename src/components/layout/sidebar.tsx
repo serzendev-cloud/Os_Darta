@@ -367,15 +367,15 @@ export function Sidebar() {
                                     const ChildIcon = iconMap[child.icon] || LayoutDashboard;
                                     const isChildActive = isPathActive(child.href);
                                     const childClasses = cn(
-                                      'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] font-medium',
+                                      'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12.5px] font-bold',
                                       'transition-all duration-200 ease-out border',
                                       isChildActive
-                                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold border-amber-400 shadow-md shadow-amber-500/30 scale-[1.01]'
+                                        ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white font-black border-amber-300/80 shadow-[0_4px_16px_rgba(249,115,22,0.4)] scale-[1.02]'
                                         : 'text-stone-700 dark:text-stone-300 hover:bg-amber-500/10 dark:hover:bg-amber-500/20 hover:text-amber-700 dark:hover:text-amber-300 border-transparent',
                                     );
                                     return (
                                       <Link key={child.href} href={child.href} onClick={() => setMobileOpen(false)} className={childClasses}>
-                                        <ChildIcon className={cn('shrink-0 w-3.5 h-3.5 transition-colors duration-200', isChildActive ? 'text-white' : 'text-stone-500 dark:text-stone-400 group-hover:text-amber-600')} />
+                                        <ChildIcon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isChildActive ? 'text-white drop-shadow-sm' : 'text-stone-500 dark:text-stone-400 group-hover:text-amber-600')} />
                                         <span className="truncate">{child.title}</span>
                                       </Link>
                                     );
