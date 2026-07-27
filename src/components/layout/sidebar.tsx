@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { useAuthStore } from '@/store/auth-store';
@@ -42,6 +42,7 @@ import { Permission } from '@/config/permissions';
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isCollapsed, isMobileOpen, toggle, setMobileOpen } = useSidebarStore();
   const { user } = useAuthStore();
   const flags = Object.fromEntries(featureFlags.map((f) => [f.key, f.enabled]));
@@ -109,6 +110,27 @@ export function Sidebar() {
     return group;
   });
 
+  // Path active checker with strict query parameter isolation
+  const isPathActive = useCallback((targetHref: string) => {
+    if (!pathname) return false;
+
+    if (targetHref.includes('?')) {
+      const [targetPath, targetQuery] = targetHref.split('?');
+      if (pathname !== targetPath) return false;
+      const params = new URLSearchParams(targetQuery);
+      for (const [key, val] of params.entries()) {
+        if (searchParams.get(key) !== val) return false;
+      }
+      return true;
+    }
+
+    if (pathname === targetHref) return true;
+    if (targetHref === '/dashboard/pengaturan') {
+      return pathname === '/dashboard/pengaturan';
+    }
+    return targetHref !== '/dashboard' && pathname.startsWith(targetHref + '/');
+  }, [pathname, searchParams]);
+
   // Accordion: track which groups are expanded
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
@@ -116,19 +138,14 @@ export function Sidebar() {
   useEffect(() => {
     const activeGroup = menuGroups.find((g) =>
       g.items.some((item) => {
-        const check = (i: typeof item) => {
-          if (!pathname) return false;
-          const cleanTarget = i.href.split('?')[0];
-          return pathname === cleanTarget || (cleanTarget !== '/dashboard' && pathname.startsWith(cleanTarget + '/'));
-        };
-        if (check(item)) return true;
-        return item.children?.some((c) => check(c)) ?? false;
+        if (isPathActive(item.href)) return true;
+        return item.children?.some((c) => isPathActive(c.href)) ?? false;
       })
     );
     if (activeGroup && !expandedGroups[activeGroup.title]) {
       setExpandedGroups((prev) => ({ ...prev, [activeGroup.title]: true }));
     }
-  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname, searchParams, menuGroups, isPathActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleGroup = useCallback((title: string) => {
     setExpandedGroups((prev) => ({ ...prev, [title]: !prev[title] }));
@@ -253,22 +270,10 @@ export function Sidebar() {
                     {/* Group Items */}
                     {group.items.map((item) => {
                       const itemHasChildren = Boolean(item.children && item.children.length > 0);
-                      const isExpanded = expandedGroups[item.title] || false;
-                      
-                      const isPathActive = (targetHref: string) => {
-                        if (!pathname) return false;
-                        const cleanTarget = targetHref.split('?')[0];
-                        if (pathname === cleanTarget) return true;
-                        // Avoid matching /dashboard/pengaturan for subroutes like /dashboard/pengaturan/manajemen-user-role
-                        if (cleanTarget === '/dashboard/pengaturan') {
-                          return pathname === '/dashboard/pengaturan';
-                        }
-                        return cleanTarget !== '/dashboard' && pathname.startsWith(cleanTarget + '/');
-                      };
-
                       const isActiveItem = itemHasChildren
                         ? item.children?.some((c) => isPathActive(c.href)) ?? false
                         : isPathActive(item.href);
+                      const isExpanded = expandedGroups[item.title] ?? isActiveItem;
 
                       const ItemIcon = iconMap[item.icon] || LayoutDashboard;
 
