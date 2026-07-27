@@ -110,13 +110,23 @@ export function Sidebar() {
     return group;
   });
 
-  // Path active checker with strict query parameter isolation
+  // Helper to normalize path by stripping trailing slashes and query strings
+  const normalizePath = (path: string) => {
+    if (!path) return '';
+    const clean = path.split('?')[0];
+    return clean.length > 1 && clean.endsWith('/') ? clean.slice(0, -1) : clean;
+  };
+
+  // Path active checker with strict query parameter isolation & trailing slash normalization
   const isPathActive = useCallback((targetHref: string) => {
     if (!pathname) return false;
 
+    const currentPath = normalizePath(pathname);
+    const targetPath = normalizePath(targetHref);
+
     if (targetHref.includes('?')) {
-      const [targetPath, targetQuery] = targetHref.split('?');
-      if (pathname !== targetPath) return false;
+      if (currentPath !== targetPath) return false;
+      const targetQuery = targetHref.split('?')[1] || '';
       const params = new URLSearchParams(targetQuery);
       for (const [key, val] of params.entries()) {
         if (searchParams.get(key) !== val) return false;
@@ -124,11 +134,11 @@ export function Sidebar() {
       return true;
     }
 
-    if (pathname === targetHref) return true;
-    if (targetHref === '/dashboard/pengaturan') {
-      return pathname === '/dashboard/pengaturan';
+    if (currentPath === targetPath) return true;
+    if (targetPath === '/dashboard/pengaturan') {
+      return currentPath === '/dashboard/pengaturan';
     }
-    return targetHref !== '/dashboard' && pathname.startsWith(targetHref + '/');
+    return targetPath !== '/dashboard' && currentPath.startsWith(targetPath + '/');
   }, [pathname, searchParams]);
 
   // Accordion: track which groups are expanded
