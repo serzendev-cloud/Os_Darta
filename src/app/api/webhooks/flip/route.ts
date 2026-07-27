@@ -2,6 +2,8 @@
 // Flip for Business Webhook Listener Route
 // ========================================
 
+export const dynamic = 'force-static';
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { invoices, wallets, walletPockets } from '@/lib/db/schema';

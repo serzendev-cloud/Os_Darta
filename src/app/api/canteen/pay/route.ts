@@ -2,6 +2,8 @@
 // RFID Canteen POS Payment API Endpoint (Multi-Canteen & Catalog Supported)
 // ========================================
 
+export const dynamic = 'force-static';
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rfidCards, wallets, canteenTransactions, walletPockets, santri, canteens } from '@/lib/db/schema';

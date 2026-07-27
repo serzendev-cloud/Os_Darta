@@ -2,6 +2,8 @@
 // Gate Checkpoint RFID Scan-Out API Endpoint (Gate Exit)
 // ========================================
 
+export const dynamic = 'force-static';
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rfidCards, gatePasses, santri } from '@/lib/db/schema';
