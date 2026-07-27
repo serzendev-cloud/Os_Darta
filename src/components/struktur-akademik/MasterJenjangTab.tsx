@@ -16,12 +16,13 @@ const inputCls = cn(
 
 interface Props {
   data: MasterJenjang[];
+  programName?: string;
   onCreate: (d: Partial<MasterJenjang>) => void;
   onUpdate: (id: string, d: Partial<MasterJenjang>) => void;
   onDelete: (id: string) => void;
 }
 
-export function MasterJenjangTab({ data, onCreate, onUpdate, onDelete }: Props) {
+export function MasterJenjangTab({ data, programName, onCreate, onUpdate, onDelete }: Props) {
   const [search, setSearch] = useState('');
   const [filterInstansi, setFilterInstansi] = useState<'all' | Instansi>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -107,7 +108,7 @@ export function MasterJenjangTab({ data, onCreate, onUpdate, onDelete }: Props) 
           <thead>
             <tr className="bg-muted/50 text-muted-foreground">
               <th className="text-left px-4 py-3 font-medium">Nama Jenjang</th>
-              <th className="text-left px-4 py-3 font-medium">Madrasah</th>
+              <th className="text-left px-4 py-3 font-medium">Program Kurikulum</th>
               <th className="text-left px-4 py-3 font-medium">Progression Indexes</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
               <th className="text-right px-4 py-3 font-medium">Aksi</th>
@@ -119,14 +120,14 @@ export function MasterJenjangTab({ data, onCreate, onUpdate, onDelete }: Props) 
                 <td className="px-4 py-3 font-medium text-foreground">{j.namaJenjang}</td>
                 <td className="px-4 py-3">
                   <span className={cn(
-                    'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border',
                     j.instansi === 'madin'
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300/60'
                       : j.instansi === 'madqur'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-300/60'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-300/60',
                   )}>
-                    {INSTANSI_LABEL[j.instansi]}
+                    {programName || INSTANSI_LABEL[j.instansi]}
                   </span>
                 </td>
                 <td className="px-4 py-3">

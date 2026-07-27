@@ -17,12 +17,13 @@ const inputCls = cn(
 interface Props {
   data: MasterTingkat[];
   jenjangList: MasterJenjang[];
+  programName?: string;
   onCreate: (d: Partial<MasterTingkat>) => void;
   onUpdate: (id: string, d: Partial<MasterTingkat>) => void;
   onDelete: (id: string) => void;
 }
 
-export function MasterTingkatTab({ data, jenjangList, onCreate, onUpdate, onDelete }: Props) {
+export function MasterTingkatTab({ data, jenjangList, programName, onCreate, onUpdate, onDelete }: Props) {
   const [search, setSearch] = useState('');
   const [filterInstansi, setFilterInstansi] = useState<'all' | Instansi>('all');
   const [filterJenjangId, setFilterJenjangId] = useState<string>('all');
@@ -139,7 +140,7 @@ export function MasterTingkatTab({ data, jenjangList, onCreate, onUpdate, onDele
             <tr className="bg-muted/50 text-muted-foreground">
               <th className="text-center px-4 py-3 font-medium w-20">Prog. Index</th>
               <th className="text-left px-4 py-3 font-medium">Label Tingkat</th>
-              <th className="text-left px-4 py-3 font-medium">Madrasah</th>
+              <th className="text-left px-4 py-3 font-medium">Program Kurikulum</th>
               <th className="text-left px-4 py-3 font-medium">Jenjang</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
               <th className="text-right px-4 py-3 font-medium">Aksi</th>
@@ -156,14 +157,14 @@ export function MasterTingkatTab({ data, jenjangList, onCreate, onUpdate, onDele
                 <td className="px-4 py-3 font-medium text-foreground">{t.tingkatLabel}</td>
                 <td className="px-4 py-3">
                   <span className={cn(
-                    'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border',
                     t.instansi === 'madin'
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300/60'
                       : t.instansi === 'madqur'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-300/60'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-300/60',
                   )}>
-                    {INSTANSI_LABEL[t.instansi]}
+                    {programName || INSTANSI_LABEL[t.instansi]}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">

@@ -625,6 +625,7 @@ export function CurriculumConfigClient() {
               {structureSubTab === 'jenjang' && (
                 <MasterJenjangTab
                   data={filteredJenjangList}
+                  programName={program.name}
                   onCreate={handleCreateJenjang}
                   onUpdate={handleUpdateJenjang}
                   onDelete={handleDeleteJenjang}
@@ -635,6 +636,7 @@ export function CurriculumConfigClient() {
                 <MasterTingkatTab
                   data={filteredTingkatList}
                   jenjangList={filteredJenjangList}
+                  programName={program.name}
                   onCreate={handleCreateTingkat}
                   onUpdate={handleUpdateTingkat}
                   onDelete={handleDeleteTingkat}
