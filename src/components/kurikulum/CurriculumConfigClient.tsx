@@ -882,25 +882,31 @@ export function CurriculumConfigClient() {
         isOpen={isAddKelasModalOpen}
         onClose={() => setIsAddKelasModalOpen(false)}
         onSubmit={handleAddClassSubmit}
-        data={newClassData}
-        setData={setNewClassData}
-        instansiJenjang={programJenjangNames}
+        activeInstansi={currentInstansi}
+        jenjangOptions={programJenjangNames}
+        jenjangList={jenjangList}
+        tingkatList={tingkatList}
         guruList={guruList}
+        newClassData={newClassData}
+        setNewClassData={setNewClassData}
       />
 
       {selectedKelas && (
         <>
           <EditKelasModal
-            isOpen={isEditKelasModalOpen}
+            open={isEditKelasModalOpen}
             onClose={() => { setIsEditKelasModalOpen(false); setSelectedKelas(null); }}
             onSave={handleSaveEditKelas}
             kelas={selectedKelas}
-            instansiJenjang={programJenjangNames}
+            activeInstansi={currentInstansi}
+            jenjangOptions={programJenjangNames}
+            jenjangList={jenjangList}
+            tingkatList={tingkatList}
             guruList={guruList}
           />
 
           <DeleteKelasModal
-            isOpen={isDeleteKelasModalOpen}
+            open={isDeleteKelasModalOpen}
             onClose={() => { setIsDeleteKelasModalOpen(false); setSelectedKelas(null); }}
             onConfirm={handleConfirmDeleteKelas}
             kelas={selectedKelas}
