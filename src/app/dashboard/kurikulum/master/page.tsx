@@ -84,7 +84,7 @@ export default function MasterCurriculumSettingsPage() {
   );
 
   return (
-    <div className="-m-4 lg:-m-6 p-4 lg:p-6 bg-gradient-to-br from-sky-100/60 via-sky-50 to-blue-50/40 min-h-[calc(100vh-4rem)] space-y-6 font-sans">
+    <div className="space-y-6 font-sans">
       {/* Toast Notification */}
       {toast && (
         <div className="p-4 rounded-2xl bg-emerald-700 text-white font-medium text-xs flex items-center justify-between shadow-xl animate-bounce">

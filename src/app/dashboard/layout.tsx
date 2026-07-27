@@ -82,14 +82,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-sky-100/80 dark:bg-background">
       {isMaintenanceActive(maintenanceConfig) && (
         <MaintenanceBanner config={maintenanceConfig} isBypass />
       )}
       <Sidebar />
-      <div className={cn('transition-all duration-300 ease-in-out', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
+      <div className={cn('transition-all duration-300 ease-in-out bg-sky-100/80 dark:bg-background min-h-screen', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
         <Topbar />
-        <main className="p-4 lg:p-6">
+        <main className="p-4 lg:p-6 bg-sky-100/80 dark:bg-background min-h-[calc(100vh-4rem)]">
           <Breadcrumb />
           {children}
         </main>
