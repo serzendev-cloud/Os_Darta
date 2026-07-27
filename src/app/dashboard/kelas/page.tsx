@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
 import type { FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PageHeader, PageCard } from '@/components/shared/page-header';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -40,6 +41,8 @@ function buildJenjangGroups(data: Kelas[], orderedJenjang: string[]): JenjangGro
 }
 
 export default function MasterKelasPage() {
+  const searchParams = useSearchParams();
+
   // ── Firebase data ─────────────────────────────────────────────────────────
   const { data: allKelas, loading: kelasLoading, error: kelasError } = useCollection<Kelas>('kelas', [], { realtime: true });
   const { data: jenjangList, loading: jenjangLoading, error: jenjangError } = useCollection<MasterJenjang>('masterJenjang');
@@ -49,8 +52,37 @@ export default function MasterKelasPage() {
   const loading = kelasLoading || jenjangLoading;
   const error = kelasError || jenjangError;
 
+  // ── Query Param Scope ───────────────────────────────────────────────────
+  const urlInstansiParam = searchParams.get('instansi');
+  const urlProgParam = searchParams.get('prog');
+  const urlTypeParam = searchParams.get('type');
+
+  const resolvedUrlInstansi = useMemo(() => {
+    if (urlInstansiParam && INSTANSI_ORDER.includes(urlInstansiParam as Instansi)) return urlInstansiParam as Instansi;
+    if (urlProgParam) {
+      if (urlProgParam.includes('madin') || urlProgParam.includes('pesantren')) return 'madin';
+      if (urlProgParam.includes('formal') || urlProgParam.includes('depag')) return 'depag';
+      if (urlProgParam.includes('madqur') || urlProgParam.includes('quran')) return 'madqur';
+    }
+    if (urlTypeParam) {
+      const lower = urlTypeParam.toLowerCase();
+      if (lower === 'formal' || lower === 'depag') return 'depag';
+      if (lower === 'pesantren' || lower === 'madin') return 'madin';
+      if (lower === 'quran' || lower === 'madqur') return 'madqur';
+    }
+    return null;
+  }, [urlInstansiParam, urlProgParam, urlTypeParam]);
+
   // ── Instansi tab (replaces AcademicTab) ───────────────────────────────────
-  const [activeInstansi, setActiveInstansi] = useState<Instansi>('madin');
+  const [activeInstansi, setActiveInstansi] = useState<Instansi>(() => resolvedUrlInstansi ?? 'madin');
+
+  useEffect(() => {
+    if (resolvedUrlInstansi) setActiveInstansi(resolvedUrlInstansi);
+  }, [resolvedUrlInstansi]);
+
+  const allowedInstansi = useMemo<Instansi[] | undefined>(() => {
+    return resolvedUrlInstansi ? [resolvedUrlInstansi] : undefined;
+  }, [resolvedUrlInstansi]);
 
   // ── Data-driven jenjang order ─────────────────────────────────────────────
   const instansiJenjang = useMemo(
@@ -145,7 +177,7 @@ export default function MasterKelasPage() {
         }
       />
 
-      <KelasTabs activeInstansi={activeInstansi} setActiveInstansi={setActiveInstansi} />
+      <KelasTabs activeInstansi={activeInstansi} setActiveInstansi={setActiveInstansi} allowedInstansi={allowedInstansi} />
 
       <UnassignedAlert
         unassignedCount={unassignedCount}

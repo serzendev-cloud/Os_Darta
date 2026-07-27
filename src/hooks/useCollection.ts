@@ -1,17 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import {
-  collection,
-  query,
-  getDocs,
-  onSnapshot,
-  type QueryConstraint,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { docsToArray } from '@/lib/firebase/utils';
 import { isDemoMode, getDemoCollection, demoDb } from '@/lib/firebase/demo-data';
+import { getActiveTenantId } from '@/lib/db/services/tenant-service';
 
 interface UseCollectionOptions {
   realtime?: boolean;
@@ -19,76 +10,73 @@ interface UseCollectionOptions {
 
 export function useCollection<T>(
   collectionName: string,
-  constraints: QueryConstraint[] = [],
+  constraints: any[] = [],
   options: UseCollectionOptions = {},
 ): { data: T[]; loading: boolean; error: Error | null } {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // stable ref for the fetch function so realtime demo re-fetch always sees latest collectionName
   const collectionNameRef = useRef(collectionName);
   collectionNameRef.current = collectionName;
 
   const fetchDemo = useCallback(() => {
     const mock = getDemoCollection(collectionNameRef.current) as T[];
-    // Spread to force new reference — demo store mutates in place so
-    // React may skip re-render if the array reference is unchanged.
-    setData([...mock]);
+    const activeTenantId = getActiveTenantId();
+    // Filter by tenantId if record has tenantId property
+    const filtered = mock.filter((item: any) => !item.tenantId || item.tenantId === activeTenantId || item.tenantId === 'default');
+    setData([...filtered]);
     setLoading(false);
   }, []);
 
+  const fetchSupabaseApi = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/db/query?collection=${encodeURIComponent(collectionNameRef.current)}`);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch ${collectionNameRef.current}: ${res.statusText}`);
+      }
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        setData(json.data);
+      } else {
+        // Fallback to local store if DB yields empty during local dev
+        fetchDemo();
+      }
+    } catch (err: any) {
+      console.warn(`[useCollection] API fallback to demo store for ${collectionNameRef.current}:`, err);
+      fetchDemo();
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchDemo]);
+
   useEffect(() => {
-    // Demo mode — return mock data
-    if (isDemoMode()) {
+    if (isDemoMode() || typeof window === 'undefined') {
       fetchDemo();
 
       if (options.realtime) {
-        // Subscribe to demo store mutations so table reflects CRUD immediately
         const unsub = demoDb.subscribe((changed) => {
           if (changed === collectionNameRef.current) {
-            console.log(`[useCollection] demo notify received for "${changed}" — re-fetching`);
             fetchDemo();
           }
         });
         return () => { unsub(); };
       }
-
       return;
     }
 
-    let unsub: Unsubscribe | undefined;
-    const q = query(collection(db, collectionName), ...constraints);
+    fetchSupabaseApi();
 
     if (options.realtime) {
-      unsub = onSnapshot(
-        q,
-        (snap) => {
-          setData(docsToArray<T>(snap));
-          setLoading(false);
-          setError(null);
-        },
-        (err) => {
-          setError(err);
-          setLoading(false);
-        },
-      );
-    } else {
-      getDocs(q)
-        .then((snap) => {
-          setData(docsToArray<T>(snap));
-          setLoading(false);
-        })
-        .catch((err) => {
-          setError(err);
-          setLoading(false);
-        });
+      const unsub = demoDb.subscribe((changed) => {
+        if (changed === collectionNameRef.current) {
+          fetchSupabaseApi();
+        }
+      });
+      return () => { unsub(); };
     }
-
-    return () => {
-      if (unsub) unsub();
-    };
-  }, [collectionName, JSON.stringify(constraints), options.realtime]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [collectionName, options.realtime, fetchDemo, fetchSupabaseApi]);
 
   return { data, loading, error };
 }

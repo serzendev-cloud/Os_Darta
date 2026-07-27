@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader, PageCard } from '@/components/shared/page-header';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -18,9 +18,41 @@ import type { Instansi, MasterJenjang, MasterTingkat } from '@/types';
 import { INSTANSI_ORDER } from '@/types';
 import type { Mapel, Kelas } from '@/types/academic';
 import type { TeacherAssignment } from '@/types';
+import { getStoredCurriculums } from '@/lib/store/curriculum-store';
+
+function resolveInstansiFromParams(
+  progParam: string | null,
+  typeParam: string | null,
+  instansiParam: string | null
+): Instansi | null {
+  if (instansiParam && INSTANSI_ORDER.includes(instansiParam as Instansi)) {
+    return instansiParam as Instansi;
+  }
+  if (progParam) {
+    if (progParam === 'prog-madin' || progParam.includes('madin') || progParam.includes('pesantren')) return 'madin';
+    if (progParam === 'prog-formal' || progParam.includes('formal') || progParam.includes('depag')) return 'depag';
+    if (progParam === 'prog-madqur' || progParam.includes('madqur') || progParam.includes('quran')) return 'madqur';
+
+    const stored = getStoredCurriculums();
+    const found = stored.find((p) => p.id === progParam);
+    if (found) {
+      if (found.typeCategory === 'quran' || found.code.includes('QUR')) return 'madqur';
+      if (found.typeCategory === 'formal' || found.code.includes('FORMAL')) return 'depag';
+      if (found.typeCategory === 'pesantren' || found.code.includes('MADIN')) return 'madin';
+    }
+  }
+  if (typeParam) {
+    const lower = typeParam.toLowerCase();
+    if (lower === 'formal' || lower === 'depag') return 'depag';
+    if (lower === 'pesantren' || lower === 'madin') return 'madin';
+    if (lower === 'quran' || lower === 'madqur') return 'madqur';
+  }
+  return null;
+}
 
 export default function MataPelajaranPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ── Data ──────────────────────────────────────────────────────────────
   const { data: allMapel, loading: mapelLoading, error: mapelError } = useCollection<Mapel>('mapel', [], { realtime: true });
@@ -32,8 +64,32 @@ export default function MataPelajaranPage() {
   const loading = mapelLoading || jenjangLoading;
   const error = mapelError || jenjangError;
 
+  // ── Query Param Scope ──────────────────────────────────────────────────
+  const progParam = searchParams.get('prog');
+  const typeParam = searchParams.get('type');
+  const instansiParam = searchParams.get('instansi');
+
+  const resolvedInstansi = useMemo(() => {
+    return resolveInstansiFromParams(progParam, typeParam, instansiParam);
+  }, [progParam, typeParam, instansiParam]);
+
   // ── Instansi tab ──────────────────────────────────────────────────────
-  const [activeInstansi, setActiveInstansi] = useState<Instansi>('madin');
+  const [activeInstansi, setActiveInstansi] = useState<Instansi>(() => {
+    return resolvedInstansi ?? 'madin';
+  });
+
+  useEffect(() => {
+    if (resolvedInstansi) {
+      setActiveInstansi(resolvedInstansi);
+    }
+  }, [resolvedInstansi]);
+
+  const allowedInstansi = useMemo<Instansi[] | undefined>(() => {
+    if (resolvedInstansi) {
+      return [resolvedInstansi];
+    }
+    return undefined;
+  }, [resolvedInstansi]);
 
   // ── View state ────────────────────────────────────────────────────────
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -194,7 +250,7 @@ export default function MataPelajaranPage() {
         action={<MapelToolbar viewMode={viewMode} onViewModeChange={setViewMode} onCreate={() => setShowCreate(true)} />}
       />
 
-      <MapelTabs activeInstansi={activeInstansi} onTabChange={setActiveInstansi} />
+      <MapelTabs activeInstansi={activeInstansi} onTabChange={setActiveInstansi} allowedInstansi={allowedInstansi} />
 
       <PageCard title="Daftar Mata Pelajaran">
         <div className="space-y-12 py-2">

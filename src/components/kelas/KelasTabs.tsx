@@ -13,13 +13,18 @@ const INSTANSI_ICONS: Record<Instansi, LucideIcon> = {
 interface KelasTabsProps {
   activeInstansi: Instansi;
   setActiveInstansi: (instansi: Instansi) => void;
+  allowedInstansi?: Instansi[];
 }
 
-export function KelasTabs({ activeInstansi, setActiveInstansi }: KelasTabsProps) {
+export function KelasTabs({ activeInstansi, setActiveInstansi, allowedInstansi }: KelasTabsProps) {
+  const displayedInstansi = allowedInstansi && allowedInstansi.length > 0
+    ? INSTANSI_ORDER.filter((inst) => allowedInstansi.includes(inst))
+    : INSTANSI_ORDER;
+
   return (
     <div className="w-full sm:w-fit overflow-x-auto hide-scrollbar" role="tablist">
       <div className="flex min-w-max p-1 gap-1 bg-muted/50 border border-border rounded-xl">
-        {INSTANSI_ORDER.map((instansi) => {
+        {displayedInstansi.map((instansi) => {
           const Icon = INSTANSI_ICONS[instansi];
           const isActive = activeInstansi === instansi;
 

@@ -39,9 +39,28 @@ export default function DistribusiGuruPage() {
   const tingkatLabelMap = useMemo(() => buildTingkatLabelMap(tingkatList), [tingkatList]);
 
   // ── Progression selector state (init from URL params) ───────────────────
-  const urlInstansi = (searchParams.get('instansi') as Instansi | null);
+  const urlInstansiParam = searchParams.get('instansi');
+  const urlProgParam = searchParams.get('prog');
+  const urlTypeParam = searchParams.get('type');
+
+  const resolvedUrlInstansi = useMemo(() => {
+    if (urlInstansiParam && INSTANSI_ORDER.includes(urlInstansiParam as Instansi)) return urlInstansiParam as Instansi;
+    if (urlProgParam) {
+      if (urlProgParam.includes('madin') || urlProgParam.includes('pesantren')) return 'madin';
+      if (urlProgParam.includes('formal') || urlProgParam.includes('depag')) return 'depag';
+      if (urlProgParam.includes('madqur') || urlProgParam.includes('quran')) return 'madqur';
+    }
+    if (urlTypeParam) {
+      const lower = urlTypeParam.toLowerCase();
+      if (lower === 'formal' || lower === 'depag') return 'depag';
+      if (lower === 'pesantren' || lower === 'madin') return 'madin';
+      if (lower === 'quran' || lower === 'madqur') return 'madqur';
+    }
+    return null;
+  }, [urlInstansiParam, urlProgParam, urlTypeParam]);
+
   const [activeInstansi, setActiveInstansi] = useState<Instansi>(
-    urlInstansi && INSTANSI_ORDER.includes(urlInstansi) ? urlInstansi : 'madin',
+    resolvedUrlInstansi ?? 'madin',
   );
   const [selectedJenjang, setSelectedJenjang] = useState<string>(searchParams.get('jenjang') ?? '');
   const [selectedTingkat, setSelectedTingkat] = useState<number | null>(
@@ -157,7 +176,7 @@ export default function DistribusiGuruPage() {
             Instansi
           </h4>
           <div className="flex gap-2 flex-wrap">
-            {INSTANSI_ORDER.map((instansi) => (
+            {(resolvedUrlInstansi ? [resolvedUrlInstansi] : INSTANSI_ORDER).map((instansi) => (
               <button
                 key={instansi}
                 type="button"

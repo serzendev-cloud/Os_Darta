@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
@@ -23,6 +24,11 @@ const SECONDARY_TABS = [
 ];
 
 export default function StrukturAkademikPage() {
+  const searchParams = useSearchParams();
+  const progParam = searchParams.get('prog');
+  const typeParam = searchParams.get('type');
+  const instansiParam = searchParams.get('instansi');
+
   const {
     data: jenjangList,
     loading: jenjangLoading,
@@ -49,6 +55,36 @@ export default function StrukturAkademikPage() {
     window.addEventListener(CURRICULUM_STORE_CHANGE_EVENT, syncMadrasahs);
     return () => window.removeEventListener(CURRICULUM_STORE_CHANGE_EVENT, syncMadrasahs);
   }, []);
+
+  const scopedProgramId = useMemo(() => {
+    if (!madrasahPrograms.length) return null;
+    if (progParam) {
+      const found = madrasahPrograms.find(p => p.id === progParam);
+      if (found) return found.id;
+    }
+    if (typeParam || instansiParam) {
+      const target = (typeParam || instansiParam || '').toLowerCase();
+      if (target === 'madin' || target === 'pesantren') {
+        const found = madrasahPrograms.find(p => p.id === 'prog-madin' || p.typeCategory === 'pesantren');
+        if (found) return found.id;
+      }
+      if (target === 'formal' || target === 'depag') {
+        const found = madrasahPrograms.find(p => p.id === 'prog-formal' || p.typeCategory === 'formal');
+        if (found) return found.id;
+      }
+      if (target === 'quran' || target === 'madqur') {
+        const found = madrasahPrograms.find(p => p.id === 'prog-madqur' || p.typeCategory === 'quran');
+        if (found) return found.id;
+      }
+    }
+    return null;
+  }, [progParam, typeParam, instansiParam, madrasahPrograms]);
+
+  useEffect(() => {
+    if (scopedProgramId) {
+      setSelectedMadrasahId(scopedProgramId);
+    }
+  }, [scopedProgramId]);
 
   const loading = jenjangLoading || tingkatLoading;
   const error = jenjangError || tingkatError;
@@ -188,24 +224,26 @@ export default function StrukturAkademikPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-stone-200/70 dark:bg-stone-900 border border-stone-300/80 dark:border-stone-800 shadow-inner">
-          <button
-            type="button"
-            onClick={() => setSelectedMadrasahId('all')}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-200',
-              selectedMadrasahId === 'all'
-                ? 'bg-gradient-to-r from-stone-900 to-amber-950 text-white shadow-md border border-amber-500/30 scale-[1.02]'
-                : 'text-stone-700 dark:text-stone-300 hover:bg-stone-300/50 dark:hover:bg-stone-800'
-            )}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Semua Program Madrasah</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] bg-stone-700 text-stone-200">
-              {jenjangList.length}
-            </span>
-          </button>
+          {!scopedProgramId && (
+            <button
+              type="button"
+              onClick={() => setSelectedMadrasahId('all')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-200',
+                selectedMadrasahId === 'all'
+                  ? 'bg-gradient-to-r from-stone-900 to-amber-950 text-white shadow-md border border-amber-500/30 scale-[1.02]'
+                  : 'text-stone-700 dark:text-stone-300 hover:bg-stone-300/50 dark:hover:bg-stone-800'
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Semua Program Madrasah</span>
+              <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] bg-stone-700 text-stone-200">
+                {jenjangList.length}
+              </span>
+            </button>
+          )}
 
-          {madrasahPrograms.map((prog) => {
+          {(scopedProgramId ? madrasahPrograms.filter(p => p.id === scopedProgramId) : madrasahPrograms).map((prog) => {
             const isSelected = selectedMadrasahId === prog.id;
             return (
               <button

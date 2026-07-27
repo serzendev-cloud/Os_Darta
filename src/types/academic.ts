@@ -24,6 +24,7 @@ export interface Kelas {
   waliKelas: string;
   studentCount: number;
   status: 'aktif' | 'nonaktif';
+  academicTab?: string;
 }
 
 export interface TingkatGroup {

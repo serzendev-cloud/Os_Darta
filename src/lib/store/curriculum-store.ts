@@ -9,6 +9,12 @@ export interface CurriculumProgram {
   totalMapel: number;
   totalGuru: number;
   iconBg: string;
+  // Advanced configuration attributes
+  skalaPenilaian?: 'numeric_100' | 'predikat_syariah' | 'letter_af';
+  kkmMin?: number;
+  formatRaport?: 'pdf_standar' | 'pdf_tahfidz' | 'kitab_kuning';
+  penanggungJawab?: string;
+  catatanTambahan?: string;
 }
 
 export const defaultCurriculumsList: CurriculumProgram[] = [

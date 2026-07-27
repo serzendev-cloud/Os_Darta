@@ -1,22 +1,26 @@
-export { usersService } from './users';
-export { santriService } from './santri';
-export { asramaService } from './asrama';
-export { kamarService } from './kamar';
-export { kelasService } from './kelas';
-export { mapelService } from './mapel';
-export { masterPelanggaranService } from './masterPelanggaran';
-export { pelanggaranService } from './pelanggaran';
-export { hukumanService } from './hukuman';
-export { questService } from './quest';
-export { notificationsService } from './notifications';
+// Re-exporting multi-tenant PostgreSQL/Drizzle DB services for backward compatibility
+export {
+  usersService,
+  santriService,
+  asramaService,
+  kamarService,
+  kelasService,
+  mapelService,
+  masterPelanggaranService,
+  pelanggaranService,
+  hukumanService,
+  questService,
+  notificationsService,
+  teacherAssignmentService,
+  masterHukumanService,
+  masterTingkatService,
+  masterJenjangService,
+  guruService,
+  governanceCaseService,
+} from '@/lib/db/services';
+
 export { tolerancePolicyService } from './tolerancePolicy';
-export { teacherAssignmentService } from './teacherAssignment';
-export { masterHukumanService } from './masterHukuman';
-export { masterTingkatService } from './masterTingkat';
-export { masterJenjangService } from './masterJenjang';
 export { healthVisitService } from './healthVisit';
 export { healthPermissionService } from './healthPermission';
-export { guruService } from './guru';
-export { governanceCaseService } from './governanceCase';
 export { auditLogService } from './auditLog';
 export { appConfigService } from './appConfig';

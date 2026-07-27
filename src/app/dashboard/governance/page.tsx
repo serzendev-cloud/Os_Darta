@@ -186,10 +186,9 @@ export default function GovernanceReviewPage() {
           reviewNotes,
         );
 
-        // Increment warning count
         await governanceCaseService.update(reviewItem.id, {
           warningCount,
-        } as Partial<import('@/types/firestore').FirestoreGovernanceCase>);
+        });
 
         createGovernanceEvent('governance:warning_issued', reviewItem.santriId, reviewItem.santriName, {
           caseId: reviewItem.id,
