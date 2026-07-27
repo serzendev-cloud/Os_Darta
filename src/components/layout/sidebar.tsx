@@ -116,7 +116,11 @@ export function Sidebar() {
   useEffect(() => {
     const activeGroup = menuGroups.find((g) =>
       g.items.some((item) => {
-        const check = (i: typeof item) => pathname === i.href || pathname?.startsWith(i.href + '/');
+        const check = (i: typeof item) => {
+          if (!pathname) return false;
+          const cleanTarget = i.href.split('?')[0];
+          return pathname === cleanTarget || (cleanTarget !== '/dashboard' && pathname.startsWith(cleanTarget + '/'));
+        };
         if (check(item)) return true;
         return item.children?.some((c) => check(c)) ?? false;
       })
@@ -253,12 +257,13 @@ export function Sidebar() {
                       
                       const isPathActive = (targetHref: string) => {
                         if (!pathname) return false;
-                        if (pathname === targetHref) return true;
+                        const cleanTarget = targetHref.split('?')[0];
+                        if (pathname === cleanTarget) return true;
                         // Avoid matching /dashboard/pengaturan for subroutes like /dashboard/pengaturan/manajemen-user-role
-                        if (targetHref === '/dashboard/pengaturan') {
+                        if (cleanTarget === '/dashboard/pengaturan') {
                           return pathname === '/dashboard/pengaturan';
                         }
-                        return pathname.startsWith(targetHref + '/');
+                        return cleanTarget !== '/dashboard' && pathname.startsWith(cleanTarget + '/');
                       };
 
                       const isActiveItem = itemHasChildren
