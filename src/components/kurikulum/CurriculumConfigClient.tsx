@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   GraduationCap, BookMarked, Settings, CheckCircle2, ArrowLeft, 
   Save, ShieldCheck, Sparkles, Layers, BookOpen, Users, 
-  Award, FileText, UserCheck, Palette, AlertCircle, Plus
+  Award, FileText, UserCheck, Palette, AlertCircle, Plus, School
 } from 'lucide-react';
 import { PageCard } from '@/components/shared/page-header';
 import { 
@@ -17,8 +17,15 @@ import {
 
 import { MasterJenjangTab, MasterTingkatTab } from '@/components/struktur-akademik';
 import { useCollection } from '@/hooks';
-import { masterJenjangService, masterTingkatService } from '@/lib/firebase/services';
-import type { MasterJenjang, MasterTingkat, Instansi } from '@/types';
+import { masterJenjangService, masterTingkatService, kelasService } from '@/lib/firebase/services';
+import type { MasterJenjang, MasterTingkat, Instansi, Guru } from '@/types';
+import type { Kelas, Mapel, JenjangGroup } from '@/types/academic';
+import { KelasClusterSection } from '@/components/kelas/KelasClusterSection';
+import { AddKelasModal, NewClassData } from '@/components/kelas/AddKelasModal';
+import { EditKelasModal, DeleteKelasModal } from '@/components/kelas/KelasModal';
+import { MapelCard } from '@/components/mapel/MapelCard';
+import { MapelClusterSection } from '@/components/mapel/MapelClusterSection';
+import { getJenjangByInstansi } from '@/lib/academic-structure';
 
 export function CurriculumConfigClient() {
   const params = useParams();
@@ -28,12 +35,24 @@ export function CurriculumConfigClient() {
   const [program, setProgram] = useState<CurriculumProgram | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
-  const [activeTab, setActiveTab] = useState<'general' | 'structure' | 'metrics' | 'grading' | 'admin'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'structure' | 'mapel' | 'rombel' | 'metrics' | 'grading' | 'admin'>('general');
   const [structureSubTab, setStructureSubTab] = useState<'jenjang' | 'tingkat'>('jenjang');
 
-  // Fetch Jenjang & Tingkat
+  // Fetch collections
   const { data: jenjangList } = useCollection<MasterJenjang>('masterJenjang', [], { realtime: true });
   const { data: tingkatList } = useCollection<MasterTingkat>('masterTingkat', [], { realtime: true });
+  const { data: allKelas } = useCollection<Kelas>('kelas', [], { realtime: true });
+  const { data: allMapel } = useCollection<Mapel>('mapel', [], { realtime: true });
+  const { data: guruList } = useCollection<Guru>('guru', [], { realtime: true });
+
+  // Modal states for Kelas
+  const [selectedKelas, setSelectedKelas] = useState<Kelas | null>(null);
+  const [isAddKelasModalOpen, setIsAddKelasModalOpen] = useState(false);
+  const [isEditKelasModalOpen, setIsEditKelasModalOpen] = useState(false);
+  const [isDeleteKelasModalOpen, setIsDeleteKelasModalOpen] = useState(false);
+  const [newClassData, setNewClassData] = useState<NewClassData>({
+    name: '', jenjang: '', tingkat: '', waliKelas: '',
+  });
 
   useEffect(() => {
     const list = getStoredCurriculums();
@@ -80,6 +99,84 @@ export function CurriculumConfigClient() {
     if (program.typeCategory === 'quran' || program.code.includes('QUR')) return 'madqur';
     if (program.typeCategory === 'formal' || program.code.includes('FORMAL')) return 'depag';
     return 'madin';
+  };
+
+  // Instansi & Jenjang Order for this program
+  const currentInstansi = getInstansiForProgram();
+  const programJenjangNames = useMemo(
+    () => getJenjangByInstansi(jenjangList, currentInstansi),
+    [jenjangList, currentInstansi]
+  );
+
+  // Grouped Rombel Kelas per Jenjang & Tingkat (matches Image 1 layout!)
+  const programJenjangClassGroups = useMemo<JenjangGroup[]>(() => {
+    return programJenjangNames
+      .map((jenjang) => {
+        const jenjangData = allKelas.filter((k) => k.jenjang === jenjang);
+        const tingkatGroups = [...new Set(jenjangData.map((k) => k.tingkat))]
+          .sort((a, b) => a - b)
+          .map((tingkat) => ({
+            tingkat,
+            classes: jenjangData.filter((k) => k.tingkat === tingkat),
+          }))
+          .filter((g) => g.classes.length > 0);
+        return { jenjang, tingkatGroups };
+      })
+      .filter((g) => g.tingkatGroups.length > 0);
+  }, [allKelas, programJenjangNames]);
+
+  // Grouped Mapel per Jenjang & Tingkat
+  const programMapelGroups = useMemo(() => {
+    return programJenjangNames
+      .map((jenjang) => {
+        const jenjangData = allMapel.filter((m) => m.jenjang === jenjang);
+        const tingkatGroups = [...new Set(jenjangData.map((m) => m.tingkat))]
+          .sort((a, b) => a - b)
+          .map((tingkat) => ({
+            tingkat,
+            mapels: jenjangData.filter((m) => m.tingkat === tingkat),
+          }))
+          .filter((g) => g.mapels.length > 0);
+        return { jenjang, tingkatGroups };
+      })
+      .filter((g) => g.tingkatGroups.length > 0);
+  }, [allMapel, programJenjangNames]);
+
+  // Handlers for Kelas
+  const handleAddClassSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await kelasService.create({
+      name: newClassData.name,
+      jenjang: newClassData.jenjang || programJenjangNames[0] || 'Ibtida\'i',
+      tingkat: parseInt(newClassData.tingkat) || 1,
+      waliKelas: newClassData.waliKelas || 'Belum Diatur',
+      studentCount: 0,
+      status: 'aktif',
+    });
+    setIsAddKelasModalOpen(false);
+    setNewClassData({ name: '', jenjang: '', tingkat: '', waliKelas: '' });
+    showNotification('Rombel Kelas baru BERHASIL DITAMBAHKAN!');
+  };
+
+  const handleSaveEditKelas = async (updated: Kelas) => {
+    await kelasService.update(updated.id, {
+      name: updated.name,
+      jenjang: updated.jenjang,
+      tingkat: updated.tingkat,
+      waliKelas: updated.waliKelas,
+      status: updated.status,
+    });
+    setIsEditKelasModalOpen(false);
+    setSelectedKelas(null);
+    showNotification('Perubahan Rombel Kelas BERHASIL DISIMPAN!');
+  };
+
+  const handleConfirmDeleteKelas = async () => {
+    if (!selectedKelas) return;
+    await kelasService.delete(selectedKelas.id);
+    setIsDeleteKelasModalOpen(false);
+    setSelectedKelas(null);
+    showNotification('Rombel Kelas BERHASIL DIHAPUS.');
   };
 
   // Filtered Jenjang & Tingkat for this specific program
@@ -313,6 +410,32 @@ export function CurriculumConfigClient() {
 
         <button
           type="button"
+          onClick={() => setActiveTab('mapel')}
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
+            activeTab === 'mapel'
+              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
+          }`}
+        >
+          <BookOpen className={`w-4 h-4 ${activeTab === 'mapel' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
+          <span>Mata Pelajaran (Mapel)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('rombel')}
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
+            activeTab === 'rombel'
+              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
+          }`}
+        >
+          <School className={`w-4 h-4 ${activeTab === 'rombel' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
+          <span>Daftar Rombel Kelas</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('metrics')}
           className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'metrics'
@@ -507,6 +630,74 @@ export function CurriculumConfigClient() {
           </PageCard>
         )}
 
+        {/* TAB 3: MAPEL (MATA PELAJARAN) */}
+        {activeTab === 'mapel' && (
+          <PageCard
+            title={`Alokasi Mata Pelajaran: ${program.name}`}
+            description="Penataan mata pelajaran yang diajarkan dalam program kurikulum ini, dikelompokkan secara terstruktur per Jenjang & Tingkat."
+          >
+            {programMapelGroups.length === 0 ? (
+              <div className="text-center py-12 text-stone-500 text-xs font-medium">
+                Belum ada mata pelajaran yang terdaftar untuk jenjang di program ini.
+              </div>
+            ) : (
+              <div className="space-y-10">
+                {programMapelGroups.map((group) => (
+                  <div key={group.jenjang} className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 shadow-sm">
+                        <h2 className="text-xs font-black text-amber-700 dark:text-amber-300 tracking-widest uppercase">
+                          Jenjang {group.jenjang}
+                        </h2>
+                      </div>
+                      <div className="flex-1 h-px bg-gradient-to-r from-amber-500/30 to-transparent" />
+                    </div>
+
+                    {group.tingkatGroups.map((tGroup) => (
+                      <MapelClusterSection
+                        key={tGroup.tingkat}
+                        jenjang={group.jenjang}
+                        tingkat={tGroup.tingkat}
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                          {tGroup.mapels.map((m) => (
+                            <MapelCard key={m.id} subject={m} />
+                          ))}
+                        </div>
+                      </MapelClusterSection>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </PageCard>
+        )}
+
+        {/* TAB 4: DAFTAR ROMBEL KELAS */}
+        {activeTab === 'rombel' && (
+          <PageCard
+            title={`Daftar Rombel Kelas: ${program.name}`}
+            description="Penataan daftar Rombel Kelas terikat kurikulum ini, dikelompokkan secara hirarki per Jenjang dan Tingkat."
+            action={
+              <button
+                type="button"
+                onClick={() => setIsAddKelasModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Buat Rombel Kelas Baru</span>
+              </button>
+            }
+          >
+            <KelasClusterSection
+              jenjangGroups={programJenjangClassGroups}
+              activeInstansi={currentInstansi}
+              onEdit={(k) => { setSelectedKelas(k); setIsEditKelasModalOpen(true); }}
+              onDelete={(k) => { setSelectedKelas(k); setIsDeleteKelasModalOpen(true); }}
+            />
+          </PageCard>
+        )}
+
         {/* TAB 3: METRICS */}
         {activeTab === 'metrics' && (
           <PageCard
@@ -685,6 +876,37 @@ export function CurriculumConfigClient() {
           </div>
         </div>
       </form>
+
+      {/* Modals for Rombel Kelas */}
+      <AddKelasModal
+        isOpen={isAddKelasModalOpen}
+        onClose={() => setIsAddKelasModalOpen(false)}
+        onSubmit={handleAddClassSubmit}
+        data={newClassData}
+        setData={setNewClassData}
+        instansiJenjang={programJenjangNames}
+        guruList={guruList}
+      />
+
+      {selectedKelas && (
+        <>
+          <EditKelasModal
+            isOpen={isEditKelasModalOpen}
+            onClose={() => { setIsEditKelasModalOpen(false); setSelectedKelas(null); }}
+            onSave={handleSaveEditKelas}
+            kelas={selectedKelas}
+            instansiJenjang={programJenjangNames}
+            guruList={guruList}
+          />
+
+          <DeleteKelasModal
+            isOpen={isDeleteKelasModalOpen}
+            onClose={() => { setIsDeleteKelasModalOpen(false); setSelectedKelas(null); }}
+            onConfirm={handleConfirmDeleteKelas}
+            kelas={selectedKelas}
+          />
+        </>
+      )}
     </div>
   );
 }
