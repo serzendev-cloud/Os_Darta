@@ -29,8 +29,9 @@ import { getJenjangByInstansi } from '@/lib/academic-structure';
 
 export function CurriculumConfigClient() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const programId = params.id as string;
+  const programId = (searchParams?.get('id') as string) || (params?.id as string) || 'prog-madin';
 
   const [program, setProgram] = useState<CurriculumProgram | null>(null);
   const [loading, setLoading] = useState(true);

@@ -42,6 +42,10 @@ export default function MasterCurriculumSettingsPage() {
     e.preventDefault();
     if (!newProgName || !newProgCode) return;
 
+    const templateType = newProgCategory === 'custom' ? 'pesantren' : newProgCategory;
+    const isQuran = newProgCategory === 'quran';
+    const isFormal = newProgCategory === 'formal';
+
     const newProgram: CurriculumProgram = {
       id: `prog-custom-${Date.now()}`,
       code: newProgCode.toUpperCase(),
@@ -49,22 +53,28 @@ export default function MasterCurriculumSettingsPage() {
       typeCategory: newProgCategory,
       description: newProgDesc || `Program Kurikulum Khusus ${newProgName}`,
       status: 'active',
-      totalJenjang: 2,
-      totalMapel: 10,
-      totalGuru: 5,
-      iconBg: 'bg-indigo-600',
+      totalJenjang: isQuran ? 2 : isFormal ? 3 : 4,
+      totalMapel: isQuran ? 8 : isFormal ? 16 : 24,
+      totalGuru: isQuran ? 8 : isFormal ? 12 : 18,
+      iconBg: isQuran ? 'bg-emerald-600' : isFormal ? 'bg-blue-600' : 'bg-indigo-600',
+      skalaPenilaian: isQuran ? 'predikat_syariah' : 'numeric_100',
+      kkmMin: 75,
+      formatRaport: isQuran ? 'pdf_tahfidz' : 'pdf_standar',
+      penanggungJawab: 'Ust. Ahmad Dahlan, M.Pd.',
+      catatanTambahan: `Konfigurasi diawali dari template ${templateType.toUpperCase()}`,
     };
 
     const updated = [...curriculums, newProgram];
     setCurriculums(updated);
     saveStoredCurriculums(updated);
 
-    showNotification(`Program Kurikulum Baru "${newProgram.name}" BERHASIL DIBUAT! Menu Kontainer Baru telah ditambahkan di Sidebar.`);
+    showNotification(`Program Kurikulum Baru "${newProgram.name}" BERHASIL DIBUAT dengan Template Auto-Generated!`);
 
     // Reset Form
     setNewProgName('');
     setNewProgCode('');
     setNewProgDesc('');
+    setNewProgCategory('custom');
     setIsAddModalOpen(false);
   };
 
@@ -203,7 +213,7 @@ export default function MasterCurriculumSettingsPage() {
               {/* Action Toolbar: Active Konfigurasi Button (Navigates to Dedicated Settings Page) & Trash Delete Button */}
               <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2">
                 <Link
-                  href={`/dashboard/kurikulum/master/${prog.id}`}
+                  href={`/dashboard/kurikulum/config?id=${prog.id}`}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95"
                 >
                   <Settings className="w-3.5 h-3.5" />
