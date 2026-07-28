@@ -64,6 +64,14 @@ export const navigationGroups: NavGroup[] = [
         roles: ['developer', 'super_admin'],
         requiredPermission: Permission.MANAGE_TENANTS,
       },
+      {
+        title: 'Pengawasan PPOB & Deposit SaaS',
+        href: '/dashboard/saas/ppob',
+        icon: 'Zap',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+        badge: 'New',
+      },
     ],
   },
 
@@ -422,6 +430,13 @@ export const navigationGroups: NavGroup[] = [
             href: '/dashboard/keuangan/invois',
             icon: 'FileText',
             roles: ['admin', 'staff'],
+            requiredPermission: Permission.VIEW_KELAS,
+          },
+          {
+            title: 'Beli Token PLN & Pulsa',
+            href: '/wali/ppob',
+            icon: 'Zap',
+            roles: ['wali', 'admin', 'staff'],
             requiredPermission: Permission.VIEW_KELAS,
           },
         ],

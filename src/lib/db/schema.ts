@@ -381,3 +381,4 @@ export const gdriveDocuments = pgTable('gdrive_documents', {
 export * from './schema/finance';
 export * from './schema/rfid';
 export * from './schema/gate_pass';
+export * from './schema/ppob';
