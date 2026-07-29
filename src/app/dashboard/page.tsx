@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks';
 import { useCollection } from '@/hooks';
 import { StatsCard } from '@/components/shared/stats-card';
@@ -10,12 +10,13 @@ import { AnalyticsCard } from '@/components/shared/analytics-card';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { DashboardShell } from '@/components/shared/dashboard-shell';
+import { MobileBankingDashboard } from '@/components/shared/mobile-banking-dashboard';
 import type { Santri, Pelanggaran, Quest, Hukuman, Asrama, Notification } from '@/types';
 import type { HealthVisit } from '@/types/health';
 import {
   Users, Building2, AlertTriangle, Trophy, Shield,
   Activity, GraduationCap, Star, Clock, CheckCircle,
-  ClipboardCheck, School, Briefcase, BookOpen, Stethoscope
+  ClipboardCheck, School, Briefcase, BookOpen, Stethoscope, Smartphone, Monitor
 } from 'lucide-react';
 
 // ─── ADMIN VIEW ────────────────────────────────────────────────
@@ -631,22 +632,95 @@ function DeveloperDashboard({ name, role }: { name: string; role: string }) {
 // ─── MAIN EXPORT ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [forceMode, setForceMode] = useState<'auto' | 'mobile_banking' | 'desktop'>('auto');
 
   if (!user) return null;
 
-  switch (user.role) {
-    case 'developer':
-    case 'super_admin':
-      return <DeveloperDashboard name={user.name} role={user.role} />;
-    case 'admin': return <AdminDashboard />;
-    case 'musyrif': return <MusyrifDashboard name={user.name} />;
-    case 'wali': return <WaliDashboard />;
-    case 'santri': return <SantriDashboard name={user.name} />;
-    case 'wali_kelas': return <WaliKelasDashboard />;
-    case 'kepala_kesiswaan': return <KesiswaanDashboard />;
-    case 'guru': return <GuruDashboard />;
-    case 'staff': return <StaffDashboard />;
-    default: return <div className="p-8 text-center text-muted-foreground">Dashboard belum tersedia untuk role ini.</div>;
+  const renderRoleDashboard = () => {
+    switch (user.role) {
+      case 'developer':
+      case 'super_admin':
+        return <DeveloperDashboard name={user.name} role={user.role} />;
+      case 'admin': return <AdminDashboard />;
+      case 'musyrif': return <MusyrifDashboard name={user.name} />;
+      case 'wali': return <WaliDashboard />;
+      case 'santri': return <SantriDashboard name={user.name} />;
+      case 'wali_kelas': return <WaliKelasDashboard />;
+      case 'kepala_kesiswaan': return <KesiswaanDashboard />;
+      case 'guru': return <GuruDashboard />;
+      case 'staff': return <StaffDashboard />;
+      default: return <div className="p-8 text-center text-muted-foreground">Dashboard belum tersedia untuk role ini.</div>;
+    }
+  };
+
+  if (forceMode === 'mobile_banking') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between bg-stone-900 text-white p-3 rounded-2xl border border-amber-400/30 shadow-lg">
+          <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+            <Smartphone className="w-4 h-4" /> Mode Preview Mobile Banking Active (BSI Style)
+          </span>
+          <button
+            onClick={() => setForceMode('auto')}
+            className="text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded-xl border border-white/20 active:scale-95 transition-all"
+          >
+            Kembali ke Mode Otomatis
+          </button>
+        </div>
+        <MobileBankingDashboard />
+      </div>
+    );
   }
+
+  if (forceMode === 'desktop') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between bg-stone-900 text-white p-3 rounded-2xl border border-amber-400/30 shadow-lg">
+          <span className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
+            <Monitor className="w-4 h-4" /> Mode Classic Desktop Active (Emerald Gold)
+          </span>
+          <button
+            onClick={() => setForceMode('auto')}
+            className="text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded-xl border border-white/20 active:scale-95 transition-all"
+          >
+            Kembali ke Mode Otomatis
+          </button>
+        </div>
+        {renderRoleDashboard()}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* View Switcher Pill for Testing / Demonstration */}
+      <div className="flex items-center justify-end gap-2 mb-3">
+        <button
+          onClick={() => setForceMode('mobile_banking')}
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-gradient-to-r from-[#001D4A] to-[#0072CE] text-white px-3 py-1.5 rounded-xl border border-sky-400/40 shadow-sm hover:brightness-110 transition-all active:scale-95"
+        >
+          <Smartphone className="w-3.5 h-3.5 text-amber-300" />
+          <span>Tampilan Mobile Banking (BSI)</span>
+        </button>
+
+        <button
+          onClick={() => setForceMode('desktop')}
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-emerald-gold-card text-gold-gradient px-3 py-1.5 rounded-xl border border-gold-accent shadow-sm hover:brightness-110 transition-all active:scale-95"
+        >
+          <Monitor className="w-3.5 h-3.5 text-amber-400" />
+          <span>Tampilan Web App (Emerald Gold)</span>
+        </button>
+      </div>
+
+      {/* Responsive Rendering: Mobile Banking on Mobile screens, Classic Desktop on Larger Screens */}
+      <div className="block md:hidden">
+        <MobileBankingDashboard />
+      </div>
+
+      <div className="hidden md:block">
+        {renderRoleDashboard()}
+      </div>
+    </div>
+  );
 }
 

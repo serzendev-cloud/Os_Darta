@@ -107,6 +107,8 @@ export interface Santri {
   totalPrestasi: number;
   statusKarakter: 'Baik' | 'Perlu Perhatian' | 'Peringatan';
   statusSP: 'Tidak Ada' | 'SP1' | 'SP2' | 'SP3';
+  rfidTag?: string;
+  limitHarian?: number;
 }
 
 export interface Asrama {

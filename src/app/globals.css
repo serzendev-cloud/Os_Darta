@@ -216,4 +216,40 @@
     border-radius: var(--radius-lg);
     transition: all 300ms ease;
   }
+
+  /* ── Mobile Banking Theme (Gambar 1: Deep Royal Blue, Cyan Glow & Gold Accents) ── */
+  .bg-mobile-banking-hero {
+    background: linear-gradient(135deg, #001D4A 0%, #002B66 40%, #0B3C85 70%, #0072CE 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bg-mobile-banking-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -30%;
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, rgba(0, 163, 224, 0.35) 0%, rgba(0, 114, 206, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* ── Web App Theme (Gambar 2: Emerald Green & Gold Luxury Islamic Theme) ── */
+  .bg-emerald-gold-card {
+    background: linear-gradient(135deg, #04241B 0%, #06382B 50%, #0D4838 100%);
+    border: 1px solid rgba(197, 160, 89, 0.35);
+    box-shadow: 0 10px 30px rgba(6, 56, 43, 0.3);
+  }
+
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #FFE8B2 0%, #E5C158 50%, #C5A059 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .border-gold-accent {
+    border-color: rgba(197, 160, 89, 0.4);
+  }
 }

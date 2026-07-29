@@ -7,6 +7,7 @@ import { useSidebarStore } from '@/store/sidebar-store';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import { MaintenanceBanner } from '@/components/shared/maintenance-banner';
 import { useConfig } from '@/hooks/useConfig';
 import { DEFAULT_MAINTENANCE_CONFIG, isMaintenanceActive, canBypassMaintenance } from '@/lib/maintenance';
@@ -66,16 +67,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       // readonly mode: show banner, children below
       return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-sky-100/80 dark:bg-background">
           <MaintenanceBanner config={maintenanceConfig} />
           <Sidebar />
           <div className={cn('transition-all duration-300 ease-in-out', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
             <Topbar />
-            <main className="p-4 lg:p-6">
+            <main className="p-4 lg:p-6 pb-24 lg:pb-6">
               <Breadcrumb />
               {children}
             </main>
           </div>
+          <MobileBottomNav />
         </div>
       );
     }
@@ -89,11 +91,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className={cn('transition-all duration-300 ease-in-out bg-sky-100/80 dark:bg-background min-h-screen', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
         <Topbar />
-        <main className="p-4 lg:p-6 bg-sky-100/80 dark:bg-background min-h-[calc(100vh-4rem)]">
+        <main className="p-4 lg:p-6 pb-24 lg:pb-6 bg-sky-100/80 dark:bg-background min-h-[calc(100vh-4rem)]">
           <Breadcrumb />
           {children}
         </main>
       </div>
+      <MobileBottomNav />
     </div>
   );
 }
