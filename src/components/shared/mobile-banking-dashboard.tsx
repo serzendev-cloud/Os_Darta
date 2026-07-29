@@ -172,13 +172,23 @@ export function MobileBankingDashboard() {
               <span>Bayar SPP</span>
             </Link>
 
-            <Link
-              href="/wali/ppob"
-              className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white/15 text-white font-bold text-[11px] border border-white/20 hover:bg-white/25 active:scale-95 transition-all"
-            >
-              <Zap className="w-4 h-4 mb-0.5 text-[#F99D1C]" />
-              <span>Pulsa/PLN</span>
-            </Link>
+            {isPpobAllowed ? (
+              <Link
+                href="/wali/ppob"
+                className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white/15 text-white font-bold text-[11px] border border-white/20 hover:bg-white/25 active:scale-95 transition-all"
+              >
+                <Zap className="w-4 h-4 mb-0.5 text-[#F99D1C]" />
+                <span>Pulsa/PLN</span>
+              </Link>
+            ) : (
+              <Link
+                href="/dashboard/notifikasi"
+                className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white/15 text-white font-bold text-[11px] border border-white/20 hover:bg-white/25 active:scale-95 transition-all"
+              >
+                <Megaphone className="w-4 h-4 mb-0.5 text-cyan-300" />
+                <span>Informasi</span>
+              </Link>
+            )}
 
             <Link
               href="/dashboard/santri/kta-rfid"
@@ -370,20 +380,37 @@ export function MobileBankingDashboard() {
             </span>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#001538] border border-cyan-200/15">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#F99D1C] to-[#E67E22] text-white flex items-center justify-center shadow">
-                <Zap className="w-4 h-4" />
+          {isPpobAllowed ? (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#001538] border border-cyan-200/15">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#F99D1C] to-[#E67E22] text-white flex items-center justify-center shadow">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-extrabold text-white">Pembelian Token PLN (PPOB)</h4>
+                  <p className="text-[11px] text-cyan-200/70">Token 50rb • Berhasil</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-extrabold text-white">Pembelian Token PLN (PPOB)</h4>
-                <p className="text-[11px] text-cyan-200/70">Token 50rb • Berhasil</p>
-              </div>
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[#00C4DF]/20 text-cyan-200 border border-[#00C4DF]/40">
+                Sukses
+              </span>
             </div>
-            <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[#00C4DF]/20 text-cyan-200 border border-[#00C4DF]/40">
-              Sukses
-            </span>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#001538] border border-cyan-200/15">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#F99D1C] to-[#E67E22] text-white flex items-center justify-center shadow">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-extrabold text-white">Catatan Kedisiplinan & Karakter</h4>
+                  <p className="text-[11px] text-cyan-200/70">Monitoring Santri Asrama</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                Baik
+              </span>
+            </div>
+          )}
 
         </div>
       </div>
