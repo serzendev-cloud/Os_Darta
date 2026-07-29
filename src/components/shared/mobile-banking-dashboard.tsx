@@ -39,6 +39,8 @@ export function MobileBankingDashboard() {
 
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'MA';
 
+  const isPpobAllowed = user?.role === 'wali'; // Extensible role check for PPOB
+
   // Mobile Banking Grid Features
   const features = [
     { label: 'Bayar SPP', icon: CreditCard, href: '/dashboard/keuangan/spp', bg: 'bg-amber-500/15 text-amber-500 border-amber-500/30' },
@@ -47,7 +49,9 @@ export function MobileBankingDashboard() {
     { label: 'Perizinan', icon: Ticket, href: '/dashboard/governance', bg: 'bg-orange-500/15 text-orange-500 border-orange-500/30' },
     { label: 'Tahfizh', icon: BookOpen, href: '/dashboard/tahfidz', bg: 'bg-teal-500/15 text-teal-500 border-teal-500/30' },
     { label: 'Raport & Nilai', icon: Award, href: '/dashboard/raport', bg: 'bg-purple-500/15 text-purple-500 border-purple-500/30' },
-    { label: 'Beli Pulsa/PLN', icon: Zap, href: '/wali/ppob', bg: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30', badge: 'PPOB' },
+    isPpobAllowed 
+      ? { label: 'Beli Pulsa/PLN', icon: Zap, href: '/wali/ppob', bg: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30', badge: 'PPOB' }
+      : { label: 'Informasi', icon: Sparkles, href: '/dashboard/notifikasi', bg: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' },
     { label: 'POS Kantin', icon: ShoppingBag, href: '/dashboard/keuangan/kantin-nfc', bg: 'bg-rose-500/15 text-rose-500 border-rose-500/30' },
     { label: 'UKS Medis', icon: Stethoscope, href: '/dashboard/uks', bg: 'bg-red-500/15 text-red-500 border-red-500/30' },
     { label: 'Gate Pass', icon: ShieldCheck, href: '/dashboard/gate-checkpoint', bg: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30' },

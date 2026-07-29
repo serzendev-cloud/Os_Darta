@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuthStore } from '@/store/auth-store';
 import { PageHeader } from '@/components/shared/page-header';
 import {
   Zap,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Sparkles,
+  ShieldAlert,
 } from 'lucide-react';
 
 // Mock Product Catalog for PLN Tokens & Pulsa
@@ -37,8 +39,32 @@ const PULSA_PRODUCTS = [
   { sku: 'xl25', name: 'XL Axiata Rp 25.000', brand: 'XL', priceSelling: 26500 },
 ];
 
+// Configurable roles allowed to access PPOB PLN & Pulsa service (Currently 'wali' only, extensible for future)
+export const ALLOWED_PPOB_ROLES: string[] = ['wali'];
+
 export default function WaliPpobPage() {
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'PLN' | 'PULSA' | 'DATA'>('PLN');
+
+  // Role Guard: Restrict PPOB Token & Pulsa service to allowed roles (Currently 'wali' only)
+  if (user && !ALLOWED_PPOB_ROLES.includes(user.role)) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4">
+        <div className="p-8 rounded-3xl bg-stone-900 text-white border border-amber-500/30 text-center space-y-4 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-extrabold text-white">Akses Layanan Terbatas</h2>
+          <p className="text-sm text-stone-300 max-w-md mx-auto leading-relaxed">
+            Layanan pengisian token listrik PLN, pulsa HP, dan paket data PPOB <span className="font-bold text-amber-400">saat ini diperuntukkan khusus bagi Wali Santri</span>.
+          </p>
+          <div className="pt-4 border-t border-white/10 text-xs text-stone-400">
+            Role Anda saat ini: <span className="font-bold text-sky-400 uppercase">{user.role}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [customerNo, setCustomerNo] = useState('');
   const [inquiryData, setInquiryData] = useState<any>(null);
   const [inquiring, setInquiring] = useState(false);
