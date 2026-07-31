@@ -40,7 +40,7 @@ export function CurriculumConfigClient() {
   const [program, setProgram] = useState<CurriculumProgram | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
-  const [activeTab, setActiveTab] = useState<'general' | 'structure' | 'mapel' | 'metrics' | 'grading' | 'admin'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'structure' | 'mapel' | 'grading' | 'admin'>('general');
   const [structureSubTab, setStructureSubTab] = useState<'jenjang' | 'tingkat' | 'rombel'>('jenjang');
 
   // Fetch collections
@@ -373,19 +373,6 @@ export function CurriculumConfigClient() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('metrics')}
-          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
-            activeTab === 'metrics'
-              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
-              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
-          }`}
-        >
-          <Layers className={`w-4 h-4 ${activeTab === 'metrics' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
-          <span>Target Metrik Kontainer</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab('grading')}
           className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'grading'
@@ -600,70 +587,6 @@ export function CurriculumConfigClient() {
                   onDelete={(k) => { setSelectedKelas(k); setIsDeleteKelasModalOpen(true); }}
                 />
               )}
-            </div>
-          </PageCard>
-        )}
-
-        {/* TAB 3: METRICS */}
-        {activeTab === 'metrics' && (
-          <PageCard
-            title="Target Metrik & Kuota Kontainer"
-            description="Tentukan perkiraan kapasitas jenjang, alokasi mata pelajaran, dan jumlah ustadz/pengajar."
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 space-y-3">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-extrabold text-xs">
-                  <Layers className="w-4 h-4" />
-                  <span>Total Jenjang Pendidikan</span>
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={program.totalJenjang}
-                  onChange={(e) => setProgram({ ...program, totalJenjang: Number(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-amber-300 dark:border-amber-700 text-lg font-black text-center text-stone-900 dark:text-white"
-                />
-                <p className="text-[11px] text-stone-500 leading-snug">
-                  Jumlah tingkatan jenjang (misal: Ula, Wustho, Ulya atau Kelas 7-9).
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 space-y-3">
-                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-extrabold text-xs">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Total Mata Pelajaran (Mapel)</span>
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={program.totalMapel}
-                  onChange={(e) => setProgram({ ...program, totalMapel: Number(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-blue-300 dark:border-blue-700 text-lg font-black text-center text-stone-900 dark:text-white"
-                />
-                <p className="text-[11px] text-stone-500 leading-snug">
-                  Target total kitab/mata pelajaran yang diampu dalam program ini.
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-extrabold text-xs">
-                  <Users className="w-4 h-4" />
-                  <span>Total Guru / Ustadz Pengajar</span>
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={program.totalGuru}
-                  onChange={(e) => setProgram({ ...program, totalGuru: Number(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-700 text-lg font-black text-center text-stone-900 dark:text-white"
-                />
-                <p className="text-[11px] text-stone-500 leading-snug">
-                  Alokasi ustadz & ustazah yang ditugaskan mengajar di program ini.
-                </p>
-              </div>
             </div>
           </PageCard>
         )}
