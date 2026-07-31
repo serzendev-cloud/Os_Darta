@@ -400,6 +400,27 @@ export function CurriculumConfigClient() {
 
       {/* Form Content */}
       <form onSubmit={handleSave} className="space-y-6">
+        {/* Domain Editor Banner with Back to Checklist CTA */}
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-500/30">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-bold text-stone-900 dark:text-stone-100">
+              Konfigurasi Domain: <strong className="text-amber-600 dark:text-amber-400 capitalize">{activeTab === 'general' ? 'Informasi Utama & Identitas' : activeTab === 'structure' ? 'Struktur Akademik' : activeTab === 'mapel' ? 'Mata Pelajaran' : activeTab === 'grading' ? 'Sistem Penilaian' : 'Penanggung Jawab'}</strong>
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-700 transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Ke Checklist Progress</span>
+          </button>
+        </div>
+
         {/* TAB 1: GENERAL */}
         {activeTab === 'general' && (
           <PageCard
