@@ -35,6 +35,8 @@ import {
   TeacherAttendanceLog
 } from '@/lib/store/academic-operation-store';
 import { BadalAssignmentDrawer } from '@/components/operasional/BadalAssignmentDrawer';
+import { SessionAttendanceModal } from '@/components/operasional/SessionAttendanceModal';
+import { SessionJournalModal } from '@/components/operasional/SessionJournalModal';
 import { useCollection } from '@/hooks';
 import type { Guru } from '@/types';
 import { cn } from '@/lib/utils';
@@ -59,8 +61,10 @@ export default function OperasionalAkademikPage() {
   const [attendanceLogs, setAttendanceLogs] = useState<TeacherAttendanceLog[]>([]);
   const [toast, setToast] = useState('');
   
-  // Drawer State for Badal Assignment
+  // Modal States for Sprint 3
   const [selectedSessionForBadal, setSelectedSessionForBadal] = useState<TeachingSession | null>(null);
+  const [selectedSessionForAttendance, setSelectedSessionForAttendance] = useState<TeachingSession | null>(null);
+  const [selectedSessionForJournal, setSelectedSessionForJournal] = useState<TeachingSession | null>(null);
 
   const { data: guruList } = useCollection<Guru>('guru', [], { realtime: true });
 
@@ -571,11 +575,34 @@ export default function OperasionalAkademikPage() {
 
                   <div className="flex items-center justify-between text-xs pt-2 border-t border-stone-100 dark:border-stone-800">
                     <span className="text-stone-500 font-medium">
-                      Absensi Santri: <strong>{sess.studentAttendanceCount}/{sess.totalStudents}</strong>
+                      Absensi: <strong className={sess.studentAttendanceCompleted ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{sess.studentAttendanceCompleted ? `✓ (${sess.studentAttendanceCount}/${sess.totalStudents})` : `⚠️ Belum (${sess.studentAttendanceCount}/${sess.totalStudents})`}</strong>
                     </span>
                     <span className={cn('font-bold', sess.journalFilled ? 'text-emerald-600' : 'text-amber-600')}>
                       {sess.journalFilled ? '✓ Jurnal Terisi' : '⚠️ Jurnal Pending'}
                     </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <button
+                      type="button"
+                      disabled={sess.status === 'locked'}
+                      onClick={() => setSelectedSessionForAttendance(sess)}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all disabled:opacity-40"
+                    >
+                      <Users className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{sess.studentAttendanceCompleted ? 'Edit Absensi' : 'Isi Absensi'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={sess.status === 'locked'}
+                      onClick={() => setSelectedSessionForJournal(sess)}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all disabled:opacity-40"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{sess.journalFilled ? 'Edit Jurnal' : 'Isi Jurnal'}</span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -684,6 +711,30 @@ export default function OperasionalAkademikPage() {
         programId={programId}
         onAssigned={() => {
           showToast('✅ GURU BADAL BERHASIL DITUGASKAN!');
+          loadData();
+        }}
+      />
+
+      {/* Student Attendance Modal Overlay (Sprint 3) */}
+      <SessionAttendanceModal
+        isOpen={Boolean(selectedSessionForAttendance)}
+        onClose={() => setSelectedSessionForAttendance(null)}
+        session={selectedSessionForAttendance}
+        programId={programId}
+        onSaved={() => {
+          showToast('✅ PRESENSI SANTRI BERHASIL DISIMPAN!');
+          loadData();
+        }}
+      />
+
+      {/* KBM Journal Modal Overlay (Sprint 3) */}
+      <SessionJournalModal
+        isOpen={Boolean(selectedSessionForJournal)}
+        onClose={() => setSelectedSessionForJournal(null)}
+        session={selectedSessionForJournal}
+        programId={programId}
+        onSaved={() => {
+          showToast('✅ JURNAL PEMBELAJARAN KBM BERHASIL DISIMPAN!');
           loadData();
         }}
       />
