@@ -17,7 +17,10 @@ import {
   School,
   FileText,
   ShieldCheck,
-  Building2
+  Building2,
+  Award,
+  Layers,
+  BarChart3
 } from 'lucide-react';
 import { PageCard } from '@/components/shared/page-header';
 import { AcademicContextPanel } from '@/components/kurikulum/AcademicContextPanel';
@@ -37,6 +40,12 @@ import {
 import { BadalAssignmentDrawer } from '@/components/operasional/BadalAssignmentDrawer';
 import { SessionAttendanceModal } from '@/components/operasional/SessionAttendanceModal';
 import { SessionJournalModal } from '@/components/operasional/SessionJournalModal';
+import { SessionAssessmentModal } from '@/components/operasional/SessionAssessmentModal';
+import { AssessmentTemplateModal } from '@/components/operasional/AssessmentTemplateModal';
+import { AssessmentSummaryModal } from '@/components/operasional/AssessmentSummaryModal';
+import { TranscriptViewModal } from '@/components/akademik/TranscriptViewModal';
+import { buildTranscriptPresenter, FormattedTranscriptData } from '@/lib/presenters/transcript-presenter';
+import { AcademicTranscript, AcademicLedgerRecord } from '@/lib/db/services/academic-ledger';
 import { useCollection } from '@/hooks';
 import type { Guru } from '@/types';
 import { cn } from '@/lib/utils';
@@ -54,17 +63,21 @@ export default function OperasionalAkademikPage() {
   };
   const programId = programMap[progType] || 'prog-madin';
 
-  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'activation' | 'matrix' | 'sessions' | 'monitoring' | 'closing'>('dashboard');
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'activation' | 'matrix' | 'sessions' | 'assessment' | 'monitoring' | 'closing'>('dashboard');
   const [program, setProgram] = useState<CurriculumProgram | null>(null);
   const [academicDay, setAcademicDay] = useState<AcademicDay | null>(null);
   const [sessions, setSessions] = useState<TeachingSession[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<TeacherAttendanceLog[]>([]);
   const [toast, setToast] = useState('');
   
-  // Modal States for Sprint 3
+  // Modal States for Sprint 3 & Sprint 4
   const [selectedSessionForBadal, setSelectedSessionForBadal] = useState<TeachingSession | null>(null);
   const [selectedSessionForAttendance, setSelectedSessionForAttendance] = useState<TeachingSession | null>(null);
   const [selectedSessionForJournal, setSelectedSessionForJournal] = useState<TeachingSession | null>(null);
+  const [selectedSessionForAssessment, setSelectedSessionForAssessment] = useState<TeachingSession | null>(null);
+  const [selectedSessionForSummary, setSelectedSessionForSummary] = useState<TeachingSession | null>(null);
+  const [isAssessmentTemplateModalOpen, setIsAssessmentTemplateModalOpen] = useState(false);
+  const [selectedTranscriptData, setSelectedTranscriptData] = useState<FormattedTranscriptData | null>(null);
 
   const { data: guruList } = useCollection<Guru>('guru', [], { realtime: true });
 
@@ -196,6 +209,20 @@ export default function OperasionalAkademikPage() {
         >
           <BookOpen className="w-4 h-4" />
           <span>Teaching Session</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('assessment')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap',
+            activeSubTab === 'assessment'
+              ? 'bg-amber-500 text-white shadow-md'
+              : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
+          )}
+        >
+          <Award className="w-4 h-4" />
+          <span>Assessment Engine</span>
         </button>
 
         <button
@@ -573,36 +600,182 @@ export default function OperasionalAkademikPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs pt-2 border-t border-stone-100 dark:border-stone-800">
+                  <div className="flex flex-wrap items-center justify-between text-xs pt-2 border-t border-stone-100 dark:border-stone-800 gap-1">
                     <span className="text-stone-500 font-medium">
                       Absensi: <strong className={sess.studentAttendanceCompleted ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{sess.studentAttendanceCompleted ? `✓ (${sess.studentAttendanceCount}/${sess.totalStudents})` : `⚠️ Belum (${sess.studentAttendanceCount}/${sess.totalStudents})`}</strong>
                     </span>
                     <span className={cn('font-bold', sess.journalFilled ? 'text-emerald-600' : 'text-amber-600')}>
-                      {sess.journalFilled ? '✓ Jurnal Terisi' : '⚠️ Jurnal Pending'}
+                      {sess.journalFilled ? '✓ Jurnal' : '⚠️ Jurnal Pending'}
+                    </span>
+                    <span className={cn('font-bold', sess.assessmentCompleted ? 'text-amber-600' : 'text-stone-400')}>
+                      {sess.assessmentCompleted ? `★ Nilai: ${sess.assessmentAverageScore || '✓'}` : '☆ Nilai: -'}
                     </span>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2 pt-2">
+                  {/* Action Buttons: 3 Column Grid (Absensi, Jurnal, Assessment) */}
+                  <div className="grid grid-cols-3 gap-2 pt-2">
                     <button
                       type="button"
                       disabled={sess.status === 'locked'}
                       onClick={() => setSelectedSessionForAttendance(sess)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all disabled:opacity-40"
+                      className="inline-flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all disabled:opacity-40"
                     >
                       <Users className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{sess.studentAttendanceCompleted ? 'Edit Absensi' : 'Isi Absensi'}</span>
+                      <span>{sess.studentAttendanceCompleted ? 'Absensi' : 'Absensi'}</span>
                     </button>
 
                     <button
                       type="button"
                       disabled={sess.status === 'locked'}
                       onClick={() => setSelectedSessionForJournal(sess)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all disabled:opacity-40"
+                      className="inline-flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all disabled:opacity-40"
                     >
                       <BookOpen className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{sess.journalFilled ? 'Edit Jurnal' : 'Isi Jurnal'}</span>
+                      <span>{sess.journalFilled ? 'Jurnal' : 'Jurnal'}</span>
                     </button>
+
+                    <button
+                      type="button"
+                      disabled={sess.status === 'locked'}
+                      onClick={() => setSelectedSessionForAssessment(sess)}
+                      className="inline-flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-500/30 text-xs font-bold transition-all disabled:opacity-40"
+                    >
+                      <Award className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{sess.assessmentCompleted ? 'Nilai ✓' : 'Isi Nilai'}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </PageCard>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SUB-MENU: ASSESSMENT ENGINE */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeSubTab === 'assessment' && (
+        <PageCard
+          title="Assessment Engine & Templat Penilaian Sesi KBM"
+          description="Manajemen agenda penilaian (Assessment Event), templat komponen dinamis, dan kalkulasi nilai santri."
+        >
+          <div className="space-y-6">
+            {/* Header Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+              <div className="space-y-1">
+                <h4 className="text-sm font-black text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-500" />
+                  <span>Kuasai Penilaian Berbasis TeachingSession & Configuration-Driven Domain</span>
+                </h4>
+                <p className="text-xs text-amber-800 dark:text-amber-300">
+                  Dukung Ujian Kantor, Penilaian Harian, Hafalan, Praktik, dan Lisan tanpa modifikasi kode.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAssessmentTemplateModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Layers className="w-4 h-4" />
+                <span>Kelola Templat Penilaian</span>
+              </button>
+            </div>
+
+            {/* Teaching Sessions Assessment Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sessions.map((sess) => (
+                <div
+                  key={`ass-${sess.id}`}
+                  className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-md space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-2">
+                    <span className="text-[10px] font-mono font-bold text-stone-400">
+                      JAM KE-{sess.periodIndex} &bull; {sess.periodTime}
+                    </span>
+                    <span className={cn(
+                      'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border',
+                      sess.assessmentCompleted
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
+                    )}>
+                      {sess.assessmentCompleted ? '✓ EVALUASI SELESAI' : '⚠️ PENDING EVALUASI'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black text-stone-900 dark:text-white">
+                      {sess.kelasName} &bull; {sess.mapelName}
+                    </h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">
+                      Pengajar: <strong>{sess.badalGuruName || sess.primaryGuruName}</strong>
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 flex items-center justify-between text-xs">
+                    <span className="text-stone-500 font-bold">Rata-Rata Kelas:</span>
+                    <span className="font-mono font-black text-amber-600 text-sm">
+                      {sess.assessmentAverageScore !== undefined ? `${sess.assessmentAverageScore} / 100` : 'Belum Evaluasi'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={sess.status === 'locked'}
+                      onClick={() => setSelectedSessionForAssessment(sess)}
+                      className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-extrabold text-xs shadow hover:bg-amber-600 transition-all flex items-center justify-center gap-1.5 disabled:opacity-40"
+                    >
+                      <Award className="w-4 h-4" />
+                      <span>{sess.assessmentCompleted ? 'Edit Penilaian' : 'Input Penilaian Sesi'}</span>
+                    </button>
+
+                    {sess.assessmentCompleted && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSessionForSummary(sess)}
+                          className="px-3 py-2.5 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-800 dark:text-stone-200 font-bold text-xs transition-all flex items-center gap-1"
+                        >
+                          <BarChart3 className="w-4 h-4 text-amber-500" />
+                          <span>Analitik</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const score = sess.assessmentAverageScore || 88;
+                            const predicate = score >= 90 ? 'Mumtaz' : 'Jayyid Jiddan';
+                            const dummyTr: AcademicTranscript = {
+                              id: `tr-${sess.id}`,
+                              santriId: 'santri-001',
+                              academicTermId: 'term-ganjil-2026',
+                              finalScore: score,
+                              predicate,
+                              isLocked: true,
+                              lockedAt: new Date().toISOString(),
+                            };
+                            const dummyRecs: AcademicLedgerRecord[] = [
+                              { id: 'rec-1', santriId: 'santri-001', academicTermId: 'term-ganjil-2026', mapelId: sess.mapelName, sourceGroup: 'office_exam', rawScore: 90, weightedScore: 36 },
+                              { id: 'rec-2', santriId: 'santri-001', academicTermId: 'term-ganjil-2026', mapelId: sess.mapelName, sourceGroup: 'daily_assessment', rawScore: score, weightedScore: (score * 0.6) },
+                            ];
+                            const formatted = buildTranscriptPresenter(dummyTr, dummyRecs, {
+                              santriName: 'Ahmad Fathoni',
+                              nis: '2026.01.001',
+                              kelas: sess.kelasName,
+                              academicTermName: 'Semester Ganjil',
+                              academicYearName: '2026/2027',
+                              tenantName: 'Pesantren Al-Fatih',
+                            });
+                            setSelectedTranscriptData(formatted);
+                          }}
+                          className="px-3 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all flex items-center gap-1 border border-emerald-500/20"
+                        >
+                          <FileText className="w-4 h-4 text-emerald-600" />
+                          <span>Rapor PDF</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -737,6 +910,44 @@ export default function OperasionalAkademikPage() {
           showToast('✅ JURNAL PEMBELAJARAN KBM BERHASIL DISIMPAN!');
           loadData();
         }}
+      />
+
+      {/* Teaching Session Assessment Modal Overlay (Sprint 4) */}
+      <SessionAssessmentModal
+        isOpen={Boolean(selectedSessionForAssessment)}
+        onClose={() => setSelectedSessionForAssessment(null)}
+        session={selectedSessionForAssessment}
+        programId={programId}
+        onSaved={() => {
+          showToast('⭐ PENILAIAN SESI KBM BERHASIL DISIMPAN!');
+          loadData();
+        }}
+      />
+
+      {/* Assessment Template Management Modal Overlay (Sprint 4) */}
+      <AssessmentTemplateModal
+        isOpen={isAssessmentTemplateModalOpen}
+        onClose={() => setIsAssessmentTemplateModalOpen(false)}
+        programId={programId}
+        onSaved={() => {
+          showToast('⭐ TEMPLAT PENILAIAN BERHASIL DIPERBARUI!');
+          loadData();
+        }}
+      />
+
+      {/* Assessment Summary Analytics Modal Overlay (Sprint 4) */}
+      <AssessmentSummaryModal
+        isOpen={Boolean(selectedSessionForSummary)}
+        onClose={() => setSelectedSessionForSummary(null)}
+        session={selectedSessionForSummary}
+        programId={programId}
+      />
+
+      {/* Transcript View & Report Card PDF Modal Overlay (Sprint 6 Task 2) */}
+      <TranscriptViewModal
+        isOpen={Boolean(selectedTranscriptData)}
+        onClose={() => setSelectedTranscriptData(null)}
+        data={selectedTranscriptData}
       />
     </div>
   );

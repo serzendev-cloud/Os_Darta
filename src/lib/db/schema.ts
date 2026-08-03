@@ -382,3 +382,5 @@ export * from './schema/finance';
 export * from './schema/rfid';
 export * from './schema/gate_pass';
 export * from './schema/ppob';
+export * from './schema/academic_workspace';
+export * from './schema/academic_ledger';

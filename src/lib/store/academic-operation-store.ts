@@ -87,6 +87,10 @@ export interface TeachingSession {
   studentAttendanceCompleted: boolean;
   studentAttendanceCount: number;
   totalStudents: number;
+  assessmentRequired?: boolean;
+  assessmentCompleted?: boolean;
+  assessmentEventId?: string;
+  assessmentAverageScore?: number;
 }
 
 // ── Default Mock Data for Store Initialization ─────────────────────────
@@ -472,6 +476,46 @@ export interface ClosingValidation {
   }[];
 }
 
+export function updateTeachingSessionAssessmentStatus(
+  sessionId: string,
+  eventId: string,
+  averageScore: number,
+  isCompleted = true,
+  programId = 'prog-madin'
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const sessions = getStoredTeachingSessions(programId);
+    const updatedSessions = sessions.map((s) => {
+      if (s.id === sessionId) {
+        const isJournalDone = s.journalFilled;
+        const isAttendanceDone = s.studentAttendanceCompleted;
+        const fullyCompleted = isJournalDone && isAttendanceDone && isCompleted;
+
+        return {
+          ...s,
+          assessmentCompleted: isCompleted,
+          assessmentEventId: eventId,
+          assessmentAverageScore: averageScore,
+          status: fullyCompleted ? ('completed' as const) : s.status,
+        };
+      }
+      return s;
+    });
+
+    saveStoredTeachingSessions(programId, updatedSessions);
+
+    const day = getStoredAcademicDay(programId);
+    const completedCount = updatedSessions.filter((s) => s.status === 'completed').length;
+    saveStoredAcademicDay({
+      ...day,
+      totalSessionsCompleted: completedCount,
+    });
+  } catch (e) {
+    console.error('Failed to update teaching session assessment status:', e);
+  }
+}
+
 export function validateDailyClosing(programId = 'prog-madin'): ClosingValidation {
   const sessions = getStoredTeachingSessions(programId);
   const day = getStoredAcademicDay(programId);
@@ -479,6 +523,7 @@ export function validateDailyClosing(programId = 'prog-madin'): ClosingValidatio
   const pendingCount = sessions.filter((s) => s.status === 'pending').length;
   const uncompletedJournalCount = sessions.filter((s) => !s.journalFilled && s.status === 'running').length;
   const uncompletedAttendanceCount = sessions.filter((s) => !s.studentAttendanceCompleted && s.status === 'running').length;
+  const uncompletedAssessmentCount = sessions.filter((s) => s.assessmentRequired && !s.assessmentCompleted && s.status === 'running').length;
 
   const checks = [
     {
@@ -495,6 +540,11 @@ export function validateDailyClosing(programId = 'prog-madin'): ClosingValidatio
       label: 'Jurnal KBM Pengajar',
       passed: uncompletedJournalCount === 0,
       detail: uncompletedJournalCount === 0 ? 'Lengkap (Semua Jurnal Terisi)' : `${uncompletedJournalCount} Jurnal belum diisi pengajar`,
+    },
+    {
+      label: 'Assessment Penilaian Sesi (Jadwal Terdaftar)',
+      passed: uncompletedAssessmentCount === 0,
+      detail: uncompletedAssessmentCount === 0 ? 'Lengkap (Seluruh Penilaian Terisi/Opsional)' : `${uncompletedAssessmentCount} Penilaian Sesi Belum Selesai`,
     },
     {
       label: 'Penugasan Guru Badal (Badal Resolution)',
