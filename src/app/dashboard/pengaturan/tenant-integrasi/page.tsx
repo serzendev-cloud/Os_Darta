@@ -149,11 +149,15 @@ export default function TenantIntegrationPage() {
     }, 1500);
   };
 
-  const tenantsList = Object.values(tenantsMap).filter(t => 
-    t.name.toLowerCase().includes(search.toLowerCase()) || 
-    t.subdomain.toLowerCase().includes(search.toLowerCase()) ||
-    t.location.toLowerCase().includes(search.toLowerCase())
-  );
+  const visibleTenantsList = Object.values(tenantsMap).filter(t => {
+    // Non-super-admin can ONLY see their own tenant credential
+    if (!isDevOrSuperAdmin && t.id !== 't1') return false;
+    return (
+      t.name.toLowerCase().includes(search.toLowerCase()) || 
+      t.subdomain.toLowerCase().includes(search.toLowerCase()) ||
+      t.location.toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-6 font-sans">
@@ -162,7 +166,7 @@ export default function TenantIntegrationPage() {
         <div className="relative z-10 space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-emerald-200 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-            <span>SaaS Ready-to-Integrate Engine</span>
+            <span>SaaS Multi-Tenant Integration Engine</span>
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
             Status & Kredensial Integrasi Mandiri Per-Pesantren
@@ -174,50 +178,63 @@ export default function TenantIntegrationPage() {
       </div>
 
       <PageCard
-        title="Daftar Status Kredensial Integrasi Pesantren"
-        description="Pilih pesantren dari dropdown atau tabel di bawah untuk menengok dan memperbarui panel kredensial API"
+        title={isDevOrSuperAdmin ? "Daftar Status Kredensial Integrasi Seluruh Pesantren" : "Pengaturan Integrasi Payment & Gateway Pesantren"}
+        description={isDevOrSuperAdmin ? "Mode Super Admin: Kelola dan audit kredensial API seluruh tenant pesantren" : "Isolasi Tenant Ketat: Kelola Flip Payment Gateway, WA Gateway, & Storage khusus pesantren Anda"}
       >
-        {/* Top Control Bar: Dropdown & Search */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 pb-6 border-b border-stone-200 dark:border-stone-800">
-          
-          {/* Dropdown Selector (Efficient Quick Jump) */}
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 font-bold">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">
-                Pilih Pesantren Instan (Dropdown)
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedDropdownId}
-                  onChange={(e) => handleDropdownChange(e.target.value)}
-                  className="w-full md:w-80 px-3.5 py-2 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-bold text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer shadow-sm pr-8"
-                >
-                  {Object.values(tenantsMap).map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.subdomain})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-stone-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {/* Top Control Bar: Dropdown & Search (Super Admin / Developer Only) */}
+        {isDevOrSuperAdmin ? (
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 pb-6 border-b border-stone-200 dark:border-stone-800">
+            {/* Dropdown Selector (Efficient Quick Jump) */}
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 font-bold">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">
+                  Pilih Pesantren (Super Admin Access)
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedDropdownId}
+                    onChange={(e) => handleDropdownChange(e.target.value)}
+                    className="w-full md:w-80 px-3.5 py-2 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-bold text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer shadow-sm pr-8"
+                  >
+                    {Object.values(tenantsMap).map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.subdomain})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-stone-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Search filter */}
-          <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari pesantren, subdomain..."
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-            />
+            {/* Search filter */}
+            <div className="relative w-full md:w-72">
+              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari pesantren, subdomain..."
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span>
+                <strong>Isolasi Tenant RLS Aktif:</strong> Anda login sebagai Administrator Pondok. Data kredensial pesantren lain terproteksi secara otomatis.
+              </span>
+            </div>
+            <span className="font-bold uppercase tracking-wider text-[10px] bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/30">
+              Tenant Admin Mode
+            </span>
+          </div>
+        )}
 
         {/* Credentials Summary Table */}
         <div className="overflow-x-auto">
@@ -232,7 +249,7 @@ export default function TenantIntegrationPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-stone-800 text-stone-800 dark:text-stone-200 font-medium">
-              {tenantsList.map((t) => (
+              {visibleTenantsList.map((t) => (
                 <tr key={t.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition-colors">
                   <td className="py-4 px-4">
                     <div className="font-bold text-stone-900 dark:text-white text-sm">{t.name}</div>
