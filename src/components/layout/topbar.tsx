@@ -41,11 +41,17 @@ export function Topbar() {
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'AD';
 
   return (
-    <header className="sticky top-0 z-30 flex items-center h-16 border-b border-sky-200/50 dark:border-border bg-sky-100/60 dark:bg-sidebar/80 backdrop-blur-xl px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex items-center h-16 border-b border-amber-500/30 dark:border-amber-500/20 bg-emerald-950/5 dark:bg-stone-950/80 backdrop-blur-xl px-4 lg:px-6 relative overflow-hidden before:absolute before:bottom-0 before:left-0 before:right-0 before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-amber-500/50 before:to-transparent">
       <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={() => setMobileOpen(true)}>
-        <Menu className="w-5 h-5" />
+        <Menu className="w-5 h-5 text-amber-600 dark:text-amber-400" />
       </Button>
-      <div className="flex-1" />
+
+      {/* Islamic Bismillah Calligraphic Badge Header Center */}
+      <div className="flex-1 flex items-center justify-center lg:justify-start">
+        <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/10 dark:bg-emerald-950/50 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-serif italic shadow-sm">
+          <span>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
+        </div>
+      </div>
       <div className="flex items-center gap-2">
         {user && (
           <Badge variant="outline" className={cn('hidden sm:flex text-xs', roleColors[user.role])}>
