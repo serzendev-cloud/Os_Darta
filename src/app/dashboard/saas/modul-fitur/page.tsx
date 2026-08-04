@@ -38,48 +38,7 @@ const modulesCatalog: ModuleCatalogItem[] = [
   { id: 'm8', name: 'Modul Tahfidz & Ziyadah (Beta)', category: 'Special Feature', description: 'Monitoring hafalan Quran, ziyadah, murojaah & setoran harian santri', icon: Trophy, isBeta: true },
 ];
 
-const mockTenantsModulesData: Record<string, TenantModulesConfig> = {
-  t1: {
-    id: 't1',
-    name: 'Ponpes Daruttahuid (Malang)',
-    subdomain: 'daruttahuid.madev.id',
-    location: 'Malang, Jawa Timur',
-    plan: 'Enterprise SaaS',
-    modules: { m1: true, m2: true, m3: true, m4: true, m5: true, m6: true, m7: true, m8: true },
-  },
-  t2: {
-    id: 't2',
-    name: 'Ponpes Al-Hikmah (Surabaya)',
-    subdomain: 'alhikmah.madev.id',
-    location: 'Surabaya, Jawa Timur',
-    plan: 'Pro SaaS',
-    modules: { m1: true, m2: true, m3: true, m4: true, m5: true, m6: false, m7: true, m8: true },
-  },
-  t3: {
-    id: 't3',
-    name: 'Ponpes An-Nisa (Jakarta)',
-    subdomain: 'annisa.madev.id',
-    location: 'Jakarta Selatan, DKI',
-    plan: 'Pro SaaS',
-    modules: { m1: true, m2: true, m3: false, m4: true, m5: true, m6: false, m7: true, m8: false },
-  },
-  t4: {
-    id: 't4',
-    name: 'Ponpes Ar-Raudah (Bandung)',
-    subdomain: 'arraudah.madev.id',
-    location: 'Bandung, Jawa Barat',
-    plan: 'Starter SaaS',
-    modules: { m1: true, m2: true, m3: false, m4: false, m5: false, m6: false, m7: false, m8: false },
-  },
-  t5: {
-    id: 't5',
-    name: 'Ponpes Darul Quran (Yogyakarta)',
-    subdomain: 'dq.madev.id',
-    location: 'Yogyakarta, DIY',
-    plan: 'Trial 14 Hari',
-    modules: { m1: true, m2: true, m3: false, m4: true, m5: false, m6: false, m7: false, m8: false },
-  },
-};
+const mockTenantsModulesData: Record<string, TenantModulesConfig> = {};
 
 export default function SaasModulesPage() {
   const [tenantsMap, setTenantsMap] = useState<Record<string, TenantModulesConfig>>(mockTenantsModulesData);
