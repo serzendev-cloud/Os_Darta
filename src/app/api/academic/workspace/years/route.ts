@@ -1,3 +1,6 @@
+export const dynamic = 'force-static';
+export const revalidate = false;
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { academicYears } from '@/lib/db/schema';
@@ -17,12 +20,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'default';
 
-    const years = await db
-      .select()
-      .from(academicYears)
-      .where(eq(academicYears.tenantId, tenantId));
-
-    return NextResponse.json({ success: true, data: years });
+    const data = await db.select().from(academicYears).where(eq(academicYears.tenantId, tenantId));
+    return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message || 'Gagal mengambil data tahun ajaran' },
@@ -36,8 +35,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = createAcademicYearSchema.parse(body);
 
-    const id = `ay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
+    const id = `ay_${Date.now()}`;
     const newYear = {
       id,
       tenantId: validatedData.tenantId,

@@ -1,3 +1,6 @@
+export const dynamic = 'force-static';
+export const revalidate = false;
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { academicTerms } from '@/lib/db/schema';
@@ -25,12 +28,8 @@ export async function GET(request: Request) {
       conditions.push(eq(academicTerms.academicYearId, academicYearId));
     }
 
-    const terms = await db
-      .select()
-      .from(academicTerms)
-      .where(and(...conditions));
-
-    return NextResponse.json({ success: true, data: terms });
+    const data = await db.select().from(academicTerms).where(and(...conditions));
+    return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message || 'Gagal mengambil data semester' },
@@ -44,8 +43,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = createAcademicTermSchema.parse(body);
 
-    const id = `term_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
+    const id = `term_${Date.now()}`;
     const newTerm = {
       id,
       tenantId: validatedData.tenantId,
