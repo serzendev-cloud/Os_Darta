@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Map collection names to Drizzle tables
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tableMap: Record<string, any> = {
       tenants: schema.tenants,
       tenantSettings: schema.tenantSettings,
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'collectionName and action are required' }, { status: 400 });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tableMap: Record<string, any> = {
       santri: schema.santri,
       asrama: schema.asrama,
@@ -122,6 +124,12 @@ export async function POST(request: NextRequest) {
 
     if (action === 'update') {
       if (!id) return NextResponse.json({ error: 'id is required for update' }, { status: 400 });
+      
+      if (collectionName === 'santri') {
+        const { santriServerService } = await import('@/modules/santri/services/santri-server');
+        await santriServerService.handleUpdate(id, data, tenant.id);
+      }
+
       await db
         .update(targetTable)
         .set({ ...data, updatedAt: new Date() })
