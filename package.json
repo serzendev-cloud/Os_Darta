@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:ci": "node tools/scripts/eslint-baseline-check.js",
+    "lint:baseline": "node tools/scripts/eslint-baseline-generate.js",
     "emulator": "firebase emulators:start",
     "test": "vitest",
     "test:run": "vitest run",

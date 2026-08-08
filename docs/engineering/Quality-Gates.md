@@ -5,7 +5,9 @@ This framework defines the structured, incremental Quality Gates required for me
 
 ---
 
-## 1. Quality Gates Hierarchy
+## 1. Quality Gates Hierarchy & Progressive Roadmap
+
+### 1.1 Quality Gates Hierarchy
 
 ```
 [Level 4: Mandatory CI Green]
@@ -14,10 +16,22 @@ This framework defines the structured, incremental Quality Gates required for me
          ▲
 [Level 2: Mandatory TypeScript Clean (tsc --noEmit)]
          ▲
-[Level 1: No New Lint Errors (ESLint flat config)]
+[Level 1: No New Lint Errors (ESLint flat config / Baseline Audited)]
          ▲
 [Level 0: Current State (Baseline)]
 ```
+
+### 1.2 Progressive Quality Gates Roadmap (CIP-WP-009)
+
+```
+[Level A: Zero New Debt] ──> [Level B: Warning Freeze] ──> [Level C: Debt Burn Down] ──> [Level D: Zero Debt]
+  (npm run lint:ci)            (0 New Warnings)            (Baseline Ratcheted Down)      (Direct ESLint Strict)
+```
+
+- **Level A (Zero New Debt - Active Baseline)**: Enforced via `npm run lint:ci`. CI fails if any new ESLint errors or warnings are introduced beyond `.eslint-baseline.json`.
+- **Level B (Warning Freeze)**: Warnings frozen; no new warnings permitted anywhere in the repository.
+- **Level C (Progressive Burn Down - Ratcheting)**: Baseline file ratcheted down at the end of each Sprint using `npm run lint:baseline`.
+- **Level D (Zero Technical Debt)**: Baseline count reaches 0 errors/warnings. Pipeline switches permanently to direct strict ESLint execution (`npm run lint`).
 
 ---
 
@@ -30,12 +44,12 @@ This framework defines the structured, incremental Quality Gates required for me
   - All existing code must compile and pass existing configurations.
 - **Verification**: `git diff origin/main` to identify target change sets.
 
-### 2.2 Level 1: No New Lint Errors
-- **Description**: Statically enforces code style, quality conventions, and security constraints.
+### 2.2 Level 1: Zero New Technical Debt (Baseline Audited)
+- **Description**: Statically enforces code style, quality conventions, security constraints, and baseline regression auditing.
 - **Rules**:
-  - Zero new ESLint errors or warnings are permitted in the modified files.
-  - Custom AST rules (e.g. `local-rules/enforce-tenant-id-param`) must check and validate all Drizzle query chains.
-- **Verification Command**: `npx eslint <changed-files>`
+  - Zero new ESLint errors or warnings are permitted beyond `.eslint-baseline.json`.
+  - Custom AST rules (`local-rules/enforce-tenant-id-param`) must check and validate all Drizzle query chains.
+- **Verification Command**: `npm run lint:ci`
 
 ### 2.3 Level 2: Mandatory TypeScript Clean
 - **Description**: Enforces complete compilation type safety.
@@ -56,7 +70,7 @@ This framework defines the structured, incremental Quality Gates required for me
 ### 2.5 Level 4: Mandatory CI Green
 - **Description**: The final automated build and packaging gate.
 - **Rules**:
-  - The complete GitHub Actions pipeline (Lint, Typecheck, Test, and Build) must run and pass cleanly.
+  - The complete GitHub Actions pipeline (Baseline Audit, Typecheck, Test, and Build) must run and pass cleanly.
   - The Next.js production build must bundle without error.
 - **Verification Commands**:
   - Pipeline check: GitHub Actions run status.

@@ -5,7 +5,18 @@ This document establishes the official lifecycle, categorization, allocation, an
 
 ---
 
-## 1. Technical Debt Lifecycle
+## 1. Technical Debt Baseline & Ratcheting Policy (CIP-WP-009)
+
+To ensure historical technical debt is burned down systematically without stalling active feature delivery, the repository enforces an **Immutable Baseline & Controlled Ratcheting Engine**:
+
+- **Baseline Snapshot**: Historical errors and warnings are recorded in `.eslint-baseline.json`.
+- **Zero New Debt Rule**: CI executes `npm run lint:ci` on every pull request. If any new error or warning is introduced beyond `.eslint-baseline.json`, CI fails immediately.
+- **Ratcheting Process**: When historical debt items are refactored during sprint maintenance, the Architect executes `npm run lint:baseline` to ratchet down `.eslint-baseline.json` counters.
+- **Prohibition**: Automatic or un-reviewed baseline updates are strictly banned.
+
+---
+
+## 2. Technical Debt Lifecycle
 
 The technical debt lifecycle consists of six distinct phases:
 
@@ -16,15 +27,15 @@ The technical debt lifecycle consists of six distinct phases:
 ```
 
 1. **Identify**: Code smells, warnings, bypass overrides, or outdated dependencies are detected.
-2. **Register**: The item is logged in the central Technical Debt Register with descriptions and impact notes.
+2. **Register**: The item is logged in `docs/engineering/Technical-Debt-Register.md` with descriptions and impact notes.
 3. **Prioritize**: The item is scored based on urgency, risk, and refactoring effort.
 4. **Allocate**: The task is assigned to a developer during sprint planning.
-5. **Verify**: The refactored code passes all validation gates (Typecheck, Lint, Build, and Tests).
-6. **Close**: The ticket is marked resolved in the register and the code is merged.
+5. **Verify**: The refactored code passes `npm run lint:ci`, `tsc --noEmit`, and tests.
+6. **Close**: The baseline is ratcheted down via `npm run lint:baseline` and the item is closed.
 
 ---
 
-## 2. Debt Registration Guideline
+## 3. Debt Registration Guideline
 When registering technical debt, developers must provide:
 - **ID**: `DEBT-XXX`
 - **Location**: Affected files or modules.
@@ -35,7 +46,7 @@ When registering technical debt, developers must provide:
 
 ---
 
-## 3. Prioritization Matrix (Quadrant Model)
+## 4. Prioritization Matrix (Quadrant Model)
 
 Prioritization is calculated using the Urgency vs. Effort matrix:
 
@@ -47,7 +58,7 @@ Prioritization is calculated using the Urgency vs. Effort matrix:
 
 ---
 
-## 4. Technical Debt Aging Policy
+## 5. Technical Debt Aging Policy
 To prevent registered technical debt from accumulating indefinitely, strict aging thresholds are enforced:
 
 - **Quadrant 1 Debt (Immediate)**:
@@ -63,43 +74,31 @@ To prevent registered technical debt from accumulating indefinitely, strict agin
 
 ---
 
-## 5. Technical Debt Metrics
+## 6. Technical Debt Metrics
 We measure, track, and report on the following indicators to maintain a healthy repository:
 
-1. **Current Debt Count ($C_d$)**:
-   - *Definition*: Total number of active, unresolved technical debt entries in the register.
-   - *Target*: $< 15$ active items globally.
-2. **Resolved Debt ($R_d$)**:
-   - *Definition*: Total number of technical debt items closed during the active sprint.
-3. **Debt Velocity ($V_d$)**:
-   - *Definition*: The rate at which technical debt is retired (Resolved Debt per Sprint).
-4. **Debt Burn Down**:
-   - *Definition*: Chart tracking the remaining count of technical debt items over time.
-5. **Debt Aging ($A_d$)**:
-   - *Definition*: Average time (in days/sprints) a technical debt item remains open.
-6. **Debt Ratio ($D_r$)**:
-   - *Definition*: Ratio of technical debt resolution hours vs. feature development hours.
-   - *Limit*: Enforced to remain below $15\%$.
-7. **Repository Health Score ($H_{repo}$)**:
-   - *Formula*: $H_{repo} = 100 - (2 \times \text{Q1 items} + 5 \times \text{Q2 items})$.
-   - *Target*: Must remain above **$90\%$** to allow standard feature sprints.
+1. **Current Debt Count ($C_d$)**: Total number of active, unresolved technical debt entries in `.eslint-baseline.json`.
+2. **Resolved Debt ($R_d$)**: Total number of technical debt items closed during the active sprint.
+3. **Debt Velocity ($V_d$)**: The rate at which technical debt is retired (Resolved Debt per Sprint).
+4. **Debt Aging ($A_d$)**: Average time (in days/sprints) a technical debt item remains open.
+5. **Repository Health Score ($H_{repo}$)**: Target must remain above **$90\%$** to allow standard feature sprints.
 
 ---
 
-## 6. Debt Reduction Strategies
+## 7. Debt Reduction Strategies
 
-### 6.1 The Boy Scout Rule
+### 7.1 The Boy Scout Rule
 - Developers must always leave the code cleaner than they found it.
 - When working on a file for business logic, resolve any minor code smells or warnings in the same file immediately.
 
-### 6.2 Sprint Allocation Capacity
+### 7.2 Sprint Allocation Capacity
 - In every standard Execution Sprint, a minimum of **10% of total engineering capacity** must be allocated to resolving items from Quadrant 1 and Quadrant 2 in the Technical Debt Register.
 
 ---
 
-## 7. Exit & Closure Criteria
+## 8. Exit & Closure Criteria
 An item is eligible for closure and removal from the active debt register only when it meets the following criteria:
-- The refactored code passes ESLint without warnings.
-- Unit and contract test coverage targets are met.
-- The change compiles cleanly (`tsc --noEmit`) and compiles in production builds.
-- The review is approved by the Senior Principal Systems Architect.
+- The refactored code passes `npm run lint:ci` without regressions.
+- Baseline is updated via `npm run lint:baseline`.
+- TypeScript compiles cleanly (`tsc --noEmit`) and production build succeeds.
+- Review approved by Senior Principal Systems Architect.
