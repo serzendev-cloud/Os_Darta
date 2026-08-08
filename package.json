@@ -10,7 +10,8 @@
     "emulator": "firebase emulators:start",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:contracts": "vitest run tests/contracts/"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
