@@ -377,8 +377,67 @@ export const gdriveDocuments = pgTable('gdrive_documents', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// ── Santri Status & History Ledgers (Audit Trail) ──────────────────────────
+export const statusLedgers = pgTable('status_ledgers', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
+  santriId: text('santri_id').notNull(),
+  currentState: text('current_state').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const statusChangeRecords = pgTable('status_change_records', {
+  id: text('id').primaryKey(),
+  statusLedgerId: text('status_ledger_id').notNull(),
+  santriId: text('santri_id').notNull(),
+  fromState: text('from_state').notNull(),
+  toState: text('to_state').notNull(),
+  transitionType: text('transition_type').notNull(),
+  actorType: text('actor_type').notNull(),
+  actorId: text('actor_id').notNull(),
+  reason: text('reason').notNull(),
+  effectiveDate: timestamp('effective_date').notNull(),
+  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+});
+
+export const historyLedgers = pgTable('history_ledgers', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: text('entity_id').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const fieldChangeRecords = pgTable('field_change_records', {
+  id: text('id').primaryKey(),
+  historyLedgerId: text('history_ledger_id').notNull(),
+  tenantId: text('tenant_id').default('default').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: text('entity_id').notNull(),
+  fieldName: text('field_name').notNull(),
+  oldValue: text('old_value'),
+  newValue: text('new_value').notNull(),
+  changedBy: text('changed_by').notNull(),
+  changedAt: timestamp('changed_at').defaultNow().notNull(),
+});
+
+export const outboxEvents = pgTable('outbox_events', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
+  eventType: text('event_type').notNull(),
+  payload: jsonb('payload').notNull(),
+  status: text('status').default('PENDING').notNull(),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  processedAt: timestamp('processed_at'),
+});
+
 // Re-export sub-schemas
 export * from './schema/finance';
 export * from './schema/rfid';
 export * from './schema/gate_pass';
 export * from './schema/ppob';
+export * from './schema/academic_workspace';
+export * from './schema/academic_ledger';

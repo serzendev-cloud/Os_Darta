@@ -211,39 +211,40 @@ export function Sidebar() {
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
       )}
       <aside className={cn(
-        'fixed top-0 left-0 z-50 h-full flex flex-col transition-all duration-300 ease-in-out',
-        'bg-gradient-to-b from-slate-200 via-stone-200 to-zinc-300 dark:from-slate-900 dark:via-zinc-900 dark:to-stone-900 border-r border-slate-300/80 dark:border-slate-800 shadow-xl',
+        'fixed top-0 left-0 z-50 h-full flex flex-col transition-all duration-300 ease-in-out bg-islamic-pattern',
+        'bg-gradient-to-b from-emerald-950/20 via-stone-100 to-amber-950/10 dark:from-emerald-950 dark:via-stone-950 dark:to-stone-950 border-r border-amber-500/30 dark:border-amber-500/20 shadow-2xl',
         isCollapsed ? 'w-[var(--sidebar-width-collapsed)]' : 'w-[var(--sidebar-width)]',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
-        {/* Logo */}
-        <div className={cn('flex items-center h-16 border-b border-sidebar-border px-4 shrink-0', isCollapsed ? 'justify-center' : 'gap-3')}>
+        {/* Logo Header */}
+        <div className={cn('flex items-center h-20 border-b border-amber-500/20 px-4 shrink-0 bg-gradient-to-r from-emerald-900/90 to-teal-950/90 text-white relative overflow-hidden', isCollapsed ? 'justify-center' : 'gap-3')}>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
           {isDevOrSuperAdmin ? (
             <>
-              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-600 shrink-0 shadow-[0_0_12px_rgba(225,29,72,0.35)] text-white">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 shrink-0 shadow-[0_0_14px_rgba(245,158,11,0.4)] text-white border border-amber-300/40">
                 <Shield className="w-5 h-5" />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col overflow-hidden">
-                  <span className="text-sm font-extrabold text-sidebar-foreground truncate">SaaS Platform Console</span>
-                  <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 truncate">Serene Zeith Corp • serzen_dev</span>
+                  <span className="text-sm font-extrabold text-amber-200 tracking-tight truncate">SaaS Console</span>
+                  <span className="text-[11px] font-semibold text-emerald-200 truncate">نظام Super Admin</span>
                 </div>
               )}
             </>
           ) : (
             <>
-              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary shrink-0 shadow-[0_0_12px_rgba(251,146,60,0.35)] dark:shadow-[0_0_16px_rgba(251,146,60,0.4)]">
-                <GraduationCap className="w-5 h-5 text-primary-foreground" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 shrink-0 shadow-[0_0_14px_rgba(16,185,129,0.4)] border border-amber-400/40 text-amber-300">
+                <GraduationCap className="w-6 h-6" />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col overflow-hidden">
-                  <span className="text-sm font-bold text-sidebar-foreground truncate">Ma&apos;had Manager</span>
-                  <span className="text-[10px] text-muted-foreground truncate">Sistem Manajemen Pesantren</span>
+                  <span className="text-sm font-extrabold text-amber-100 tracking-tight truncate">Ma&apos;had Manager</span>
+                  <span className="text-[11px] font-serif italic text-emerald-200/90 truncate">نظام إدارة المعهد</span>
                 </div>
               )}
             </>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} className="lg:hidden ml-auto text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} className="lg:hidden ml-auto text-amber-200 hover:text-white">
             <X className="w-5 h-5" />
           </Button>
         </div>

@@ -26,6 +26,10 @@ import { EditKelasModal, DeleteKelasModal } from '@/components/kelas/KelasModal'
 import { MapelCard } from '@/components/mapel/MapelCard';
 import { MapelClusterSection } from '@/components/mapel/MapelClusterSection';
 import { getJenjangByInstansi } from '@/lib/academic-structure';
+import { AcademicContextPanel } from './AcademicContextPanel';
+import { CurriculumChecklist } from './CurriculumChecklist';
+import { DependencyIndicator } from './DependencyIndicator';
+import { calculateCurriculumReadiness } from '@/lib/curriculum/readiness';
 
 export function CurriculumConfigClient() {
   const params = useParams();
@@ -36,7 +40,7 @@ export function CurriculumConfigClient() {
   const [program, setProgram] = useState<CurriculumProgram | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
-  const [activeTab, setActiveTab] = useState<'general' | 'structure' | 'mapel' | 'metrics' | 'grading' | 'admin'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'structure' | 'mapel' | 'grading' | 'admin'>('general');
   const [structureSubTab, setStructureSubTab] = useState<'jenjang' | 'tingkat' | 'rombel'>('jenjang');
 
   // Fetch collections
@@ -262,6 +266,16 @@ export function CurriculumConfigClient() {
     }
   };
 
+  // Calculate readiness metrics dynamically from domain states
+  const readiness = useMemo(() => {
+    return calculateCurriculumReadiness(
+      program,
+      filteredJenjangList,
+      filteredTingkatList,
+      allMapel
+    );
+  }, [program, filteredJenjangList, filteredTingkatList, allMapel]);
+
   if (loading) {
     return (
       <div className="p-12 text-center text-stone-500 font-medium animate-pulse">
@@ -281,7 +295,7 @@ export function CurriculumConfigClient() {
             href="/dashboard/kurikulum/master"
             className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-stone-900 text-white font-bold text-xs"
           >
-            <ArrowLeft className="w-4 h-4" /> Kembali ke Master Madrasah
+            <ArrowLeft className="w-4 h-4" /> Kembali ke Pustaka Program
           </Link>
         </div>
       </div>
@@ -301,85 +315,20 @@ export function CurriculumConfigClient() {
         </div>
       )}
 
-      {/* Top Navigation & Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/kurikulum/master"
-            className="p-2.5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-all shadow-sm"
-            title="Kembali ke Master Madrasah"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400 text-xs font-semibold">
-              <Link href="/dashboard/kurikulum/master" className="hover:underline">Kurikulum Master</Link>
-              <span>/</span>
-              <span className="text-stone-900 dark:text-white font-bold">Konfigurasi Program</span>
-            </div>
-            <h1 className="text-2xl font-extrabold text-stone-900 dark:text-white flex items-center gap-2">
-              Pengaturan Program: <span className="text-amber-600 dark:text-amber-400">{program.name}</span>
-            </h1>
-          </div>
-        </div>
+      {/* Enterprise Administrator Context Panel */}
+      <AcademicContextPanel
+        program={program}
+        progressPercentage={readiness.percentage}
+        completedCount={readiness.completedCount}
+        totalCount={readiness.availableCount}
+      />
 
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/kurikulum/master"
-            className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 font-bold text-xs hover:bg-stone-100 dark:hover:bg-stone-800 transition-all"
-          >
-            Batal
-          </Link>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-lg transition-all active:scale-95"
-          >
-            <Save className="w-4 h-4" />
-            <span>Simpan Perubahan</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Program Summary Card */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-stone-900 via-amber-950 to-stone-900 text-white shadow-xl border border-amber-500/20 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-2xl ${program.iconBg} text-white flex items-center justify-center font-extrabold text-2xl shadow-lg ring-4 ring-white/10`}>
-            <GraduationCap className="w-8 h-8" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-md bg-amber-500/30 border border-amber-400/40 text-amber-300 text-[10px] font-mono font-bold uppercase">
-                {program.code}
-              </span>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                program.status === 'active' 
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-              }`}>
-                {program.status === 'active' ? '🟢 AKTIF (TERBIT DI SIDEBAR)' : '🟡 DRAFT (DISEMBUNYIKAN)'}
-              </span>
-            </div>
-            <h2 className="text-xl font-black mt-1 text-white">{program.name}</h2>
-            <p className="text-stone-300 text-xs mt-0.5 max-w-xl line-clamp-1">{program.description}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10">
-          <div className="text-center px-3 border-r border-white/20">
-            <div className="text-[10px] font-semibold text-stone-300 uppercase">Jenjang</div>
-            <div className="text-lg font-black text-amber-300">{filteredJenjangList.length || program.totalJenjang}</div>
-          </div>
-          <div className="text-center px-3 border-r border-white/20">
-            <div className="text-[10px] font-semibold text-stone-300 uppercase">Tingkat</div>
-            <div className="text-lg font-black text-amber-300">{filteredTingkatList.length || program.totalJenjang}</div>
-          </div>
-          <div className="text-center px-3">
-            <div className="text-[10px] font-semibold text-stone-300 uppercase">Mapel</div>
-            <div className="text-lg font-black text-amber-300">{program.totalMapel}</div>
-          </div>
-        </div>
-      </div>
+      {/* Guided Curriculum Stepper & Checklist */}
+      <CurriculumChecklist
+        domains={readiness.domains}
+        activeTab={activeTab}
+        onSelectTab={(tabKey) => setActiveTab(tabKey as any)}
+      />
 
       {/* Tabs Navigation */}
       <div className="bg-white/90 dark:bg-stone-900/90 p-2 rounded-2xl border border-stone-200/90 dark:border-stone-800 shadow-lg shadow-sky-900/5 backdrop-blur-md flex items-center space-x-2 overflow-x-auto">
@@ -424,19 +373,6 @@ export function CurriculumConfigClient() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('metrics')}
-          className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
-            activeTab === 'metrics'
-              ? 'bg-gradient-to-b from-amber-50 to-orange-100/80 dark:from-stone-800 dark:to-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-amber-500/40 translate-y-[-1px]'
-              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 border border-transparent'
-          }`}
-        >
-          <Layers className={`w-4 h-4 ${activeTab === 'metrics' ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
-          <span>Target Metrik Kontainer</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab('grading')}
           className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-extrabold text-xs transition-all duration-200 whitespace-nowrap ${
             activeTab === 'grading'
@@ -464,6 +400,27 @@ export function CurriculumConfigClient() {
 
       {/* Form Content */}
       <form onSubmit={handleSave} className="space-y-6">
+        {/* Domain Editor Banner with Back to Checklist CTA */}
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-500/30">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-bold text-stone-900 dark:text-stone-100">
+              Konfigurasi Domain: <strong className="text-amber-600 dark:text-amber-400 capitalize">{activeTab === 'general' ? 'Informasi Utama & Identitas' : activeTab === 'structure' ? 'Struktur Akademik' : activeTab === 'mapel' ? 'Mata Pelajaran' : activeTab === 'grading' ? 'Sistem Penilaian' : 'Penanggung Jawab'}</strong>
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-700 transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Ke Checklist Progress</span>
+          </button>
+        </div>
+
         {/* TAB 1: GENERAL */}
         {activeTab === 'general' && (
           <PageCard
@@ -651,70 +608,6 @@ export function CurriculumConfigClient() {
                   onDelete={(k) => { setSelectedKelas(k); setIsDeleteKelasModalOpen(true); }}
                 />
               )}
-            </div>
-          </PageCard>
-        )}
-
-        {/* TAB 3: METRICS */}
-        {activeTab === 'metrics' && (
-          <PageCard
-            title="Target Metrik & Kuota Kontainer"
-            description="Tentukan perkiraan kapasitas jenjang, alokasi mata pelajaran, dan jumlah ustadz/pengajar."
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 space-y-3">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-extrabold text-xs">
-                  <Layers className="w-4 h-4" />
-                  <span>Total Jenjang Pendidikan</span>
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={program.totalJenjang}
-                  onChange={(e) => setProgram({ ...program, totalJenjang: Number(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-amber-300 dark:border-amber-700 text-lg font-black text-center text-stone-900 dark:text-white"
-                />
-                <p className="text-[11px] text-stone-500 leading-snug">
-                  Jumlah tingkatan jenjang (misal: Ula, Wustho, Ulya atau Kelas 7-9).
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 space-y-3">
-                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-extrabold text-xs">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Total Mata Pelajaran (Mapel)</span>
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={program.totalMapel}
-                  onChange={(e) => setProgram({ ...program, totalMapel: Number(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-blue-300 dark:border-blue-700 text-lg font-black text-center text-stone-900 dark:text-white"
-                />
-                <p className="text-[11px] text-stone-500 leading-snug">
-                  Target total kitab/mata pelajaran yang diampu dalam program ini.
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-extrabold text-xs">
-                  <Users className="w-4 h-4" />
-                  <span>Total Guru / Ustadz Pengajar</span>
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={program.totalGuru}
-                  onChange={(e) => setProgram({ ...program, totalGuru: Number(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-700 text-lg font-black text-center text-stone-900 dark:text-white"
-                />
-                <p className="text-[11px] text-stone-500 leading-snug">
-                  Alokasi ustadz & ustazah yang ditugaskan mengajar di program ini.
-                </p>
-              </div>
             </div>
           </PageCard>
         )}

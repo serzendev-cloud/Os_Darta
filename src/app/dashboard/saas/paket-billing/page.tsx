@@ -19,12 +19,7 @@ interface BillingInvoice {
   paymentMethod: string;
 }
 
-const mockInvoicesList: BillingInvoice[] = [
-  { id: 'inv1', invoiceNo: 'INV-2026-07-001', tenantName: 'Ponpes Daruttahuid Malang', planName: 'Enterprise SaaS', amount: 3500000, dueDate: '2026-07-05', paidDate: '2026-07-03', status: 'Paid', paymentMethod: 'Flip Virtual Account (BCA)' },
-  { id: 'inv2', invoiceNo: 'INV-2026-07-002', tenantName: 'Ponpes Al-Hikmah Surabaya', planName: 'Pro SaaS', amount: 2000000, dueDate: '2026-07-10', paidDate: '2026-07-08', status: 'Paid', paymentMethod: 'Flip Virtual Account (Mandiri)' },
-  { id: 'inv3', invoiceNo: 'INV-2026-07-003', tenantName: 'Ponpes An-Nisa Jakarta', planName: 'Pro SaaS', amount: 2000000, dueDate: '2026-07-20', status: 'Unpaid', paymentMethod: 'Flip Bank Transfer' },
-  { id: 'inv4', invoiceNo: 'INV-2026-07-004', tenantName: 'Ponpes Ar-Raudah Bandung', planName: 'Starter SaaS', amount: 1000000, dueDate: '2026-07-01', status: 'Overdue', paymentMethod: 'Pending Transfer' },
-];
+const mockInvoicesList: BillingInvoice[] = [];
 
 export default function SaasBillingPage() {
   const [invoices, setInvoices] = useState<BillingInvoice[]>(mockInvoicesList);

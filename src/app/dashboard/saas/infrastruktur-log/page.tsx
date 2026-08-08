@@ -17,14 +17,6 @@ interface ResourceMetric {
   status: 'Optimal' | 'High Traffic' | 'Noisy Neighbor Warning';
 }
 
-const mockResourceUsage: ResourceMetric[] = [
-  { tenantName: 'Ponpes Daruttahuid Malang', subdomain: 'daruttahuid.madev.id', activeUsersCount: 420, bandwidthMb: 1450, storageGb: 12.4, cpuUsagePct: 18, status: 'Optimal' },
-  { tenantName: 'Ponpes Al-Hikmah Surabaya', subdomain: 'alhikmah.madev.id', activeUsersCount: 210, bandwidthMb: 820, storageGb: 8.1, cpuUsagePct: 12, status: 'Optimal' },
-  { tenantName: 'Ponpes An-Nisa Jakarta', subdomain: 'annisa.madev.id', activeUsersCount: 260, bandwidthMb: 3100, storageGb: 24.8, cpuUsagePct: 64, status: 'High Traffic' },
-  { tenantName: 'Ponpes Ar-Raudah Bandung', subdomain: 'arraudah.madev.id', activeUsersCount: 110, bandwidthMb: 450, storageGb: 4.2, cpuUsagePct: 8, status: 'Optimal' },
-  { tenantName: 'Ponpes Darul Quran Yogyakarta', subdomain: 'dq.madev.id', activeUsersCount: 50, bandwidthMb: 210, storageGb: 2.1, cpuUsagePct: 4, status: 'Optimal' },
-];
-
 interface AuditLogItem {
   id: string;
   timestamp: string;
@@ -35,12 +27,8 @@ interface AuditLogItem {
   ipAddress: string;
 }
 
-const mockAuditLogs: AuditLogItem[] = [
-  { id: 'al1', timestamp: '2026-07-24 16:42:10', actor: 'Serzen Dev (Developer Owner)', action: 'UPDATE_TENANT_FEATURE_FLAGS', target: 'Ponpes Al-Hikmah', details: 'Mengaktifkan modul POS Kantin Cashless RFID', ipAddress: '180.252.11.4' },
-  { id: 'al2', timestamp: '2026-07-24 14:15:33', actor: 'Madev Super Admin', action: 'APPROVE_TRIAL_REQUEST', target: 'Ponpes Darul Quran', details: 'Provisi tenant baru subdomain dq.madev.id', ipAddress: '180.252.11.4' },
-  { id: 'al3', timestamp: '2026-07-24 11:05:19', actor: 'Serzen Dev (Developer Owner)', action: 'SAVE_TENANT_GATEWAY_KEYS', target: 'Ponpes Daruttahuid', details: 'Memperbarui Flip Secret Key & Validation Token', ipAddress: '180.252.11.4' },
-  { id: 'al4', timestamp: '2026-07-23 09:20:45', actor: 'System Auto Job', action: 'DATABASE_BACKUP_SUCCESS', target: 'Global Drizzle Postgres', details: 'Automated snapshot backup completed (3.2 GB)', ipAddress: '127.0.0.1' },
-];
+const mockResourceUsage: ResourceMetric[] = [];
+const mockAuditLogs: AuditLogItem[] = [];
 
 export default function SaasInfraLogPage() {
   const [resources, setResources] = useState<ResourceMetric[]>(mockResourceUsage);

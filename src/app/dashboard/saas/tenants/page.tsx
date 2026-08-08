@@ -58,84 +58,8 @@ const defaultModules: TenantModules = {
   questKarakter: true,
 };
 
-const mockActiveTenants: ActiveTenant[] = [
-  { 
-    id: 't1', 
-    name: 'Ponpes Daruttahuid', 
-    subdomain: 'daruttahuid.madev.id', 
-    location: 'Malang, Jawa Timur', 
-    ownerName: 'Kyai Ahmad Fauzi', 
-    ownerEmail: 'admin@mahad.sch.id', 
-    ownerPhone: '081234567890', 
-    plan: 'Enterprise SaaS', 
-    status: 'aktif', 
-    santriCount: 340, 
-    createdAt: '2025-01-10',
-    modules: { ...defaultModules }
-  },
-  { 
-    id: 't2', 
-    name: 'Ponpes Al-Hikmah', 
-    subdomain: 'alhikmah.madev.id', 
-    location: 'Surabaya, Jawa Timur', 
-    ownerName: 'Ustadz Mahmud', 
-    ownerEmail: 'admin@alhikmah.sch.id', 
-    ownerPhone: '081298765432', 
-    plan: 'Pro SaaS', 
-    status: 'aktif', 
-    santriCount: 180, 
-    createdAt: '2025-02-01',
-    modules: { ...defaultModules, posKantin: false, uksKesehatan: true }
-  },
-  { 
-    id: 't3', 
-    name: 'Ponpes An-Nisa', 
-    subdomain: 'annisa.madev.id', 
-    location: 'Jakarta Selatan, DKI', 
-    ownerName: 'Ustadzah Fatimah', 
-    ownerEmail: 'admin@annisa.sch.id', 
-    ownerPhone: '081311223344', 
-    plan: 'Pro SaaS', 
-    status: 'aktif', 
-    santriCount: 220, 
-    createdAt: '2025-02-15',
-    modules: { ...defaultModules, waGateway: true, paymentGateway: false }
-  },
-  { 
-    id: 't4', 
-    name: 'Ponpes Ar-Raudah', 
-    subdomain: 'arraudah.madev.id', 
-    location: 'Bandung, Jawa Barat', 
-    ownerName: 'Ustadz Ridwan', 
-    ownerEmail: 'admin@arraudah.sch.id', 
-    ownerPhone: '081544556677', 
-    plan: 'Starter SaaS', 
-    status: 'aktif', 
-    santriCount: 95, 
-    createdAt: '2025-03-01',
-    modules: { ...defaultModules, posKantin: false, paymentGateway: false, waGateway: false }
-  },
-  { 
-    id: 't5', 
-    name: 'Ponpes Darul Quran', 
-    subdomain: 'dq.madev.id', 
-    location: 'Yogyakarta, DIY', 
-    ownerName: 'Ustadz Syarif', 
-    ownerEmail: 'admin@dq.sch.id', 
-    ownerPhone: '081788990011', 
-    plan: 'Trial 14 Hari', 
-    status: 'trial', 
-    santriCount: 45, 
-    createdAt: '2025-03-10',
-    modules: { ...defaultModules, posKantin: false, uksKesehatan: false }
-  },
-];
-
-const mockTrialRequests: TrialRequest[] = [
-  { id: 'tr1', name: 'Ponpes Al-Baqarah', subdomainReq: 'albaqarah.madev.id', location: 'Surakarta, Jawa Tengah', applicantName: 'Kyai H. Mustofa', applicantRole: 'Pimpinan Ponpes', email: 'kyai.mustofa@albaqarah.or.id', phone: '082133445566', requestedPlan: 'Pro SaaS (Trial 14 Hari)', requestDate: '2026-07-24', status: 'pending' },
-  { id: 'tr2', name: 'Ponpes Nurul Huda', subdomainReq: 'nurulhuda.madev.id', location: 'Semarang, Jawa Tengah', applicantName: 'Ustadz Zulkifli', applicantRole: 'Kepala IT Pesantren', email: 'zulkifli@nurulhuda.sch.id', phone: '082255667788', requestedPlan: 'Enterprise SaaS', requestDate: '2026-07-23', status: 'pending' },
-  { id: 'tr3', name: 'Ponpes Miftahul Ulum', subdomainReq: 'miftahululum.madev.id', location: 'Jember, Jawa Timur', applicantName: 'Ustadz Rahmat', applicantRole: 'Ketua Yayasan', email: 'rahmat@miftahululum.id', phone: '082399001122', requestedPlan: 'Starter SaaS', requestDate: '2026-07-22', status: 'pending' },
-];
+const mockActiveTenants: ActiveTenant[] = [];
+const mockTrialRequests: TrialRequest[] = [];
 
 export default function SaasTenantsPage() {
   const [activeTab, setActiveTab] = useState<'tenants' | 'requests'>('tenants');

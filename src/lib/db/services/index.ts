@@ -17,3 +17,6 @@ export { masterTingkatService } from './masterTingkat';
 export { masterJenjangService } from './masterJenjang';
 export { guruService } from './guru';
 export { governanceCaseService } from './governanceCase';
+export { academicYearService, academicTermService } from './academic-workspace';
+export { academicLedgerRecordService, academicTranscriptService } from './academic-ledger';
+

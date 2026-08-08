@@ -17,17 +17,12 @@ interface StatsCardProps {
 export function StatsCard({ title, value, description, icon: Icon, trend, className, iconClassName }: StatsCardProps) {
   return (
     <Card className={cn(
-      'relative overflow-hidden cursor-default',
-      // Explicit transition — better GPU compositing than transition-all
+      'relative overflow-hidden cursor-default border border-amber-500/20 dark:border-amber-500/30',
       'transition-[transform,box-shadow,background-color,border-color] duration-300',
-      // Light mode: subtle lift
-      'hover:shadow-md',
-      // Dark mode: reuse shared glass-card utility for consistency
-      'dark:glass-card',
-      // motion-safe: respect reduced-motion preference
+      'hover:shadow-lg hover:border-amber-500/50',
+      'bg-gradient-to-br from-emerald-950/5 via-stone-50 to-amber-500/5 dark:from-emerald-950/20 dark:via-stone-900/60 dark:to-stone-950/90',
       'motion-safe:hover:-translate-y-0.5',
-      // Refined amber glow — smaller spread for StatsCard scale
-      'dark:hover:shadow-[0_6px_24px_rgba(251,146,60,0.08),0_2px_8px_rgba(0,0,0,0.20)]',
+      'before:absolute before:top-0 before:left-0 before:right-0 before:h-0.5 before:bg-gradient-to-r before:from-transparent before:via-amber-500/60 before:to-transparent',
       className,
     )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

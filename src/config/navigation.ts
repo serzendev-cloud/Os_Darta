@@ -96,14 +96,14 @@ export const navigationGroups: NavGroup[] = [
     icon: 'Building2',
     items: [
       {
-        title: 'Program Madrasah',
+        title: 'Program Akademik',
         href: '',
         icon: 'BookMarked',
         roles: ['admin', 'kepala_kesiswaan', 'staff'],
         requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
         children: [
           {
-            title: 'Master Madrasah',
+            title: 'Pustaka Program',
             href: '/dashboard/kurikulum/master',
             icon: 'Settings',
             roles: ['admin', 'kepala_kesiswaan'],
@@ -164,6 +164,7 @@ export const navigationGroups: NavGroup[] = [
   },
 
   // ── 3. PROGRAM KURIKULUM ───────────────────────────────────────────────
+  // ── 3. PROGRAM KURIKULUM ───────────────────────────────────────────────
   {
     title: 'Program Kurikulum',
     icon: 'GraduationCap',
@@ -177,32 +178,40 @@ export const navigationGroups: NavGroup[] = [
         academicDomain: 'formal',
         children: [
           {
-            title: 'Struktur Akademik',
-            href: '/dashboard/struktur-akademik?type=formal',
-            icon: 'GraduationCap',
+            title: 'Kelola Kurikulum',
+            href: '/dashboard/kurikulum/config?id=prog-formal',
+            icon: 'Settings',
             roles: ['admin', 'kepala_kesiswaan'],
             requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
           },
           {
-            title: 'Mata Pelajaran',
-            href: '/dashboard/mapel?type=formal',
-            icon: 'Library',
-            roles: ['admin', 'kepala_kesiswaan', 'staff'],
-            requiredPermission: Permission.VIEW_MAPEL,
-          },
-          {
-            title: 'Distribusi Guru',
-            href: '/dashboard/distribusi-guru?type=formal',
-            icon: 'UsersRound',
-            roles: ['admin', 'kepala_kesiswaan', 'staff'],
-            requiredPermission: Permission.VIEW_DISTRIBUSI_GURU,
+            title: 'Tahun Ajaran',
+            href: '/dashboard/tahun-ajaran',
+            icon: 'Calendar',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
           },
           {
             title: 'Kalender Akademik',
             href: '/dashboard/kalender-akademik?type=formal',
-            icon: 'Calendar',
+            icon: 'CalendarDays',
             roles: ['admin', 'kepala_kesiswaan'],
             requiredPermission: Permission.VIEW_KALENDER_AKADEMIK,
+          },
+          {
+            title: 'Operasional Akademik',
+            href: '/dashboard/operasional?type=formal',
+            icon: 'Activity',
+            roles: ['admin', 'kepala_kesiswaan', 'staff', 'guru'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+            badge: 'Command Center',
+          },
+          {
+            title: 'Penilaian',
+            href: '/dashboard/penilaian?type=formal',
+            icon: 'Award',
+            roles: ['admin', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
+            requiredPermission: Permission.VIEW_PENILAIAN,
           },
           {
             title: 'Evaluasi & Raport',
@@ -222,32 +231,40 @@ export const navigationGroups: NavGroup[] = [
         academicDomain: 'pesantren',
         children: [
           {
-            title: 'Struktur Akademik Madin',
-            href: '/dashboard/struktur-akademik?type=madin',
-            icon: 'GraduationCap',
+            title: 'Kelola Kurikulum',
+            href: '/dashboard/kurikulum/config?id=prog-madin',
+            icon: 'Settings',
             roles: ['admin', 'kepala_kesiswaan'],
             requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
           },
           {
-            title: 'Mata Pelajaran Madin',
-            href: '/dashboard/mapel?type=madin',
-            icon: 'Library',
-            roles: ['admin', 'kepala_kesiswaan', 'staff'],
-            requiredPermission: Permission.VIEW_MAPEL,
-          },
-          {
-            title: 'Distribusi Guru Madin',
-            href: '/dashboard/distribusi-guru?type=madin',
-            icon: 'UsersRound',
-            roles: ['admin', 'kepala_kesiswaan', 'staff'],
-            requiredPermission: Permission.VIEW_DISTRIBUSI_GURU,
+            title: 'Tahun Ajaran',
+            href: '/dashboard/tahun-ajaran',
+            icon: 'Calendar',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
           },
           {
             title: 'Kalender Madin',
             href: '/dashboard/kalender-akademik?type=madin',
-            icon: 'Calendar',
+            icon: 'CalendarDays',
             roles: ['admin', 'kepala_kesiswaan'],
             requiredPermission: Permission.VIEW_KALENDER_AKADEMIK,
+          },
+          {
+            title: 'Operasional Akademik',
+            href: '/dashboard/operasional?type=madin',
+            icon: 'Activity',
+            roles: ['admin', 'kepala_kesiswaan', 'staff', 'guru'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+            badge: 'Command Center',
+          },
+          {
+            title: 'Penilaian',
+            href: '/dashboard/penilaian?type=madin',
+            icon: 'Award',
+            roles: ['admin', 'kepala_kesiswaan', 'guru', 'wali_kelas'],
+            requiredPermission: Permission.VIEW_PENILAIAN,
           },
           {
             title: 'Evaluasi & Raport Madin',
@@ -266,6 +283,13 @@ export const navigationGroups: NavGroup[] = [
         requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
         academicDomain: 'quran',
         children: [
+          {
+            title: 'Kelola Kurikulum',
+            href: '/dashboard/kurikulum/config?id=prog-madqur',
+            icon: 'Settings',
+            roles: ['admin', 'kepala_kesiswaan'],
+            requiredPermission: Permission.VIEW_STRUKTUR_AKADEMIK,
+          },
           {
             title: 'Monitoring Tahfidz & Ziyadah',
             href: '/dashboard/tahfidz',

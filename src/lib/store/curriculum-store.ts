@@ -15,6 +15,12 @@ export interface CurriculumProgram {
   formatRaport?: 'pdf_standar' | 'pdf_tahfidz' | 'kitab_kuning';
   penanggungJawab?: string;
   catatanTambahan?: string;
+  // Enterprise lifecycle & versioning extensions
+  version?: string;
+  lifecycleStatus?: 'draft' | 'review' | 'published' | 'archived';
+  tahunAjaran?: string;
+  lastModified?: string;
+  publishedAt?: string;
 }
 
 export const defaultCurriculumsList: CurriculumProgram[] = [
@@ -29,6 +35,9 @@ export const defaultCurriculumsList: CurriculumProgram[] = [
     totalMapel: 16,
     totalGuru: 12,
     iconBg: 'bg-blue-600',
+    version: 'v2.1',
+    lifecycleStatus: 'published',
+    tahunAjaran: 'TA 2025/2026',
   },
   {
     id: 'prog-madin',
@@ -41,6 +50,9 @@ export const defaultCurriculumsList: CurriculumProgram[] = [
     totalMapel: 24,
     totalGuru: 18,
     iconBg: 'bg-amber-600',
+    version: 'v1.0',
+    lifecycleStatus: 'published',
+    tahunAjaran: 'TA 2025/2026',
   },
   {
     id: 'prog-madqur',
@@ -53,6 +65,9 @@ export const defaultCurriculumsList: CurriculumProgram[] = [
     totalMapel: 8,
     totalGuru: 8,
     iconBg: 'bg-emerald-600',
+    version: 'v1.2',
+    lifecycleStatus: 'published',
+    tahunAjaran: 'TA 2025/2026',
   },
 ];
 
