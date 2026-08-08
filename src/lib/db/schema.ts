@@ -423,6 +423,17 @@ export const fieldChangeRecords = pgTable('field_change_records', {
   changedAt: timestamp('changed_at').defaultNow().notNull(),
 });
 
+export const outboxEvents = pgTable('outbox_events', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').default('default').notNull(),
+  eventType: text('event_type').notNull(),
+  payload: jsonb('payload').notNull(),
+  status: text('status').default('PENDING').notNull(),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  processedAt: timestamp('processed_at'),
+});
+
 // Re-export sub-schemas
 export * from './schema/finance';
 export * from './schema/rfid';
