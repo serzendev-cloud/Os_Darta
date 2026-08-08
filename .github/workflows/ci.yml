@@ -1,0 +1,49 @@
+# ========================================
+# GitHub Actions CI/CD Pipeline Workflow
+# Traceability: CIP-WP-007 | ETP-T2.4
+# ========================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - preview
+      - main
+  pull_request:
+    branches:
+      - preview
+      - main
+
+jobs:
+  validate:
+    name: Lint, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Baseline ESLint Audit
+        run: npm run lint:ci
+
+      - name: TypeScript Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run Unit Tests
+        run: npm run test:run
+
+      - name: Run Contract Tests
+        run: npm run test:contracts
+
+      - name: Next.js Production Build
+        run: npm run build

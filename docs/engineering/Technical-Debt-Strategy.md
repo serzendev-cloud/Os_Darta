@@ -35,7 +35,18 @@ The technical debt lifecycle consists of six distinct phases:
 
 ---
 
-## 3. Prioritization Matrix (Quadrant Model)
+## 3. Debt Registration Guideline
+When registering technical debt, developers must provide:
+- **ID**: `DEBT-XXX`
+- **Location**: Affected files or modules.
+- **Description**: What is the structural issue or deviation.
+- **Justification**: Why it was introduced (if applicable).
+- **Impact**: Risk of leaving it unresolved (e.g. performance bottleneck, maintenance friction).
+- **Refactor Action**: Proposed technical steps to resolve the debt.
+
+---
+
+## 4. Prioritization Matrix (Quadrant Model)
 
 Prioritization is calculated using the Urgency vs. Effort matrix:
 
@@ -47,7 +58,7 @@ Prioritization is calculated using the Urgency vs. Effort matrix:
 
 ---
 
-## 4. Technical Debt Aging Policy
+## 5. Technical Debt Aging Policy
 To prevent registered technical debt from accumulating indefinitely, strict aging thresholds are enforced:
 
 - **Quadrant 1 Debt (Immediate)**:
@@ -63,7 +74,7 @@ To prevent registered technical debt from accumulating indefinitely, strict agin
 
 ---
 
-## 5. Technical Debt Metrics
+## 6. Technical Debt Metrics
 We measure, track, and report on the following indicators to maintain a healthy repository:
 
 1. **Current Debt Count ($C_d$)**: Total number of active, unresolved technical debt entries in `.eslint-baseline.json`.
@@ -74,7 +85,18 @@ We measure, track, and report on the following indicators to maintain a healthy 
 
 ---
 
-## 6. Exit & Closure Criteria
+## 7. Debt Reduction Strategies
+
+### 7.1 The Boy Scout Rule
+- Developers must always leave the code cleaner than they found it.
+- When working on a file for business logic, resolve any minor code smells or warnings in the same file immediately.
+
+### 7.2 Sprint Allocation Capacity
+- In every standard Execution Sprint, a minimum of **10% of total engineering capacity** must be allocated to resolving items from Quadrant 1 and Quadrant 2 in the Technical Debt Register.
+
+---
+
+## 8. Exit & Closure Criteria
 An item is eligible for closure and removal from the active debt register only when it meets the following criteria:
 - The refactored code passes `npm run lint:ci` without regressions.
 - Baseline is updated via `npm run lint:baseline`.
