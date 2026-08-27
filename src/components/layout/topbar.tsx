@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { useCollection } from '@/hooks';
 import type { Notification } from '@/types';
-import { notificationsService } from '@/lib/firebase/services';
+import { notificationsService } from '@/lib/db/services';
 import { cn } from '@/lib/utils';
 
 export function Topbar() {
@@ -27,7 +27,7 @@ export function Topbar() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
-  // Load notifications from Firebase with realtime subscription
+  // Load notifications with realtime subscription
   const { data: rawNotifications } = useCollection<Notification>('notifications', [], { realtime: true });
 
   const isWali = useIsRole('wali');
@@ -41,8 +41,8 @@ export function Topbar() {
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'AD';
 
   return (
-    <header className="sticky top-0 z-30 flex items-center h-16 border-b border-amber-500/30 dark:border-amber-500/20 bg-emerald-950/5 dark:bg-stone-950/80 backdrop-blur-xl px-4 lg:px-6 relative overflow-hidden before:absolute before:bottom-0 before:left-0 before:right-0 before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-amber-500/50 before:to-transparent">
-      <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={() => setMobileOpen(true)}>
+    <header className="sticky top-0 z-30 flex items-center h-16 border-b border-amber-500/30 dark:border-amber-500/20 bg-emerald-950/5 dark:bg-stone-950/80 backdrop-blur-xl px-3.5 sm:px-4 lg:px-6 relative overflow-hidden before:absolute before:bottom-0 before:left-0 before:right-0 before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-amber-500/50 before:to-transparent">
+      <Button variant="ghost" size="icon" className="lg:hidden mr-1.5 sm:mr-2" onClick={() => setMobileOpen(true)}>
         <Menu className="w-5 h-5 text-amber-600 dark:text-amber-400" />
       </Button>
 
@@ -52,7 +52,7 @@ export function Topbar() {
           <span>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         {user && (
           <Badge variant="outline" className={cn('hidden sm:flex text-xs', roleColors[user.role])}>
             <Shield className="w-3 h-3 mr-1" />{roleLabels[user.role]}

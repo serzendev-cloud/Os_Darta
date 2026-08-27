@@ -211,7 +211,7 @@ export function Sidebar() {
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
       )}
       <aside className={cn(
-        'fixed top-0 left-0 z-50 h-full flex flex-col transition-all duration-300 ease-in-out bg-islamic-pattern',
+        'fixed top-0 left-0 z-50 h-dvh flex flex-col transition-all duration-300 ease-in-out bg-islamic-pattern',
         'bg-gradient-to-b from-emerald-950/20 via-stone-100 to-amber-950/10 dark:from-emerald-950 dark:via-stone-950 dark:to-stone-950 border-r border-amber-500/30 dark:border-amber-500/20 shadow-2xl',
         isCollapsed ? 'w-[var(--sidebar-width-collapsed)]' : 'w-[var(--sidebar-width)]',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -250,7 +250,7 @@ export function Sidebar() {
         </div>
 
         {/* Nav */}
-        <div className="flex-1 overflow-y-auto py-3">
+        <div className="flex-1 overflow-y-auto py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <nav className="px-2 space-y-1">
             {isDevOrSuperAdmin ? (
               /* Flat Menu Items for Developer & Super Admin Console */

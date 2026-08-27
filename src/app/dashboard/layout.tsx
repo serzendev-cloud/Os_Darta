@@ -26,7 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-muted-foreground">Memuat...</p>
@@ -44,8 +44,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!canBypassMaintenance(maintenanceConfig, user.role)) {
       if (maintenanceConfig.type === 'full') {
         return (
-          <main className="min-h-screen bg-background">
-            <div className="min-h-screen flex items-center justify-center p-4">
+          <main className="min-h-dvh bg-background">
+            <div className="min-h-dvh flex items-center justify-center p-4">
               <div className="max-w-md w-full text-center space-y-4">
                 <div className="flex justify-center">
                   <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
@@ -66,12 +66,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       // readonly mode: show banner, children below
       return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-dvh bg-background">
           <MaintenanceBanner config={maintenanceConfig} />
           <Sidebar />
           <div className={cn('transition-all duration-300 ease-in-out', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
             <Topbar />
-            <main className="p-4 lg:p-6">
+            <main className="p-3.5 sm:p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               <Breadcrumb />
               {children}
             </main>
@@ -82,14 +82,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-sky-100/80 dark:bg-background">
+    <div className="min-h-dvh bg-sky-100/80 dark:bg-background">
       {isMaintenanceActive(maintenanceConfig) && (
         <MaintenanceBanner config={maintenanceConfig} isBypass />
       )}
       <Sidebar />
-      <div className={cn('transition-all duration-300 ease-in-out bg-sky-100/80 dark:bg-background min-h-screen', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
+      <div className={cn('transition-all duration-300 ease-in-out bg-sky-100/80 dark:bg-background min-h-dvh', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
         <Topbar />
-        <main className="p-4 lg:p-6 bg-sky-100/80 dark:bg-background min-h-[calc(100vh-4rem)]">
+        <main className="p-3.5 sm:p-4 lg:p-6 bg-sky-100/80 dark:bg-background min-h-[calc(100dvh-4rem)] pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Breadcrumb />
           {children}
         </main>
