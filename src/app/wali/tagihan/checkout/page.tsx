@@ -107,7 +107,7 @@ export default function WaliBundledCheckoutPage() {
             <button
               type="submit"
               disabled={loading || total <= 0}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 min-h-[44px]"
             >
               {loading ? 'Mengenerate Invoice Flip...' : 'Buat Kode Bayar Single Transfer (Flip API)'}
               <ArrowRight className="w-4 h-4" />

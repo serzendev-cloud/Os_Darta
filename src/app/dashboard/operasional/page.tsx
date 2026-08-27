@@ -378,7 +378,7 @@ export default function OperasionalAkademikPage() {
                 <button
                   type="button"
                   onClick={handleActivateKbm}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all shadow-md"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all shadow-md min-h-[44px] flex items-center justify-center"
                 >
                   AKTIFKAN KBM SEKARANG
                 </button>

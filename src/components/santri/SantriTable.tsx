@@ -3,6 +3,16 @@
 import type { Santri } from '@/types';
 import { PageCard } from '@/components/shared/page-header';
 import { Edit2, Search, SlidersHorizontal } from 'lucide-react';
+import {
+  ResponsiveDataGrid,
+  MobileCard,
+  MobileCardHeader,
+  MobileCardTitle,
+  MobileCardContent,
+  MobileCardFooter,
+  ResponsiveFilterBar,
+  MobileRowActions,
+} from '@/components/ui/responsive-data';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,30 +102,12 @@ export function SantriTable({
       description={`Menampilkan ${rows.length} santri`}
     >
       {/* ---- Toolbar ---- */}
-      <div className="flex flex-col gap-3 mb-5">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search
-              aria-hidden="true"
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
-            />
-            <input
-              type="text"
-              placeholder="Cari nama, NIS, atau asrama..."
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
-            />
-          </div>
-
-          {/* Filters */}
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
-            <SlidersHorizontal
-              aria-hidden="true"
-              className="w-4 h-4 text-muted-foreground shrink-0"
-            />
-
+      <ResponsiveFilterBar
+        searchValue={search}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Cari nama, NIS, atau asrama..."
+        filterContent={
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <label htmlFor="filter-status" className="sr-only">Filter Status</label>
             <select
               id="filter-status"
@@ -157,144 +149,169 @@ export function SantriTable({
               ))}
             </select>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* ---- Table ---- */}
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-muted/50 text-muted-foreground">
-              <th className={TH_CLS}>Santri</th>
-              <th className={TH_CLS}>NIS</th>
-              <th className={TH_CLS}>Asrama / Kamar</th>
-              <th className={TH_CLS}>Kelas</th>
-              <th className={TH_CLS}>Status</th>
-              <th className={TH_CLS}>SP</th>
-              <th className={TH_CLS}>Status Karakter</th>
-              <th className={TH_CLS}>Poin Pelanggaran</th>
-              <th className={TH_CLS}>Total Prestasi</th>
-              <th className="text-right px-4 py-3 font-medium w-[80px]">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rows.map((s) => (
-              <tr key={s.id} className="hover:bg-muted/30 transition-colors group">
-                {/* Santri identity */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                      {getInitials(s.name)}
-                    </div>
-                    <div>
-                      <p className="font-bold text-foreground">{s.name}</p>
-                      <div className="flex flex-col mt-0.5 gap-0.5">
-                        <p className="text-[10px] text-muted-foreground">
-                          {s.asalKota}, {s.asalProvinsi}
-                        </p>
-                        <span className="w-fit font-semibold px-1.5 py-0.5 rounded bg-muted text-[9px] uppercase tracking-wider text-muted-foreground">
-                          ANGKATAN {s.angkatanMasuk}
-                        </span>
+      {/* ---- Responsive Presentation Adapter (Desktop Table vs Mobile Cards) ---- */}
+      <ResponsiveDataGrid
+        data={rows}
+        keyExtractor={(s) => s.id}
+        renderDesktop={() => (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-muted-foreground">
+                  <th className={TH_CLS}>Santri</th>
+                  <th className={TH_CLS}>NIS</th>
+                  <th className={TH_CLS}>Asrama / Kamar</th>
+                  <th className={TH_CLS}>Kelas</th>
+                  <th className={TH_CLS}>Status</th>
+                  <th className={TH_CLS}>SP</th>
+                  <th className={TH_CLS}>Status Karakter</th>
+                  <th className={TH_CLS}>Poin Pelanggaran</th>
+                  <th className={TH_CLS}>Total Prestasi</th>
+                  <th className="text-right px-4 py-3 font-medium w-[80px]">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {rows.map((s) => (
+                  <tr key={s.id} className="hover:bg-muted/30 transition-colors group">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                          {getInitials(s.name)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-foreground">{s.name}</p>
+                          <div className="flex flex-col mt-0.5 gap-0.5">
+                            <p className="text-[10px] text-muted-foreground">
+                              {s.asalKota}, {s.asalProvinsi}
+                            </p>
+                            <span className="w-fit font-semibold px-1.5 py-0.5 rounded bg-muted text-[9px] uppercase tracking-wider text-muted-foreground">
+                              ANGKATAN {s.angkatanMasuk}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </td>
-
-                {/* NIS */}
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                  {s.nis}
-                </td>
-
-                {/* Asrama / Kamar */}
-                <td className="px-4 py-3">
-                  <span className="font-medium">{s.asrama}</span>
-                  <span className="text-muted-foreground"> · {s.kamar}</span>
-                </td>
-
-                {/* Kelas */}
-                <td className="px-4 py-3 text-muted-foreground">{s.kelas}</td>
-
-                {/* Status badge */}
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[s.status]}`}
-                  >
-                    {s.status}
-                  </span>
-                </td>
-
-                {/* SP badge */}
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${SP_COLORS[s.statusSP]}`}
-                  >
-                    {s.statusSP}
-                  </span>
-                </td>
-
-                {/* Status Karakter badge */}
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${KARAKTER_COLORS[s.statusKarakter]}`}
-                  >
-                    {s.statusKarakter}
-                  </span>
-                </td>
-
-                {/* Violation points progress */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-muted rounded-full h-1.5 w-16">
-                      <div
-                        className={`h-1.5 rounded-full ${pointBarColor(s.totalPoinPelanggaran)}`}
-                        style={{
-                          width: `${Math.min((s.totalPoinPelanggaran / 60) * 100, 100)}%`,
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.nis}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium">{s.asrama}</span>
+                      <span className="text-muted-foreground"> · {s.kamar}</span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{s.kelas}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[s.status]}`}>
+                        {s.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${SP_COLORS[s.statusSP]}`}>
+                        {s.statusSP}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${KARAKTER_COLORS[s.statusKarakter]}`}>
+                        {s.statusKarakter}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-muted rounded-full h-1.5 w-16">
+                          <div
+                            className={`h-1.5 rounded-full ${pointBarColor(s.totalPoinPelanggaran)}`}
+                            style={{ width: `${Math.min((s.totalPoinPelanggaran / 60) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium">{s.totalPoinPelanggaran}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-600 dark:text-amber-400">
+                        <span aria-hidden="true" className="text-xs">&#9733;</span>
+                        {s.totalPrestasi}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        aria-label={`Edit status ${s.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(s);
                         }}
-                      />
-                    </div>
-                    <span className="text-xs font-medium">{s.totalPoinPelanggaran}</span>
+                        className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                      >
+                        <Edit2 aria-hidden="true" className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        renderMobile={(s) => (
+          <MobileCard key={s.id}>
+            <MobileCardHeader>
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                  {getInitials(s.name)}
+                </div>
+                <div className="truncate">
+                  <MobileCardTitle>{s.name}</MobileCardTitle>
+                  <p className="text-[11px] text-muted-foreground font-mono">NIS: {s.nis}</p>
+                </div>
+              </div>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold capitalize ${STATUS_COLORS[s.status]}`}>
+                {s.status}
+              </span>
+            </MobileCardHeader>
+            <MobileCardContent>
+              <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[10px]">Kelas & Asrama</span>
+                  <span className="font-semibold text-foreground">{s.kelas} · {s.asrama}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px]">Status SP / Karakter</span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SP_COLORS[s.statusSP]}`}>{s.statusSP}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${KARAKTER_COLORS[s.statusKarakter]}`}>{s.statusKarakter}</span>
                   </div>
-                </td>
-
-                {/* Total Prestasi */}
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-600 dark:text-amber-400">
-                    <span aria-hidden="true" className="text-xs">&#9733;</span>
-                    {s.totalPrestasi}
-                  </span>
-                </td>
-
-                {/* Action */}
-                <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    aria-label={`Edit status ${s.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(s);
-                    }}
-                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                  >
-                    <Edit2 aria-hidden="true" className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-
-            {/* Empty state */}
-            {rows.length === 0 && (
-              <tr>
-                <td
-                  colSpan={10}
-                  className="px-4 py-10 text-center text-muted-foreground text-sm"
-                >
-                  Tidak ada data santri aktif.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground">Poin:</span>
+                  <div className="w-12 bg-muted rounded-full h-1.5">
+                    <div
+                      className={`h-1.5 rounded-full ${pointBarColor(s.totalPoinPelanggaran)}`}
+                      style={{ width: `${Math.min((s.totalPoinPelanggaran / 60) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="font-bold text-foreground">{s.totalPoinPelanggaran}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">Prestasi:</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">★ {s.totalPrestasi}</span>
+                </div>
+              </div>
+            </MobileCardContent>
+            <MobileCardFooter>
+              <span className="text-[10px] text-muted-foreground">{s.asalKota}, {s.asalProvinsi}</span>
+              <MobileRowActions
+                primaryAction={{
+                  key: 'edit',
+                  label: 'Edit Status',
+                  icon: Edit2,
+                  onClick: () => onEdit(s),
+                }}
+              />
+            </MobileCardFooter>
+          </MobileCard>
+        )}
+      />
     </PageCard>
   );
 }

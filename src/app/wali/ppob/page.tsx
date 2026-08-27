@@ -161,13 +161,14 @@ export default function WaliPpobPage() {
       </div>
 
       {/* Main Tabs */}
-      <div className="flex gap-2 border-b border-border/60 pb-2">
+      <div className="flex gap-2 border-b border-border/60 pb-2 overflow-x-auto hide-scrollbar">
         <button
+          type="button"
           onClick={() => {
             setActiveTab('PLN');
             setSelectedProduct(null);
           }}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap min-h-[44px] ${
             activeTab === 'PLN'
               ? 'bg-amber-500 text-slate-950 font-bold shadow'
               : 'bg-muted/40 hover:bg-muted text-muted-foreground'
@@ -177,11 +178,12 @@ export default function WaliPpobPage() {
         </button>
 
         <button
+          type="button"
           onClick={() => {
             setActiveTab('PULSA');
             setSelectedProduct(null);
           }}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap min-h-[44px] ${
             activeTab === 'PULSA'
               ? 'bg-blue-600 text-white font-bold shadow'
               : 'bg-muted/40 hover:bg-muted text-muted-foreground'
@@ -191,11 +193,12 @@ export default function WaliPpobPage() {
         </button>
 
         <button
+          type="button"
           onClick={() => {
             setActiveTab('DATA');
             setSelectedProduct(null);
           }}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap min-h-[44px] ${
             activeTab === 'DATA'
               ? 'bg-purple-600 text-white font-bold shadow'
               : 'bg-muted/40 hover:bg-muted text-muted-foreground'

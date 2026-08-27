@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { useCollection } from '@/hooks';
 import { useAuthStore } from '@/store/auth-store';
-import { healthVisitService } from '@/lib/firebase/services';
+import { healthVisitService } from '@/lib/db/services';
 import { createGovernanceEvent } from '@/lib/governance-events';
 import { validNextStatuses, HEALTH_STATUS_LABELS, HEALTH_SEVERITY_LABELS } from '@/lib/health-engine';
 import { CatatUKSModal } from '@/components/uks/CatatUKSModal';
@@ -36,6 +36,16 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HealthVisit, HealthVisitStatus } from '@/types/health';
+import {
+  ResponsiveDataGrid,
+  MobileCard,
+  MobileCardHeader,
+  MobileCardTitle,
+  MobileCardContent,
+  MobileCardFooter,
+  ResponsiveFilterBar,
+  MobileRowActions,
+} from '@/components/ui/responsive-data';
 
 // ── Severity Badge Colors ──────────────────────────────────────────────────────
 
@@ -293,178 +303,158 @@ export default function UKSPage() {
           description={`${filtered.length} kunjungan ditemukan`}
         >
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-5">
-            <div className="relative flex-1">
-              <Search
-                aria-hidden="true"
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
-              />
-              <label htmlFor="search-uks" className="sr-only">
-                Cari kunjungan UKS
-              </label>
-              <input
-                id="search-uks"
-                type="text"
-                placeholder="Cari nama santri atau keluhan..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-              />
-            </div>
-            <label htmlFor="filter-status-uks" className="sr-only">
-              Filter status kunjungan
-            </label>
-            <select
-              id="filter-status-uks"
-              value={filterStatus}
-              onChange={(e) =>
-                setFilterStatus(e.target.value as HealthVisitStatus | 'all')
-              }
-              className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none"
-            >
-              <option value="all">Semua Status</option>
-              <option value="observasi">Observasi</option>
-              <option value="istirahat">Istirahat</option>
-              <option value="rawat_sementara">Rawat Sementara</option>
-              <option value="perlu_berobat_luar">Perlu Berobat Luar</option>
-              <option value="selesai">Selesai</option>
-              <option value="dirujuk">Dirujuk</option>
-            </select>
-            <label htmlFor="filter-severity-uks" className="sr-only">
-              Filter tingkat keparahan
-            </label>
-            <select
-              id="filter-severity-uks"
-              value={filterSeverity}
-              onChange={(e) => setFilterSeverity(e.target.value)}
-              className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none"
-            >
-              <option value="all">Semua Tingkat</option>
-              <option value="ringan">Ringan</option>
-              <option value="sedang">Sedang</option>
-              <option value="darurat">Darurat</option>
-            </select>
-          </div>
+          <ResponsiveFilterBar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Cari nama santri atau keluhan..."
+            activeFilterCount={(filterStatus !== 'all' ? 1 : 0) + (filterSeverity !== 'all' ? 1 : 0)}
+            onResetFilters={() => {
+              setFilterStatus('all');
+              setFilterSeverity('all');
+            }}
+            filterContent={
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <label htmlFor="filter-status-uks" className="sr-only">
+                  Filter status kunjungan
+                </label>
+                <select
+                  id="filter-status-uks"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as HealthVisitStatus | 'all')}
+                  className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none"
+                >
+                  <option value="all">Semua Status</option>
+                  <option value="observasi">Observasi</option>
+                  <option value="istirahat">Istirahat</option>
+                  <option value="rawat_sementara">Rawat Sementara</option>
+                  <option value="perlu_berobat_luar">Perlu Berobat Luar</option>
+                  <option value="selesai">Selesai</option>
+                  <option value="dirujuk">Dirujuk</option>
+                </select>
 
-          {/* Table */}
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/50 text-muted-foreground">
-                  <th className="text-left px-4 py-3 font-medium">Santri</th>
-                  <th className="text-left px-4 py-3 font-medium">Keluhan</th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    Kategori
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    Severity
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">Status</th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    Petugas
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">Masuk</th>
-                  <th className="text-left px-4 py-3 font-medium">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((v) => (
-                  <tr
-                    key={v.id}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Santri */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          aria-hidden="true"
-                          className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0"
-                        >
-                          {v.santriName
-                            .split(' ')
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </div>
-                        <span className="font-medium">{v.santriName}</span>
-                      </div>
-                    </td>
+                <label htmlFor="filter-severity-uks" className="sr-only">
+                  Filter tingkat keparahan
+                </label>
+                <select
+                  id="filter-severity-uks"
+                  value={filterSeverity}
+                  onChange={(e) => setFilterSeverity(e.target.value)}
+                  className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none"
+                >
+                  <option value="all">Semua Tingkat</option>
+                  <option value="ringan">Ringan</option>
+                  <option value="sedang">Sedang</option>
+                  <option value="darurat">Darurat</option>
+                </select>
+              </div>
+            }
+          />
 
-                    {/* Keluhan */}
-                    <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">
-                      {v.keluhan}
-                    </td>
-
-                    {/* Kategori */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs text-muted-foreground">
-                        {CATEGORY_LABEL[v.category] ?? v.category}
-                      </span>
-                    </td>
-
-                    {/* Severity */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                          SEVERITY_BADGE[v.severity] ??
-                            SEVERITY_BADGE.ringan,
-                        )}
-                      >
-                        {HEALTH_SEVERITY_LABELS[v.severity]}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                          STATUS_BADGE[v.status] ?? STATUS_BADGE.observasi,
-                        )}
-                      >
-                        {HEALTH_STATUS_LABELS[v.status]}
-                      </span>
-                    </td>
-
-                    {/* Petugas */}
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {v.petugasName ?? '-'}
-                    </td>
-
-                    {/* Masuk */}
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(v.masukAt)}
-                    </td>
-
-                    {/* Aksi */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setDetailVisit(v)}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                          title="Lihat detail"
-                        >
-                          <Eye className="w-4 h-4" aria-hidden="true" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-10 text-center text-muted-foreground text-sm"
-                    >
-                      Tidak ada kunjungan ditemukan.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Responsive Presentation Adapter */}
+          <ResponsiveDataGrid
+            data={filtered}
+            keyExtractor={(v) => v.id}
+            renderDesktop={() => (
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 text-muted-foreground">
+                      <th className="text-left px-4 py-3 font-medium">Santri</th>
+                      <th className="text-left px-4 py-3 font-medium">Keluhan</th>
+                      <th className="text-left px-4 py-3 font-medium">Kategori</th>
+                      <th className="text-left px-4 py-3 font-medium">Severity</th>
+                      <th className="text-left px-4 py-3 font-medium">Status</th>
+                      <th className="text-left px-4 py-3 font-medium">Petugas</th>
+                      <th className="text-left px-4 py-3 font-medium">Masuk</th>
+                      <th className="text-left px-4 py-3 font-medium">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filtered.map((v) => (
+                      <tr key={v.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div
+                              aria-hidden="true"
+                              className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0"
+                            >
+                              {v.santriName.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                            </div>
+                            <span className="font-medium">{v.santriName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">{v.keluhan}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-muted-foreground">{CATEGORY_LABEL[v.category] ?? v.category}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', SEVERITY_BADGE[v.severity] ?? SEVERITY_BADGE.ringan)}>
+                            {HEALTH_SEVERITY_LABELS[v.severity]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', STATUS_BADGE[v.status] ?? STATUS_BADGE.observasi)}>
+                            {HEALTH_STATUS_LABELS[v.status]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{v.petugasName ?? '-'}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(v.masukAt)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setDetailVisit(v)}
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              title="Lihat detail"
+                            >
+                              <Eye className="w-4 h-4" aria-hidden="true" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            renderMobile={(v) => (
+              <MobileCard key={v.id}>
+                <MobileCardHeader>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                      {v.santriName.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                    </div>
+                    <MobileCardTitle>{v.santriName}</MobileCardTitle>
+                  </div>
+                  <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold', SEVERITY_BADGE[v.severity] ?? SEVERITY_BADGE.ringan)}>
+                    {HEALTH_SEVERITY_LABELS[v.severity]}
+                  </span>
+                </MobileCardHeader>
+                <MobileCardContent>
+                  <div className="space-y-1 text-xs pt-1">
+                    <p className="font-semibold text-foreground">Keluhan: {v.keluhan}</p>
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] pt-1 border-t border-border/40">
+                      <span>Kategori: {CATEGORY_LABEL[v.category] ?? v.category}</span>
+                      <span>{formatDateTime(v.masukAt)}</span>
+                    </div>
+                  </div>
+                </MobileCardContent>
+                <MobileCardFooter>
+                  <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold', STATUS_BADGE[v.status] ?? STATUS_BADGE.observasi)}>
+                    {HEALTH_STATUS_LABELS[v.status]}
+                  </span>
+                  <MobileRowActions
+                    primaryAction={{
+                      key: 'detail',
+                      label: 'Detail',
+                      icon: Eye,
+                      onClick: () => setDetailVisit(v),
+                    }}
+                  />
+                </MobileCardFooter>
+              </MobileCard>
+            )}
+          />
         </PageCard>
       )}
 
