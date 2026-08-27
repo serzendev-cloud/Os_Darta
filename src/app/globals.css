@@ -96,6 +96,15 @@
   --sidebar-border: oklch(0.88 0.02 165);
   --sidebar-ring: oklch(0.68 0.18 75);
 
+  /* ── WP-UI-010A: Standard Density Baseline variables ───────────────── */
+  --density-control-gap: 0.75rem;   /* Jarak antar-kontrol: 12px */
+  --density-card-padding: 1.25rem;  /* Padding kontainer/card: 20px */
+  --density-table-row: 3.25rem;     /* Tinggi baris data: 52px */
+  --density-control-height: 2.5rem; /* Tinggi control standard: 40px */
+  
+  --touch-target-min: 44px;         /* Area sentuh minimum mobile */
+  --icon-hit-area-min: 44px;
+
   /* Status palette — light */
   --status-success: oklch(0.596 0.145 164.3);
   --status-warning: oklch(0.70 0.18 73);
@@ -104,6 +113,22 @@
   --status-neutral: oklch(0.55 0.01 265);
   --status-purple: oklch(0.50 0.18 300);
   --status-fatal: oklch(0.55 0.22 20);
+}
+
+/* ── WP-UI-010A: Comfortable Density variables ──────────────────────── */
+[data-density="comfortable"] {
+  --density-control-gap: 1rem;       /* Jarak antar-kontrol: 16px */
+  --density-card-padding: 1.5rem;     /* Padding kontainer/card: 24px */
+  --density-table-row: 3.75rem;       /* Tinggi baris data: 60px */
+  --density-control-height: 2.75rem;  /* Tinggi control Comfortable: 44px */
+}
+
+/* ── WP-UI-010A: Compact Density variables ──────────────────────────── */
+[data-density="compact"] {
+  --density-control-gap: 0.5rem;     /* Jarak antar-kontrol: 8px */
+  --density-card-padding: 0.875rem;  /* Padding kontainer/card: 14px */
+  --density-table-row: 2.75rem;      /* Tinggi baris data: 44px (Aksesibel min height 44px di mobile) */
+  --density-control-height: 2.25rem; /* Tinggi control Compact: 36px */
 }
 
 /* ── Dark Mode — Night Mosque & Obsidian Emerald Gold ───────────────────────────────────────────── */
@@ -180,6 +205,19 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* ── WP-UI-010A: Accessibility Reduced Motion Foundation ────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-delay: -1ms !important;
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      background-attachment: initial !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0s !important;
+      transition-delay: 0s !important;
+    }
   }
 }
 

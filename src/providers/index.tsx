@@ -1,15 +1,13 @@
-'use client';
-
 import { type ReactNode } from 'react';
-import { FirebaseProvider } from './firebase-provider';
 import { AuthProvider } from './auth-provider';
+import { DensityProvider } from './density-provider';
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <FirebaseProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <DensityProvider>
         {children}
-      </AuthProvider>
-    </FirebaseProvider>
+      </DensityProvider>
+    </AuthProvider>
   );
 }
