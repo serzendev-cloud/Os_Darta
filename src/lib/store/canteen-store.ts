@@ -6,6 +6,8 @@ export interface CanteenUnit {
   operatingHours: string;
   receiptFooter: string;
   status: 'active' | 'inactive';
+  managerUserId?: string;
+  staffUserIds?: string[];
 }
 
 export interface CanteenCatalogItem {
@@ -15,6 +17,7 @@ export interface CanteenCatalogItem {
   code: string;
   category: 'makanan' | 'minuman' | 'snack' | 'alat_tulis';
   price: number;
+  costPrice?: number;
   stock: number;
 }
 
@@ -27,28 +30,28 @@ export const initialCanteenUnits: CanteenUnit[] = [
 
 export const initialCanteenItems: CanteenCatalogItem[] = [
   // Kantin Utama Pesantren (cnt-1)
-  { id: 'itm-1', canteenId: 'cnt-1', name: 'Nasi Goreng Spesial', code: 'MKN-01', category: 'makanan', price: 12000, stock: 50 },
-  { id: 'itm-2', canteenId: 'cnt-1', name: 'Es Teh Manis', code: 'MNM-01', category: 'minuman', price: 3000, stock: 100 },
-  { id: 'itm-3', canteenId: 'cnt-1', name: 'Ayam Geprek Nasi', code: 'MKN-02', category: 'makanan', price: 15000, stock: 40 },
-  { id: 'itm-4', canteenId: 'cnt-1', name: 'Jus Alpukat', code: 'MNM-03', category: 'minuman', price: 8000, stock: 35 },
+  { id: 'itm-1', canteenId: 'cnt-1', name: 'Nasi Goreng Spesial', code: 'MKN-01', category: 'makanan', price: 12000, costPrice: 8000, stock: 50 },
+  { id: 'itm-2', canteenId: 'cnt-1', name: 'Es Teh Manis', code: 'MNM-01', category: 'minuman', price: 3000, costPrice: 1500, stock: 100 },
+  { id: 'itm-3', canteenId: 'cnt-1', name: 'Ayam Geprek Nasi', code: 'MKN-02', category: 'makanan', price: 15000, costPrice: 10000, stock: 40 },
+  { id: 'itm-4', canteenId: 'cnt-1', name: 'Jus Alpukat', code: 'MNM-03', category: 'minuman', price: 8000, costPrice: 5000, stock: 35 },
 
   // Kantin Asrama Putra (cnt-2)
-  { id: 'itm-5', canteenId: 'cnt-2', name: 'Nasi Rames Asrama', code: 'MKN-03', category: 'makanan', price: 10000, stock: 60 },
-  { id: 'itm-6', canteenId: 'cnt-2', name: 'Kopi Susu Warmindo', code: 'MNM-02', category: 'minuman', price: 4000, stock: 80 },
-  { id: 'itm-7', canteenId: 'cnt-2', name: 'Indomie Telur Kornet', code: 'MKN-04', category: 'makanan', price: 9000, stock: 50 },
-  { id: 'itm-8', canteenId: 'cnt-2', name: 'Teh Hangat', code: 'MNM-04', category: 'minuman', price: 3000, stock: 75 },
+  { id: 'itm-5', canteenId: 'cnt-2', name: 'Nasi Rames Asrama', code: 'MKN-03', category: 'makanan', price: 10000, costPrice: 7000, stock: 60 },
+  { id: 'itm-6', canteenId: 'cnt-2', name: 'Kopi Susu Warmindo', code: 'MNM-02', category: 'minuman', price: 4000, costPrice: 2500, stock: 80 },
+  { id: 'itm-7', canteenId: 'cnt-2', name: 'Indomie Telur Kornet', code: 'MKN-04', category: 'makanan', price: 9000, costPrice: 6000, stock: 50 },
+  { id: 'itm-8', canteenId: 'cnt-2', name: 'Teh Hangat', code: 'MNM-04', category: 'minuman', price: 3000, costPrice: 1500, stock: 75 },
 
   // Kantin Asrama Putri (cnt-3)
-  { id: 'itm-9', canteenId: 'cnt-3', name: 'Seblak Pedas Asrama', code: 'MKN-05', category: 'makanan', price: 10000, stock: 40 },
-  { id: 'itm-10', canteenId: 'cnt-3', name: 'Boba Milk Tea', code: 'MNM-05', category: 'minuman', price: 8000, stock: 45 },
-  { id: 'itm-11', canteenId: 'cnt-3', name: 'Nasi Soto Ayam', code: 'MKN-06', category: 'makanan', price: 12000, stock: 30 },
-  { id: 'itm-12', canteenId: 'cnt-3', name: 'Es Jeruk Peras', code: 'MNM-06', category: 'minuman', price: 4000, stock: 60 },
+  { id: 'itm-9', canteenId: 'cnt-3', name: 'Seblak Pedas Asrama', code: 'MKN-05', category: 'makanan', price: 10000, costPrice: 6500, stock: 40 },
+  { id: 'itm-10', canteenId: 'cnt-3', name: 'Boba Milk Tea', code: 'MNM-05', category: 'minuman', price: 8000, costPrice: 5000, stock: 45 },
+  { id: 'itm-11', canteenId: 'cnt-3', name: 'Nasi Soto Ayam', code: 'MKN-06', category: 'makanan', price: 12000, costPrice: 8500, stock: 30 },
+  { id: 'itm-12', canteenId: 'cnt-3', name: 'Es Jeruk Peras', code: 'MNM-06', category: 'minuman', price: 4000, costPrice: 2000, stock: 60 },
 
   // Koperasi Pesantren (cnt-4)
-  { id: 'itm-13', canteenId: 'cnt-4', name: 'Kitab Safinatun Najah', code: 'KTB-01', category: 'alat_tulis', price: 15000, stock: 30 },
-  { id: 'itm-14', canteenId: 'cnt-4', name: 'Buku Tulis 50 Lembar', code: 'ALT-01', category: 'alat_tulis', price: 5000, stock: 200 },
-  { id: 'itm-15', canteenId: 'cnt-4', name: 'Pulpen Gel Hitam', code: 'ALT-02', category: 'alat_tulis', price: 3500, stock: 150 },
-  { id: 'itm-16', canteenId: 'cnt-4', name: 'Sarung Wadimor Asli', code: 'PRL-01', category: 'snack', price: 65000, stock: 25 },
+  { id: 'itm-13', canteenId: 'cnt-4', name: 'Kitab Safinatun Najah', code: 'KTB-01', category: 'alat_tulis', price: 15000, costPrice: 10000, stock: 30 },
+  { id: 'itm-14', canteenId: 'cnt-4', name: 'Buku Tulis 50 Lembar', code: 'ALT-01', category: 'alat_tulis', price: 5000, costPrice: 3500, stock: 200 },
+  { id: 'itm-15', canteenId: 'cnt-4', name: 'Pulpen Gel Hitam', code: 'ALT-02', category: 'alat_tulis', price: 3500, costPrice: 2000, stock: 150 },
+  { id: 'itm-16', canteenId: 'cnt-4', name: 'Sarung Wadimor Asli', code: 'PRL-01', category: 'snack', price: 65000, costPrice: 50000, stock: 25 },
 ];
 
 const LOCAL_STORAGE_CANTEENS_KEY = 'mahad_canteen_units_v1';
