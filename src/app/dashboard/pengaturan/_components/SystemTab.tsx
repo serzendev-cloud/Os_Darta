@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PageCard } from '@/components/shared/page-header';
-import { appConfigService } from '@/lib/firebase/services/appConfig';
+import { appConfigService } from '@/lib/db/services';
 import { useConfig } from '@/hooks/useConfig';
 import { DEFAULT_MAINTENANCE_CONFIG } from '@/lib/maintenance';
 import type { MaintenanceConfig, UserRole } from '@/types';
@@ -156,6 +156,96 @@ export function SystemTab() {
             </div>
           </PageCard>
         </div>
+      </div>
+
+      {/* Network Management Feature Card (Coming Soon & Toggle) */}
+      <div className="pt-2">
+        <PageCard
+          title="Network Management — Pengelolaan Jaringan Pesantren"
+          description="Fitur Pratinjau Pengaturan Jaringan, Router, WiFi, Bandwidth, & Policy Jaringan Pesantren"
+        >
+          <NetworkManagementCard />
+        </PageCard>
+      </div>
+    </div>
+  );
+}
+
+function NetworkManagementCard() {
+  const [networkToggle, setNetworkToggle] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('mahad_feature_network_management');
+      if (stored === 'true') {
+        setNetworkToggle(true);
+      }
+    }
+  }, []);
+
+  const handleToggle = () => {
+    const nextState = !networkToggle;
+    setNetworkToggle(nextState);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mahad_feature_network_management', String(nextState));
+    }
+  };
+
+  return (
+    <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border space-y-4 shadow-sm">
+      <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+            </svg>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-extrabold text-foreground">Network Management</h4>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold uppercase tracking-wider">
+                COMING SOON
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
+              Kelola jaringan pesantren dari satu pusat kontrol. Monitor router, perangkat yang terhubung, WiFi, bandwidth, dan kebijakan akses jaringan.
+            </p>
+          </div>
+        </div>
+
+        {/* Feature Toggle Switch */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Toggle Preview ({networkToggle ? 'ON' : 'OFF'})
+          </span>
+          <div
+            className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${
+              networkToggle ? 'bg-emerald-600' : 'bg-muted-foreground/30'
+            }`}
+            onClick={handleToggle}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                networkToggle ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between flex-wrap gap-3 text-xs">
+        <span className="text-muted-foreground">
+          {networkToggle 
+            ? 'Feature Toggle Pratinjau AKTIF: Entry point Network Management dapat diakses untuk preview UI.' 
+            : 'Feature Toggle NONAKTIF: Fitur Network Management dalam status Coming Soon.'}
+        </span>
+
+        <a
+          href="/dashboard/pengaturan/network-management"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold transition-all min-h-[38px]"
+        >
+          <span>Lihat Detail Preview (Coming Soon)</span>
+        </a>
       </div>
     </div>
   );
