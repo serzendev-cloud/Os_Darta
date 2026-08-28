@@ -1,9 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { PageCard } from '@/components/shared/page-header';
-import { Calendar, Plus, CheckCircle2, Clock, Archive, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { PageHeader, PageCard } from '@/components/shared/page-header';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { 
+  Calendar, Plus, CheckCircle2, Clock, Archive, Loader2, 
+  Search, BookOpen, Layers
+} from 'lucide-react';
 import type { AcademicYear, AcademicTerm } from '@/lib/db/services/academic-workspace';
+import {
+  ResponsiveDataGrid,
+  MobileCard,
+  MobileCardHeader,
+  MobileCardTitle,
+  MobileCardContent,
+  MobileCardFooter,
+  ResponsiveFilterBar,
+} from '@/components/ui/responsive-data';
+
+// Semantic status mapping
+const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'neutral'> = {
+  active: 'success',
+  planned: 'warning',
+  archived: 'neutral',
+};
 
 export default function TahunAjaranPage() {
   const [years, setYears] = useState<AcademicYear[]>([]);
@@ -11,6 +31,10 @@ export default function TahunAjaranPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Search & Filter State
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
   // Form State
   const [newYearName, setNewYearName] = useState('');
@@ -76,134 +100,191 @@ export default function TahunAjaranPage() {
     }
   };
 
-  return (
-    <div className="space-y-6 font-sans">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-stone-900 via-amber-950 to-stone-900 text-white rounded-3xl p-6 md:p-8 shadow-xl border border-amber-500/20 relative overflow-hidden">
-        <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-semibold">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Temporal Academic Hierarchy</span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-            Manajemen Tahun Ajaran & Semester
-          </h1>
-          <p className="text-stone-300 text-xs md:text-sm max-w-3xl leading-relaxed">
-            Pengelolaan periode akademik aktif, pembagian semester ganjil/genap, dan registrasi jangkar temporal transaksi santri.
-          </p>
-        </div>
-      </div>
+  // Client-side filtering
+  const filteredYears = useMemo(() => {
+    return years.filter((y) => {
+      const matchSearch =
+        y.name.toLowerCase().includes(search.toLowerCase()) ||
+        y.startDate.includes(search) ||
+        y.endDate.includes(search);
+      const matchStatus = filterStatus === 'all' || y.status === filterStatus;
+      return matchSearch && matchStatus;
+    });
+  }, [years, search, filterStatus]);
 
-      <PageCard
-        title="Daftar Tahun Ajaran"
-        description="Periode akademik terdaftar pada database Drizzle PostgreSQL"
-      >
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-xs text-stone-500">
-            Total Periode: <strong>{years.length}</strong>
-          </div>
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-10">
+      {/* Header */}
+      <PageHeader
+        title="Tahun Ajaran & Semester"
+        description="Pengelolaan periode akademik aktif, pembagian semester ganjil/genap, & jangkar temporal santri"
+        action={
           <button
+            type="button"
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs rounded-xl transition-all shadow-md"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95 min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Tahun Ajaran</span>
           </button>
-        </div>
+        }
+      />
+
+      <PageCard
+        title="Daftar Tahun Ajaran Terdaftar"
+        description={`${filteredYears.length} periode akademik ditemukan`}
+      >
+        <ResponsiveFilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Cari tahun ajaran (e.g. 2026/2027)..."
+          activeFilterCount={filterStatus !== 'all' ? 1 : 0}
+          onResetFilters={() => setFilterStatus('all')}
+          filterContent={
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-xs border border-border rounded-xl px-3 py-2.5 bg-background focus:outline-none min-h-[44px]"
+            >
+              <option value="all">Semua Status Periode</option>
+              <option value="active">Active (Aktif)</option>
+              <option value="planned">Planned (Rencana)</option>
+              <option value="archived">Archived (Arsip)</option>
+            </select>
+          }
+        />
 
         {loading ? (
-          <div className="flex justify-center items-center py-12 text-stone-500 text-xs gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
-            <span>Memuat data tahun ajaran dari PostgreSQL...</span>
+          <div className="flex justify-center items-center py-12 text-muted-foreground text-xs gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span>Memuat data tahun ajaran dari database...</span>
           </div>
-        ) : years.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center border border-dashed border-stone-300 dark:border-stone-800 rounded-2xl">
-            <Calendar className="w-10 h-10 text-stone-400" />
-            <div className="text-xs text-stone-500">Belum ada tahun ajaran yang dibuat. Klik tombol di atas untuk menambah.</div>
+        ) : filteredYears.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center border border-dashed border-border rounded-2xl">
+            <Calendar className="w-10 h-10 text-muted-foreground/60" />
+            <div className="text-xs text-muted-foreground">Belum ada tahun ajaran yang sesuai pencarian. Klik tombol di atas untuk menambah.</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {years.map((y) => (
-              <div
-                key={y.id}
-                className="p-5 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm space-y-3 relative overflow-hidden"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-extrabold text-base text-stone-900 dark:text-white">
-                    {y.name}
-                  </div>
-                  <span
-                    className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
-                      y.status === 'active'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : y.status === 'planned'
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                        : 'bg-stone-500/10 text-stone-600 dark:text-stone-400 border border-stone-500/20'
-                    }`}
-                  >
-                    {y.status === 'active' && <CheckCircle2 className="w-3 h-3" />}
-                    {y.status === 'planned' && <Clock className="w-3 h-3" />}
-                    {y.status === 'archived' && <Archive className="w-3 h-3" />}
-                    <span className="capitalize">{y.status}</span>
-                  </span>
-                </div>
-                <div className="text-xs text-stone-500 dark:text-stone-400 space-y-1">
-                  <div>Periode: {y.startDate} s.d. {y.endDate}</div>
-                  <div className="text-[11px] text-stone-400">ID: {y.id}</div>
-                </div>
+          <ResponsiveDataGrid
+            data={filteredYears}
+            keyExtractor={(y) => y.id}
+            renderDesktop={() => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredYears.map((y) => {
+                  const yearTerms = terms.filter((t) => t.academicYearId === y.id);
+                  return (
+                    <div
+                      key={y.id}
+                      className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-3 relative overflow-hidden hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="font-extrabold text-base text-foreground">
+                          {y.name}
+                        </div>
+                        <StatusBadge
+                          status={y.status.toUpperCase()}
+                          variant={STATUS_VARIANT[y.status] ?? 'neutral'}
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1.5 pt-1 border-t border-border/50">
+                        <p className="font-medium text-foreground">Periode: {y.startDate} s.d. {y.endDate}</p>
+                        {yearTerms.length > 0 && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                            <BookOpen className="w-3.5 h-3.5" />
+                            <span>{yearTerms.length} Semester Terdaftar</span>
+                          </div>
+                        )}
+                        <p className="text-[10px] text-muted-foreground/70 font-mono">ID: {y.id}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            )}
+            renderMobile={(y) => {
+              const yearTerms = terms.filter((t) => t.academicYearId === y.id);
+              return (
+                <MobileCard key={y.id}>
+                  <MobileCardHeader>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0 border border-primary/20">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <MobileCardTitle>{y.name}</MobileCardTitle>
+                    </div>
+                    <StatusBadge
+                      status={y.status.toUpperCase()}
+                      variant={STATUS_VARIANT[y.status] ?? 'neutral'}
+                    />
+                  </MobileCardHeader>
+                  <MobileCardContent>
+                    <div className="space-y-1.5 text-xs pt-1">
+                      <p className="font-semibold text-foreground">Tanggal: {y.startDate} - {y.endDate}</p>
+                      {yearTerms.length > 0 ? (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] flex items-center gap-2">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          <span>{yearTerms.length} Semester Aktif Terdaftar</span>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-[11px]">Belum ada semester khusus</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground font-mono">Ref ID: {y.id.slice(0, 12)}</p>
+                    </div>
+                  </MobileCardContent>
+                </MobileCard>
+              );
+            }}
+          />
         )}
       </PageCard>
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 max-w-md w-full border border-stone-200 dark:border-stone-800 shadow-2xl space-y-4">
-            <h3 className="text-lg font-extrabold text-stone-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-md rounded-3xl p-6 border border-border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+            <h3 className="text-base font-extrabold text-foreground">
               Tambah Tahun Ajaran Baru
             </h3>
             <form onSubmit={handleCreateYear} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold mb-1 text-stone-700 dark:text-stone-300">Nama Tahun Ajaran</label>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase tracking-wider">Nama Tahun Ajaran *</label>
                 <input
                   type="text"
                   placeholder="e.g. 2026/2027"
                   value={newYearName}
                   onChange={(e) => setNewYearName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold mb-1 text-stone-700 dark:text-stone-300">Tanggal Mulai</label>
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-foreground uppercase tracking-wider">Tanggal Mulai *</label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-xs min-h-[44px]"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block font-semibold mb-1 text-stone-700 dark:text-stone-300">Tanggal Selesai</label>
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-foreground uppercase tracking-wider">Tanggal Selesai *</label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-xs min-h-[44px]"
                     required
                   />
                 </div>
               </div>
-              <div>
-                <label className="block font-semibold mb-1 text-stone-700 dark:text-stone-300">Status</label>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase tracking-wider">Status *</label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-xs font-semibold min-h-[44px]"
                 >
                   <option value="active">Active (Aktif)</option>
                   <option value="planned">Planned (Rencana)</option>
@@ -211,20 +292,20 @@ export default function TahunAjaranPage() {
                 </select>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-3 pt-3 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl font-medium"
+                  className="px-4 py-2.5 text-muted-foreground hover:bg-muted rounded-xl font-bold min-h-[44px]"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium inline-flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-extrabold inline-flex items-center gap-2 min-h-[44px] shadow-md transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>Simpan ke Database</span>
                 </button>
               </div>
