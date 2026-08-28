@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { LoadingState } from '@/components/shared/loading-state';
 import { DistribusiMatrix } from '@/components/distribusi/DistribusiMatrix';
 import { useCollection } from '@/hooks';
-import { teacherAssignmentService } from '@/lib/firebase/services';
+import { teacherAssignmentService } from '@/lib/db/services';
 import { getJenjangByInstansi } from '@/lib/academic-structure';
 import type { Instansi, MasterJenjang, MasterTingkat } from '@/types';
 import { INSTANSI_ORDER, INSTANSI_LABEL } from '@/types';
@@ -182,7 +182,7 @@ export default function DistribusiGuruPage() {
                 type="button"
                 onClick={() => setActiveInstansi(instansi)}
                 className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all border',
+                  'px-4 py-2.5 rounded-xl text-xs font-bold transition-all border min-h-[44px] flex items-center justify-center',
                   activeInstansi === instansi
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                     : 'bg-background text-muted-foreground border-border hover:border-muted-foreground/30 hover:text-foreground',
@@ -194,7 +194,7 @@ export default function DistribusiGuruPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Jenjang */}
           <div>
             <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
@@ -207,7 +207,7 @@ export default function DistribusiGuruPage() {
                   type="button"
                   onClick={() => { setSelectedJenjang(j); setSelectedTingkat(null); }}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-all border',
+                    'px-4 py-2.5 rounded-xl text-xs font-bold transition-all border min-h-[44px] flex items-center justify-center',
                     selectedJenjang === j
                       ? 'bg-foreground text-background border-foreground shadow-sm'
                       : 'bg-background text-muted-foreground border-border hover:border-muted-foreground/30 hover:text-foreground',
@@ -234,7 +234,7 @@ export default function DistribusiGuruPage() {
                   type="button"
                   onClick={() => setSelectedTingkat(t)}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-all border',
+                    'px-4 py-2.5 rounded-xl text-xs font-bold transition-all border min-h-[44px] flex items-center justify-center',
                     selectedTingkat === t
                       ? 'bg-foreground text-background border-foreground shadow-sm'
                       : 'bg-background text-muted-foreground border-border hover:border-muted-foreground/30 hover:text-foreground',

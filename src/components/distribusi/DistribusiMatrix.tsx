@@ -1,18 +1,26 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Users, X, AlertCircle } from 'lucide-react';
+import { Search, Users, X, AlertCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Subject } from '@/data/mock-mapel';
 import type { Kelas } from '@/data/mock-kelas/types';
 import type { TeacherAssignment } from '@/types';
+import {
+  ResponsiveDataGrid,
+  MobileCard,
+  MobileCardHeader,
+  MobileCardTitle,
+  MobileCardContent,
+  MobileCardFooter,
+} from '@/components/ui/responsive-data';
 
 const inputCls = cn(
-  'w-full rounded-lg border px-2.5 py-1.5 text-xs text-foreground',
+  'w-full rounded-xl border px-3 py-2 text-sm text-foreground',
   'bg-muted/40 border-border/60',
   'placeholder:text-muted-foreground/40',
   'focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40',
-  'transition-[border-color,box-shadow] duration-200',
+  'transition-[border-color,box-shadow] duration-200 min-h-[44px] sm:min-h-0',
 );
 
 // ── Cell key encoding ─────────────────────────────────────────────────────
@@ -41,19 +49,26 @@ export function DistribusiMatrix({
   const [cells, setCells] = useState<Record<string, string>>({});
   const [initialCells, setInitialCells] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [expandedMapelId, setExpandedMapelId] = useState<string | null>(null);
 
   // Pre-fill from existing assignments
   useEffect(() => {
     const init: Record<string, string> = {};
     for (const a of existingAssignments) {
       if (a.status !== 'active') continue;
-      // Match: mapelId + kelasName
       const k = cellKey(a.mapelId, a.kelasName);
       init[k] = a.guruName;
     }
     setCells({ ...init });
     setInitialCells({ ...init });
   }, [existingAssignments]);
+
+  // Default expand first mapel on mobile
+  useEffect(() => {
+    if (mapelList.length > 0 && !expandedMapelId) {
+      setExpandedMapelId(mapelList[0].id);
+    }
+  }, [mapelList, expandedMapelId]);
 
   // ── Dirty detection ──────────────────────────────────────────────────────
   const dirty = useMemo(() => {
@@ -116,7 +131,7 @@ export function DistribusiMatrix({
       }
     }
     if (records.length > 0) {
-      onSave(records);
+      await onSave(records);
     }
     setSaving(false);
   };
@@ -143,13 +158,13 @@ export function DistribusiMatrix({
   return (
     <div className="space-y-4">
       {/* Summary bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <Users className="w-3.5 h-3.5" aria-hidden="true" />
           <span>
-            {filledCells} dari {totalCells} sel terisi
+            {filledCells} dari {totalCells} pengampu terisi
             {filledCells > 0 && (
-              <span className="ml-1 text-primary/70">
+              <span className="ml-1 font-bold text-primary">
                 ({Math.round((filledCells / totalCells) * 100)}%)
               </span>
             )}
@@ -161,58 +176,118 @@ export function DistribusiMatrix({
           onClick={handleSave}
           disabled={!dirty || saving}
           className={cn(
-            'px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95',
+            'px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 min-h-[44px] sm:min-h-0 flex items-center justify-center',
             dirty
               ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-              : 'bg-muted text-muted-foreground cursor-not-allowed',
+              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-70',
           )}
         >
           {saving ? 'Menyimpan...' : dirty ? 'Simpan Perubahan' : 'Tersimpan'}
         </button>
       </div>
 
-      {/* Matrix Table */}
-      <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
-        <table className="w-full text-xs border-collapse">
-          <thead>
-            <tr className="bg-muted/50">
-              <th className="sticky left-0 z-10 bg-muted/50 text-left px-4 py-3 font-medium text-muted-foreground min-w-[160px] border-r border-border">
-                Mata Pelajaran
-              </th>
-              {kelasList.map((kelas) => (
-                <th
-                  key={kelas.id}
-                  className="text-center px-3 py-3 font-medium text-muted-foreground min-w-[180px] border-r border-border last:border-r-0"
-                >
-                  {kelas.name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {mapelList.map((mapel) => (
-              <tr key={mapel.id} className="hover:bg-muted/10 transition-colors group">
-                <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/10 px-4 py-2.5 border-r border-border">
-                  <div className="font-medium text-foreground">{mapel.name}</div>
-                  {mapel.code && (
-                    <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{mapel.code}</div>
-                  )}
-                </td>
-                {kelasList.map((kelas) => (
-                  <td key={kelas.id} className="px-2 py-2 border-r border-border last:border-r-0">
-                    <GuruCell
-                      value={cells[cellKey(mapel.id, kelas.name)] ?? ''}
-                      guruNameList={guruNameList}
-                      onChange={(name) => setGuru(mapel.id, kelas.name, name)}
-                      onRemove={() => removeGuru(mapel.id, kelas.name)}
-                    />
-                  </td>
+      {/* Responsive Presentation Adapter */}
+      <ResponsiveDataGrid
+        data={mapelList}
+        keyExtractor={(m) => m.id}
+        renderDesktop={() => (
+          <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-muted/50">
+                  <th className="sticky left-0 z-10 bg-muted/50 text-left px-4 py-3 font-medium text-muted-foreground min-w-[160px] border-r border-border">
+                    Mata Pelajaran
+                  </th>
+                  {kelasList.map((kelas) => (
+                    <th
+                      key={kelas.id}
+                      className="text-center px-3 py-3 font-medium text-muted-foreground min-w-[180px] border-r border-border last:border-r-0"
+                    >
+                      {kelas.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {mapelList.map((mapel) => (
+                  <tr key={mapel.id} className="hover:bg-muted/10 transition-colors group">
+                    <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/10 px-4 py-2.5 border-r border-border">
+                      <div className="font-medium text-foreground">{mapel.name}</div>
+                      {mapel.code && (
+                        <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{mapel.code}</div>
+                      )}
+                    </td>
+                    {kelasList.map((kelas) => (
+                      <td key={kelas.id} className="px-2 py-2 border-r border-border last:border-r-0">
+                        <GuruCell
+                          value={cells[cellKey(mapel.id, kelas.name)] ?? ''}
+                          guruNameList={guruNameList}
+                          onChange={(name) => setGuru(mapel.id, kelas.name, name)}
+                          onRemove={() => removeGuru(mapel.id, kelas.name)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </tbody>
+            </table>
+          </div>
+        )}
+        renderMobile={(mapel) => {
+          const isExpanded = expandedMapelId === mapel.id;
+          const assignedCount = kelasList.filter((k) => cells[cellKey(mapel.id, k.name)]?.trim()).length;
+
+          return (
+            <MobileCard key={mapel.id} className="overflow-visible border border-border/80">
+              <MobileCardHeader
+                onClick={() => setExpandedMapelId(isExpanded ? null : mapel.id)}
+                className="cursor-pointer hover:bg-muted/40 transition-colors p-3.5 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div className="truncate">
+                    <MobileCardTitle>{mapel.name}</MobileCardTitle>
+                    <p className="text-[10px] text-muted-foreground">
+                      {assignedCount} dari {kelasList.length} kelas terisi
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-bold border', assignedCount === kelasList.length ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30')}>
+                    {assignedCount}/{kelasList.length}
+                  </span>
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </div>
+              </MobileCardHeader>
+
+              {isExpanded && (
+                <MobileCardContent className="p-3.5 space-y-3 bg-muted/20 border-t border-border/60">
+                  {kelasList.map((kelas) => {
+                    const currentGuru = cells[cellKey(mapel.id, kelas.name)] ?? '';
+                    return (
+                      <div key={kelas.id} className="space-y-1 bg-background p-3 rounded-xl border border-border/60">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground">{kelas.name}</span>
+                          <span className="text-[10px] text-muted-foreground">Pengampu Rombel</span>
+                        </div>
+                        <GuruCell
+                          value={currentGuru}
+                          guruNameList={guruNameList}
+                          onChange={(name) => setGuru(mapel.id, kelas.name, name)}
+                          onRemove={() => removeGuru(mapel.id, kelas.name)}
+                        />
+                      </div>
+                    );
+                  })}
+                </MobileCardContent>
+              )}
+            </MobileCard>
+          );
+        }}
+      />
     </div>
   );
 }
@@ -247,10 +322,10 @@ function GuruCell({
     <div className="relative">
       <Search
         aria-hidden="true"
-        className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/60"
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60 pointer-events-none"
       />
       <input
-        className={cn(inputCls, 'pl-6')}
+        className={cn(inputCls, 'pl-8 pr-7')}
         value={search}
         onChange={(e) => {
           setSearch(e.target.value);
@@ -258,7 +333,7 @@ function GuruCell({
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
-        placeholder={value || 'Belum ada guru'}
+        placeholder={value || 'Pilih Guru...'}
         autoComplete="off"
       />
       {value && (
@@ -269,14 +344,14 @@ function GuruCell({
             onRemove();
             setSearch('');
           }}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-red-500 rounded transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-red-500 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
           aria-label="Hapus guru"
         >
-          <X className="w-3 h-3" aria-hidden="true" />
+          <X className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}
       {open && filtered.length > 0 && (
-        <div className="absolute z-30 left-0 right-0 mt-1 bg-background border border-border rounded-lg shadow-lg max-h-32 overflow-y-auto">
+        <div className="absolute z-30 left-0 right-0 mt-1 bg-background border border-border rounded-xl shadow-xl max-h-40 overflow-y-auto">
           {filtered.map((name) => (
             <button
               key={name}
@@ -286,7 +361,7 @@ function GuruCell({
                 setSearch(name);
                 setOpen(false);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+              className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted transition-colors font-medium min-h-[44px] sm:min-h-0 flex items-center"
             >
               {name}
             </button>
