@@ -65,7 +65,7 @@ export default function WaliBundledCheckoutPage() {
 
             {/* Top Up Uang Saku */}
             <div className="p-4 rounded-xl bg-background border border-border space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center flex-wrap gap-1">
                 <label className="text-sm font-semibold text-foreground">Top-Up Kantong Uang Saku</label>
                 <span className="text-xs text-muted-foreground">Untuk Jajan Santri di Kantin</span>
               </div>
@@ -73,14 +73,14 @@ export default function WaliBundledCheckoutPage() {
                 type="number"
                 value={uangSakuAmount}
                 onChange={(e) => setUangSakuAmount(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm font-bold text-emerald-600"
+                className="w-full px-4 py-3 rounded-xl bg-muted/30 border border-border text-sm font-bold text-emerald-600 dark:text-emerald-400 min-h-[44px] focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 placeholder="300000"
               />
             </div>
 
             {/* Top Up Tabungan */}
             <div className="p-4 rounded-xl bg-background border border-border space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center flex-wrap gap-1">
                 <label className="text-sm font-semibold text-foreground">Top-Up Kantong Tabungan</label>
                 <span className="text-xs text-muted-foreground">Simpanan Cadangan Jangka Panjang</span>
               </div>
@@ -88,7 +88,7 @@ export default function WaliBundledCheckoutPage() {
                 type="number"
                 value={tabunganAmount}
                 onChange={(e) => setTabunganAmount(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm font-bold text-blue-600"
+                className="w-full px-4 py-3 rounded-xl bg-muted/30 border border-border text-sm font-bold text-blue-600 dark:text-blue-400 min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="200000"
               />
             </div>

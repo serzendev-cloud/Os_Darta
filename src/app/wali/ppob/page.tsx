@@ -217,22 +217,23 @@ export default function WaliPpobPage() {
             <label className="block text-sm font-semibold text-foreground">
               {activeTab === 'PLN' ? 'Masukkan Nomor Meter / ID Pelanggan PLN' : 'Masukkan Nomor Telepon HP'}
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <input
                   type="text"
                   value={customerNo}
                   onChange={(e) => setCustomerNo(e.target.value)}
                   placeholder={activeTab === 'PLN' ? 'Contoh: 14029981240' : 'Contoh: 081234567890'}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted/40 border border-border text-sm font-mono font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted/40 border border-border text-sm font-mono font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
                 />
-                <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3.5" />
+                <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>
               {activeTab === 'PLN' && (
                 <button
+                  type="button"
                   onClick={handleInquirePln}
                   disabled={inquiring || !customerNo}
-                  className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+                  className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 min-h-[44px] shrink-0"
                 >
                   {inquiring ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Cek Pelanggan'}
                 </button>
