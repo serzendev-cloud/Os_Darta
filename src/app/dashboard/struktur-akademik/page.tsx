@@ -8,7 +8,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { MasterJenjangTab, MasterTingkatTab } from '@/components/struktur-akademik';
 import { useCollection } from '@/hooks';
-import { masterJenjangService, masterTingkatService } from '@/lib/firebase/services';
+import { masterJenjangService, masterTingkatService } from '@/lib/db/services';
 import type { MasterJenjang, MasterTingkat } from '@/types';
 import { cn } from '@/lib/utils';
 import { 
@@ -243,21 +243,21 @@ export default function StrukturAkademikPage() {
           <span>Pilih Program Madrasah:</span>
         </div>
 
-        <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-stone-200/70 dark:bg-stone-900 border border-stone-300/80 dark:border-stone-800 shadow-inner">
+        <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-muted/60 border border-border shadow-inner">
           {!scopedProgramId && (
             <button
               type="button"
               onClick={() => setSelectedMadrasahId('all')}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-200',
+                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 min-h-[44px]',
                 selectedMadrasahId === 'all'
-                  ? 'bg-gradient-to-r from-stone-900 to-amber-950 text-white shadow-md border border-amber-500/30 scale-[1.02]'
-                  : 'text-stone-700 dark:text-stone-300 hover:bg-stone-300/50 dark:hover:bg-stone-800'
+                  ? 'bg-primary text-primary-foreground shadow-md scale-[1.02]'
+                  : 'text-muted-foreground hover:bg-muted/80'
               )}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Semua Program Madrasah</span>
-              <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] bg-stone-700 text-stone-200">
+              <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] bg-background text-foreground border border-border">
                 {jenjangList.length}
               </span>
             </button>
@@ -271,17 +271,17 @@ export default function StrukturAkademikPage() {
                 type="button"
                 onClick={() => setSelectedMadrasahId(prog.id)}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-200',
+                  'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 min-h-[44px]',
                   isSelected
-                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md border border-amber-300/40 scale-[1.02]'
-                    : 'text-stone-800 dark:text-stone-200 bg-white/80 dark:bg-stone-800/80 hover:bg-amber-500/10 border border-stone-200 dark:border-stone-700'
+                    ? 'bg-primary text-primary-foreground shadow-md scale-[1.02]'
+                    : 'text-foreground bg-card hover:bg-muted/60 border border-border'
                 )}
               >
-                <Building2 className={cn('w-3.5 h-3.5', isSelected ? 'text-white' : 'text-amber-600')} />
+                <Building2 className={cn('w-3.5 h-3.5', isSelected ? 'text-primary-foreground' : 'text-primary')} />
                 <span>{prog.name}</span>
                 <span className={cn(
                   'ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono',
-                  isSelected ? 'bg-amber-700 text-white' : 'bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300'
+                  isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
                 )}>
                   {prog.code}
                 </span>
@@ -292,8 +292,8 @@ export default function StrukturAkademikPage() {
       </div>
 
       {/* ── 2. SECONDARY LEVEL TABS: MASTER JENJANG & MASTER TINGKAT ── */}
-      <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-stone-800">
-        <div className="flex gap-2 bg-stone-100 dark:bg-stone-900 p-1 rounded-2xl border border-stone-200 dark:border-stone-800">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-border">
+        <div className="flex gap-2 bg-muted p-1 rounded-2xl border border-border">
           {SECONDARY_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -303,13 +303,13 @@ export default function StrukturAkademikPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200',
+                  'flex items-center justify-center gap-2 flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 min-h-[44px]',
                   isActive
-                    ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm border border-stone-200 dark:border-stone-700'
-                    : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                    ? 'bg-card text-foreground shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Icon className={cn('w-4 h-4', isActive ? 'text-amber-600' : 'text-stone-400')} />
+                <Icon className={cn('w-4 h-4', isActive ? 'text-primary' : 'text-muted-foreground')} />
                 <span>{tab.label}</span>
               </button>
             );

@@ -1,17 +1,28 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Layers, Edit2, Trash2, Plus } from 'lucide-react';
 import type { MasterTingkat, MasterJenjang, Instansi } from '@/types';
 import { INSTANSI_ORDER, INSTANSI_LABEL } from '@/types';
 import { cn } from '@/lib/utils';
+import { StatusBadge } from '@/components/shared/status-badge';
+import {
+  ResponsiveDataGrid,
+  MobileCard,
+  MobileCardHeader,
+  MobileCardTitle,
+  MobileCardContent,
+  MobileCardFooter,
+  ResponsiveFilterBar,
+  MobileRowActions,
+} from '@/components/ui/responsive-data';
 
 const inputCls = cn(
-  'w-full rounded-lg border px-3 py-2 text-sm text-foreground',
-  'bg-muted/40 border-border/60',
+  'w-full rounded-xl border px-3.5 py-2.5 text-sm text-foreground min-h-[44px]',
+  'bg-background border-border',
   'placeholder:text-muted-foreground/40',
-  'focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40',
-  'transition-[border-color,box-shadow] duration-200',
+  'focus:outline-none focus:ring-2 focus:ring-primary/40',
+  'transition-all duration-200',
 );
 
 interface Props {
@@ -33,11 +44,64 @@ export function MasterTingkatTab({ data, jenjangList, programName, onCreate, onU
   const [editData, setEditData] = useState<MasterTingkat | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  /** Jenjang list filtered by instansi (used for jenjang filter dropdown). */
+  // Form state
+  const [formProgIndex, setFormProgIndex] = useState<number>(1);
+  const [formLabel, setFormLabel] = useState('');
+  const [formInstansi, setFormInstansi] = useState<Instansi>('madin');
+  const [formJenjangId, setFormJenjangId] = useState('');
+  const [formStatus, setFormStatus] = useState<'active' | 'inactive'>('active');
+
   const jenjangForFilter = useMemo(() => {
     if (filterInstansi === 'all') return jenjangList.filter((j) => j.status === 'active');
     return jenjangList.filter((j) => j.instansi === filterInstansi && j.status === 'active');
   }, [jenjangList, filterInstansi]);
+
+  const jenjangNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const j of jenjangList) map[j.id] = j.namaJenjang;
+    return map;
+  }, [jenjangList]);
+
+  const openAddModal = () => {
+    setFormProgIndex(1);
+    setFormLabel('');
+    setFormInstansi('madin');
+    setFormJenjangId(jenjangList[0]?.id || '');
+    setFormStatus('active');
+    setShowAdd(true);
+  };
+
+  const openEditModal = (t: MasterTingkat) => {
+    setEditData(t);
+    setFormProgIndex(t.progressionIndex);
+    setFormLabel(t.tingkatLabel);
+    setFormInstansi(t.instansi);
+    setFormJenjangId(t.jenjangId);
+    setFormStatus(t.status);
+  };
+
+  const handleSaveAdd = () => {
+    onCreate({
+      progressionIndex: formProgIndex,
+      tingkatLabel: formLabel,
+      instansi: formInstansi,
+      jenjangId: formJenjangId,
+      status: formStatus,
+    });
+    setShowAdd(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editData) return;
+    onUpdate(editData.id, {
+      progressionIndex: formProgIndex,
+      tingkatLabel: formLabel,
+      instansi: formInstansi,
+      jenjangId: formJenjangId,
+      status: formStatus,
+    });
+    setEditData(null);
+  };
 
   const filtered = data.filter((t) => {
     const matchSearch =
@@ -52,42 +116,35 @@ export function MasterTingkatTab({ data, jenjangList, programName, onCreate, onU
   const activeCount = data.filter((t) => t.status === 'active').length;
   const inactiveCount = data.filter((t) => t.status === 'inactive').length;
 
-  /** Resolve jenjang name from jenjangId for display. */
-  const jenjangNameMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const j of jenjangList) map[j.id] = j.namaJenjang;
-    return map;
-  }, [jenjangList]);
-
   return (
     <div className="space-y-5">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-muted/30 border border-border rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-foreground">{data.length}</div>
-          <div className="text-xs text-muted-foreground">Total Tingkat</div>
+        <div className="bg-muted/30 border border-border rounded-2xl p-3.5 text-center">
+          <div className="text-xl sm:text-2xl font-extrabold text-foreground">{data.length}</div>
+          <div className="text-xs text-muted-foreground font-medium">Total Tingkat</div>
         </div>
-        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{activeCount}</div>
-          <div className="text-xs text-muted-foreground">Aktif</div>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3.5 text-center">
+          <div className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{activeCount}</div>
+          <div className="text-xs text-muted-foreground font-medium">Aktif</div>
         </div>
-        <div className="bg-slate-100 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-700/40 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-slate-500">{inactiveCount}</div>
-          <div className="text-xs text-muted-foreground">Nonaktif</div>
+        <div className="bg-muted/50 border border-border rounded-2xl p-3.5 text-center">
+          <div className="text-xl sm:text-2xl font-extrabold text-muted-foreground">{inactiveCount}</div>
+          <div className="text-xs text-muted-foreground font-medium">Nonaktif</div>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1 flex-wrap">
+          <div className="relative flex-1 min-w-[180px]">
             <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Cari tingkat atau label…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+              className="w-full pl-9 pr-4 py-2.5 text-xs border border-border rounded-xl bg-background focus:outline-none min-h-[44px]"
             />
           </div>
           <select
@@ -96,7 +153,7 @@ export function MasterTingkatTab({ data, jenjangList, programName, onCreate, onU
               setFilterInstansi(e.target.value as typeof filterInstansi);
               setFilterJenjangId('all');
             }}
-            className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="text-xs border border-border rounded-xl px-3 py-2.5 bg-background focus:outline-none min-h-[44px]"
           >
             <option value="all">Semua Madrasah</option>
             {INSTANSI_ORDER.map((i) => (
@@ -106,7 +163,7 @@ export function MasterTingkatTab({ data, jenjangList, programName, onCreate, onU
           <select
             value={filterJenjangId}
             onChange={(e) => setFilterJenjangId(e.target.value)}
-            className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="text-xs border border-border rounded-xl px-3 py-2.5 bg-background focus:outline-none min-h-[44px]"
           >
             <option value="all">Semua Jenjang</option>
             {jenjangForFilter.map((j) => (
@@ -116,7 +173,7 @@ export function MasterTingkatTab({ data, jenjangList, programName, onCreate, onU
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-            className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="text-xs border border-border rounded-xl px-3 py-2.5 bg-background focus:outline-none min-h-[44px]"
           >
             <option value="all">Semua Status</option>
             <option value="active">Aktif</option>
@@ -125,288 +182,191 @@ export function MasterTingkatTab({ data, jenjangList, programName, onCreate, onU
         </div>
         <button
           type="button"
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 shrink-0 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm active:scale-95"
+          onClick={openAddModal}
+          className="flex items-center justify-center gap-2 shrink-0 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95 min-h-[44px]"
         >
           <Plus aria-hidden="true" className="w-4 h-4" />
-          Tambah Tingkat
+          <span>Tambah Tingkat</span>
         </button>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-muted/50 text-muted-foreground">
-              <th className="text-center px-4 py-3 font-medium w-20">Prog. Index</th>
-              <th className="text-left px-4 py-3 font-medium">Label Tingkat</th>
-              <th className="text-left px-4 py-3 font-medium">Program Kurikulum</th>
-              <th className="text-left px-4 py-3 font-medium">Jenjang</th>
-              <th className="text-center px-4 py-3 font-medium">Status</th>
-              <th className="text-right px-4 py-3 font-medium">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.map((t) => (
-              <tr key={t.id} className="hover:bg-muted/30 transition-colors group">
-                <td className="px-4 py-3 text-center">
-                  <span className="inline-flex items-center justify-center w-8 h-6 rounded bg-muted/60 font-mono text-xs font-bold text-foreground">
-                    {t.progressionIndex}
-                  </span>
-                </td>
-                <td className="px-4 py-3 font-medium text-foreground">{t.tingkatLabel}</td>
-                <td className="px-4 py-3">
-                  <span className={cn(
-                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border',
-                    t.instansi === 'madin'
-                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300/60'
-                      : t.instansi === 'madqur'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-300/60'
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-300/60',
-                  )}>
-                    {programName || INSTANSI_LABEL[t.instansi]}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {jenjangNameMap[t.jenjangId] ?? t.jenjangId}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={cn(
-                    'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                    t.status === 'active'
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-                  )}>
-                    {t.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditData(t)}
-                      aria-label="Edit"
-                      className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
-                    >
-                      <Edit2 aria-hidden="true" className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteId(t.id)}
-                      aria-label="Hapus"
-                      className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-                    >
-                      <Trash2 aria-hidden="true" className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <Layers aria-hidden="true" className="w-8 h-8 opacity-20" />
-                    <p className="text-sm">Tidak ada tingkat yang sesuai filter.</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modals */}
-      {showAdd && (
-        <TingkatFormModal
-          title="Tambah Tingkat"
-          jenjangList={jenjangList}
-          onClose={() => setShowAdd(false)}
-          onSave={(d) => { onCreate(d); setShowAdd(false); }}
-        />
-      )}
-      {editData && (
-        <TingkatFormModal
-          title="Edit Tingkat"
-          initialData={editData}
-          jenjangList={jenjangList}
-          onClose={() => setEditData(null)}
-          onSave={(d) => { onUpdate(editData.id, d); setEditData(null); }}
-        />
-      )}
-      {deleteId && (
-        <DeleteTingkatDialog
-          onClose={() => setDeleteId(null)}
-          onConfirm={() => { onDelete(deleteId); setDeleteId(null); }}
-        />
-      )}
-    </div>
-  );
-}
-
-// ── Form Modal ─────────────────────────────────────────────────────────────
-
-function TingkatFormModal({
-  title,
-  initialData,
-  jenjangList,
-  onClose,
-  onSave,
-}: {
-  title: string;
-  initialData?: MasterTingkat;
-  jenjangList: MasterJenjang[];
-  onClose: () => void;
-  onSave: (data: Partial<MasterTingkat>) => void;
-}) {
-  const [selectedInstansi, setSelectedInstansi] = useState<Instansi>(
-    initialData?.instansi ?? 'madin',
-  );
-  const [validationError, setValidationError] = useState<string | null>(null);
-
-  // Filter jenjang by selected instansi
-  const filteredJenjang = useMemo(
-    () => jenjangList.filter((j) => j.instansi === selectedInstansi && j.status === 'active'),
-    [jenjangList, selectedInstansi],
-  );
-
-  // Auto-reset jenjangId when instansi changes (only on add, not edit)
-  useEffect(() => {
-    if (!initialData && filteredJenjang.length > 0) {
-      const select = document.getElementById('tk-jenjang') as HTMLSelectElement | null;
-      if (select) select.value = '';
-    }
-  }, [selectedInstansi, filteredJenjang, initialData]);
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setValidationError(null);
-    const fd = new FormData(e.currentTarget);
-    const idx = parseInt(fd.get('progressionIndex') as string, 10);
-    if (isNaN(idx) || idx < 1) {
-      setValidationError('Progression Index harus berupa angka positif (minimal 1).');
-      console.warn('[TingkatFormModal] progressionIndex invalid:', fd.get('progressionIndex'));
-      return;
-    }
-    const jenjangId = fd.get('jenjangId') as string;
-    if (!jenjangId) {
-      setValidationError('Jenjang wajib dipilih.');
-      return;
-    }
-    // Validate jenjang belongs to selected instansi
-    const jenjang = filteredJenjang.find((j) => j.id === jenjangId);
-    if (!jenjang) {
-      setValidationError('Jenjang yang dipilih tidak sesuai dengan instansi.');
-      return;
-    }
-    const payload = {
-      instansi: selectedInstansi,
-      progressionIndex: idx,
-      tingkatLabel: fd.get('tingkatLabel') as string,
-      jenjangId,
-      status: fd.get('status') as 'active' | 'inactive',
-    };
-    console.log('[TingkatFormModal] Submitting payload:', JSON.stringify(payload, null, 2));
-    onSave(payload);
-  };
-
-  return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="bg-background border border-border rounded-xl shadow-xl w-full max-w-lg pointer-events-auto max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-background z-10">
-            <h2 className="font-semibold text-foreground">{title}</h2>
-            <button type="button" onClick={onClose} aria-label="Tutup" className="p-1.5 text-muted-foreground hover:bg-muted rounded-md">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="p-5 space-y-4">
-            {/* Instansi */}
-            <div className="space-y-1.5">
-              <label htmlFor="tk-instansi" className="text-sm font-medium">Instansi</label>
-              <select
-                id="tk-instansi"
-                name="instansi"
-                required
-                value={selectedInstansi}
-                onChange={(e) => setSelectedInstansi(e.target.value as Instansi)}
-                className={inputCls}
-              >
-                {INSTANSI_ORDER.map((i) => (
-                  <option key={i} value={i}>{INSTANSI_LABEL[i]}</option>
+      {/* Grid Table */}
+      <ResponsiveDataGrid
+        data={filtered}
+        keyExtractor={(t) => t.id}
+        renderDesktop={() => (
+          <div className="overflow-x-auto rounded-2xl border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-muted-foreground">
+                  <th className="text-center px-4 py-3.5 font-bold text-xs uppercase tracking-wider w-20">Prog. Index</th>
+                  <th className="text-left px-4 py-3.5 font-bold text-xs uppercase tracking-wider">Label Tingkat</th>
+                  <th className="text-left px-4 py-3.5 font-bold text-xs uppercase tracking-wider">Program Kurikulum</th>
+                  <th className="text-left px-4 py-3.5 font-bold text-xs uppercase tracking-wider">Jenjang</th>
+                  <th className="text-center px-4 py-3.5 font-bold text-xs uppercase tracking-wider">Status</th>
+                  <th className="text-right px-4 py-3.5 font-bold text-xs uppercase tracking-wider">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((t) => (
+                  <tr key={t.id} className="hover:bg-muted/30 transition-colors group">
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-primary">{t.progressionIndex}</td>
+                    <td className="px-4 py-3.5 font-bold text-foreground">{t.tingkatLabel}</td>
+                    <td className="px-4 py-3.5">
+                      <span className={cn(
+                        'inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-bold border',
+                        t.instansi === 'madin'
+                          ? 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300'
+                          : t.instansi === 'madqur'
+                            ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-300'
+                            : 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300',
+                      )}>
+                        {programName || INSTANSI_LABEL[t.instansi]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-muted-foreground font-semibold">
+                      {jenjangNameMap[t.jenjangId] || '-'}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <StatusBadge
+                        status={t.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                        variant={t.status === 'active' ? 'success' : 'neutral'}
+                      />
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(t)}
+                          className="p-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-all min-h-[44px] min-w-[44px] flex items-center justify-center border border-border"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteId(t.id)}
+                          className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center border border-red-500/20"
+                          title="Hapus"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </select>
-              <p className="text-[10px] text-muted-foreground">
-                Pilih instansi terlebih dahulu — jenjang akan otomatis terfilter.
-              </p>
-            </div>
+              </tbody>
+            </table>
+          </div>
+        )}
+        renderMobile={(t) => (
+          <MobileCard key={t.id}>
+            <MobileCardHeader>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <MobileCardTitle>{t.tingkatLabel}</MobileCardTitle>
+              </div>
+              <StatusBadge
+                status={t.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                variant={t.status === 'active' ? 'success' : 'neutral'}
+              />
+            </MobileCardHeader>
+            <MobileCardContent>
+              <div className="space-y-2 text-xs pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground font-semibold">Prog. Index:</span>
+                  <span className="font-mono font-extrabold text-primary">{t.progressionIndex}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground font-semibold">Madrasah:</span>
+                  <span className="font-bold text-foreground">{programName || INSTANSI_LABEL[t.instansi]}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground font-semibold">Jenjang:</span>
+                  <span className="font-bold text-foreground">{jenjangNameMap[t.jenjangId] || '-'}</span>
+                </div>
+              </div>
+            </MobileCardContent>
+            <MobileCardFooter>
+              <MobileRowActions
+                primaryAction={{
+                  key: 'edit',
+                  label: 'Edit',
+                  icon: Edit2,
+                  onClick: () => openEditModal(t),
+                }}
+                secondaryActions={[
+                  {
+                    key: 'delete',
+                    label: 'Hapus',
+                    icon: Trash2,
+                    onClick: () => setDeleteId(t.id),
+                    variant: 'destructive',
+                  },
+                ]}
+              />
+            </MobileCardFooter>
+          </MobileCard>
+        )}
+      />
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Jenjang (filtered by instansi) */}
+      {/* Add Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-md rounded-3xl p-6 border border-border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+            <h3 className="text-base font-extrabold text-foreground">Tambah Tingkat Baru</h3>
+            <div className="space-y-3.5 text-xs">
               <div className="space-y-1.5">
-                <label htmlFor="tk-jenjang" className="text-sm font-medium">Jenjang</label>
+                <label className="block font-bold text-foreground uppercase">Progression Index *</label>
+                <input
+                  type="number"
+                  placeholder="1"
+                  value={formProgIndex}
+                  onChange={(e) => setFormProgIndex(parseInt(e.target.value, 10) || 1)}
+                  className={inputCls}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Label Tingkat *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Tingkat 1 / Kelas X"
+                  value={formLabel}
+                  onChange={(e) => setFormLabel(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Madrasah / Program *</label>
                 <select
-                  id="tk-jenjang"
-                  name="jenjangId"
-                  required
-                  defaultValue={initialData?.jenjangId ?? ''}
+                  value={formInstansi}
+                  onChange={(e) => setFormInstansi(e.target.value as Instansi)}
                   className={inputCls}
                 >
-                  <option value="" disabled>Pilih Jenjang</option>
-                  {filteredJenjang.map((j) => (
+                  {INSTANSI_ORDER.map((i) => (
+                    <option key={i} value={i}>{INSTANSI_LABEL[i]}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Jenjang Induk *</label>
+                <select
+                  value={formJenjangId}
+                  onChange={(e) => setFormJenjangId(e.target.value)}
+                  className={inputCls}
+                >
+                  {jenjangList.map((j) => (
                     <option key={j.id} value={j.id}>{j.namaJenjang}</option>
                   ))}
                 </select>
-                {filteredJenjang.length === 0 && (
-                  <p className="text-[10px] text-red-500">
-                    Tidak ada jenjang aktif untuk instansi {INSTANSI_LABEL[selectedInstansi]}. Buat jenjang dulu di tab Master Jenjang.
-                  </p>
-                )}
               </div>
-
-              {/* Progression Index */}
               <div className="space-y-1.5">
-                <label htmlFor="tk-idx" className="text-sm font-medium">Progression Index</label>
-                <input
-                  id="tk-idx"
-                  required
-                  name="progressionIndex"
-                  type="number"
-                  min="1"
-                  max="99"
-                  defaultValue={initialData?.progressionIndex ?? ''}
-                  className={inputCls}
-                  placeholder="Contoh: 5"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Angka global unik untuk urutan akademik.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Label Tingkat */}
-              <div className="space-y-1.5">
-                <label htmlFor="tk-label" className="text-sm font-medium">Label Tingkat</label>
-                <input
-                  id="tk-label"
-                  required
-                  name="tingkatLabel"
-                  defaultValue={initialData?.tingkatLabel}
-                  className={inputCls}
-                  placeholder="Contoh: Kelas 1, Tahsin Dasar"
-                />
-              </div>
-
-              {/* Status */}
-              <div className="space-y-1.5">
-                <label htmlFor="tk-status" className="text-sm font-medium">Status</label>
+                <label className="block font-bold text-foreground uppercase">Status *</label>
                 <select
-                  id="tk-status"
-                  name="status"
-                  defaultValue={initialData?.status ?? 'active'}
+                  value={formStatus}
+                  onChange={(e) => setFormStatus(e.target.value as 'active' | 'inactive')}
                   className={inputCls}
                 >
                   <option value="active">Aktif</option>
@@ -414,44 +374,134 @@ function TingkatFormModal({
                 </select>
               </div>
             </div>
-
-            {validationError && (
-              <div className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 text-sm text-red-700 dark:text-red-400">
-                {validationError}
-              </div>
-            )}
-
-            <div className="pt-2 flex gap-3">
-              <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setShowAdd(false)}
+                className="px-4 py-2.5 text-muted-foreground hover:bg-muted rounded-xl font-bold min-h-[44px]"
+              >
                 Batal
               </button>
-              <button type="submit" className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-                Simpan
+              <button
+                type="button"
+                onClick={handleSaveAdd}
+                className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-extrabold shadow-md transition-all active:scale-95 min-h-[44px]"
+              >
+                Simpan Tingkat
               </button>
             </div>
-          </form>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── Delete Dialog ──────────────────────────────────────────────────────────
-
-function DeleteTingkatDialog({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
-  return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="bg-background border border-border rounded-xl shadow-xl w-full max-w-sm pointer-events-auto p-5 text-center">
-          <h2 className="font-bold text-lg mb-2">Hapus Tingkat?</h2>
-          <p className="text-sm text-muted-foreground mb-6">Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin?</p>
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors">Batal</button>
-            <button type="button" onClick={onConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Hapus</button>
           </div>
         </div>
-      </div>
-    </>
+      )}
+
+      {/* Edit Modal */}
+      {editData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-md rounded-3xl p-6 border border-border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+            <h3 className="text-base font-extrabold text-foreground">Edit Tingkat</h3>
+            <div className="space-y-3.5 text-xs">
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Progression Index *</label>
+                <input
+                  type="number"
+                  value={formProgIndex}
+                  onChange={(e) => setFormProgIndex(parseInt(e.target.value, 10) || 1)}
+                  className={inputCls}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Label Tingkat *</label>
+                <input
+                  type="text"
+                  value={formLabel}
+                  onChange={(e) => setFormLabel(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Madrasah / Program *</label>
+                <select
+                  value={formInstansi}
+                  onChange={(e) => setFormInstansi(e.target.value as Instansi)}
+                  className={inputCls}
+                >
+                  {INSTANSI_ORDER.map((i) => (
+                    <option key={i} value={i}>{INSTANSI_LABEL[i]}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Jenjang Induk *</label>
+                <select
+                  value={formJenjangId}
+                  onChange={(e) => setFormJenjangId(e.target.value)}
+                  className={inputCls}
+                >
+                  {jenjangList.map((j) => (
+                    <option key={j.id} value={j.id}>{j.namaJenjang}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block font-bold text-foreground uppercase">Status *</label>
+                <select
+                  value={formStatus}
+                  onChange={(e) => setFormStatus(e.target.value as 'active' | 'inactive')}
+                  className={inputCls}
+                >
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Nonaktif</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-3 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setEditData(null)}
+                className="px-4 py-2.5 text-muted-foreground hover:bg-muted rounded-xl font-bold min-h-[44px]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-extrabold shadow-md transition-all active:scale-95 min-h-[44px]"
+              >
+                Perbarui Tingkat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-sm rounded-3xl p-6 border border-border shadow-2xl space-y-4 animate-in fade-in zoom-in-95 text-center">
+            <h3 className="text-base font-extrabold text-foreground">Hapus Tingkat?</h3>
+            <p className="text-xs text-muted-foreground">Tindakan ini tidak dapat dibatalkan.</p>
+            <div className="flex justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteId(null)}
+                className="px-4 py-2.5 text-muted-foreground hover:bg-muted rounded-xl font-bold min-h-[44px]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete(deleteId);
+                  setDeleteId(null);
+                }}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-extrabold shadow-md transition-all min-h-[44px]"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
