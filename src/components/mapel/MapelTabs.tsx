@@ -30,14 +30,14 @@ export function MapelTabs({ activeInstansi, onTabChange, allowedInstansi }: Prop
               key={instansi}
               type="button"
               onClick={() => onTabChange(instansi)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all min-h-[44px] ${
                 isActive
-                  ? 'bg-background shadow-sm text-foreground'
+                  ? 'bg-background shadow-sm text-foreground border border-border'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`}
             >
-              <Icon className="w-4 h-4 text-primary" />
-              {INSTANSI_LABEL[instansi]}
+              <Icon className="w-4 h-4 text-primary shrink-0" />
+              <span>{INSTANSI_LABEL[instansi]}</span>
             </button>
           );
         })}

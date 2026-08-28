@@ -15,11 +15,10 @@ interface Props {
   onDelete: (subject: Subject) => void;
 }
 
-// ── Action button token — mirrors MapelCard / KelasCard system ────────────────
 const actionBtn = cn(
-  'p-1.5 rounded-md text-muted-foreground/70',
-  'transition-[color,background-color] duration-200',
-  'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40',
+  'p-2.5 rounded-xl text-muted-foreground/70 min-h-[44px] min-w-[44px] flex items-center justify-center border border-border/50',
+  'transition-all duration-200',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
 );
 
 export function MapelListView({
@@ -28,7 +27,7 @@ export function MapelListView({
   onAssign, onEdit, onDelete,
 }: Props) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {subjects.map((subject) => {
         const isDragged = draggedSubject === subject.id;
 
@@ -40,14 +39,12 @@ export function MapelListView({
             onDragOver={onDragOver}
             onDrop={(e) => onDrop(e, subject.id)}
             className={cn(
-              'group flex flex-col sm:flex-row sm:items-center justify-between p-3',
-              'bg-card border rounded-lg',
-              // Explicit transitions — no transition-all
-              'transition-[border-color,background-color,opacity] duration-200',
+              'group flex flex-col sm:flex-row sm:items-center justify-between p-3.5',
+              'bg-card border rounded-2xl shadow-sm',
+              'transition-all duration-200',
               isDragged
-                // Refined drag state: warm tint, dashed amber border, gentle fade
-                ? 'opacity-50 border-primary/50 border-dashed bg-primary/[0.03]'
-                : 'border-border/80 hover:border-primary/25 hover:bg-primary/[0.02]',
+                ? 'opacity-50 border-primary/50 border-dashed bg-primary/5'
+                : 'border-border hover:border-primary/30 hover:bg-muted/40',
             )}
           >
             {/* Left: drag handle + badge + name + code */}
@@ -55,9 +52,9 @@ export function MapelListView({
               <div
                 className={cn(
                   'cursor-grab active:cursor-grabbing shrink-0',
-                  'p-1 -ml-1 rounded text-muted-foreground/50',
-                  'hover:text-muted-foreground hover:bg-muted/60',
-                  'transition-[color,background-color] duration-200',
+                  'p-2 rounded-lg text-muted-foreground/50',
+                  'hover:text-muted-foreground hover:bg-muted',
+                  'transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center',
                 )}
                 title="Drag untuk mengubah urutan"
                 role="img"
@@ -69,38 +66,32 @@ export function MapelListView({
               <StatusBadge status={subject.status} variant="success" />
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 min-w-0">
-                {/* Title: semibold — consistent with MapelCard / KelasCard */}
-                <h4 className="font-semibold text-sm text-foreground line-clamp-1">
+                <h4 className="font-extrabold text-sm text-foreground line-clamp-1">
                   {subject.name}
                 </h4>
-                <span className="text-[10px] sm:text-xs text-muted-foreground font-mono bg-muted/80 px-2 py-0.5 rounded-sm w-fit shrink-0">
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-mono bg-muted px-2.5 py-1 rounded-lg border border-border w-fit shrink-0 font-bold">
                   {subject.code}
                 </span>
               </div>
             </div>
 
             {/* Right: teacher count + action buttons */}
-            <div className="flex items-center justify-between sm:justify-end gap-5 w-full sm:w-auto mt-3 sm:mt-0 pl-9 sm:pl-0 border-t sm:border-0 pt-3 sm:pt-0 border-border/40">
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-border">
               <button
                 type="button"
                 onClick={() => onAssign?.(subject)}
                 disabled={!onAssign}
                 className={cn(
-                  'flex items-center gap-1.5 text-xs font-medium text-muted-foreground',
-                  onAssign && 'hover:text-primary transition-colors',
+                  'flex items-center gap-2 text-xs font-bold text-muted-foreground px-3 py-2 rounded-xl bg-muted/60 min-h-[44px]',
+                  onAssign && 'hover:text-primary hover:bg-primary/10 transition-all',
                 )}
                 title={onAssign ? 'Atur distribusi guru' : undefined}
               >
-                <Users className="w-3.5 h-3.5 shrink-0" />
+                <Users className="w-4 h-4 shrink-0" />
                 <span>{teacherSummaryMap?.[subject.id] ?? 'Belum ada guru'}</span>
               </button>
 
-              {/* Action buttons — soft reveal: 40% → 100% on hover; full on mobile */}
-              <div className={cn(
-                'flex items-center gap-0.5 shrink-0',
-                'opacity-100 md:opacity-40 md:group-hover:opacity-100',
-                'transition-opacity duration-200',
-              )}>
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   aria-label={`Edit mata pelajaran ${subject.name}`}
@@ -108,7 +99,7 @@ export function MapelListView({
                   onClick={() => onEdit(subject)}
                   className={cn(actionBtn, 'hover:bg-primary/10 hover:text-primary')}
                 >
-                  <Edit2 className="w-3.5 h-3.5" />
+                  <Edit2 className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -117,11 +108,10 @@ export function MapelListView({
                   onClick={() => onDelete(subject)}
                   className={cn(
                     actionBtn,
-                    'hover:bg-destructive/10 hover:text-destructive',
-                    'focus-visible:ring-destructive/40',
+                    'hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 border-red-500/20',
                   )}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>

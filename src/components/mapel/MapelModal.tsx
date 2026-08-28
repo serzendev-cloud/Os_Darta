@@ -20,17 +20,15 @@ const CLOSE_ANIMATION_MS = 200;
 
 // ── Shared input token ────────────────────────────────────────────────────────
 const inputCls = cn(
-  'w-full rounded-lg border px-3 py-2 text-sm text-foreground',
-  'bg-muted/40 border-border/60',
+  'w-full rounded-xl border px-3.5 py-2.5 text-sm text-foreground min-h-[44px]',
+  'bg-background border-border',
   'placeholder:text-muted-foreground/40',
-  'focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40',
-  'dark:bg-white/[0.03] dark:border-white/[0.07]',
-  'dark:focus:ring-primary/30 dark:focus:border-primary/30',
-  'transition-[border-color,box-shadow,background-color] duration-200',
+  'focus:outline-none focus:ring-2 focus:ring-primary/40',
+  'transition-all duration-200',
 );
 
 const dialogCls = cn(
-  'bg-background/95',
+  'bg-background/95 max-h-[90vh] overflow-y-auto',
   'dark:bg-background/90 dark:backdrop-blur-md',
   'dark:border dark:border-white/[0.08]',
   'dark:shadow-[0_16px_40px_oklch(0_0_0/35%)]',
