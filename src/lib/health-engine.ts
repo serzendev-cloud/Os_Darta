@@ -29,8 +29,9 @@ export const HEALTH_STATUS_LABELS: Record<HealthVisitStatus, string> = {
 };
 
 export const PERMISSION_STATUS_LABELS: Record<HealthPermissionStatus, string> = {
-  diajukan: 'Diajukan',
-  disetujui: 'Disetujui',
+  diajukan: 'Pending Wali Kelas',
+  diteruskan_kesiswaan: 'Diteruskan ke Kesiswaan',
+  disetujui: 'Disetujui Kesiswaan',
   ditolak: 'Ditolak',
   dalam_perjalanan: 'Dalam Perjalanan',
   kembali: 'Kembali',

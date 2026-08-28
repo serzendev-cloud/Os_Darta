@@ -3,8 +3,6 @@
 // Health Governance & Santri Care System
 // ========================================
 
-import type { Timestamp } from 'firebase/firestore';
-
 // ── Enums ──────────────────────────────────────────────────────
 
 export type HealthVisitCategory =
@@ -29,6 +27,7 @@ export type HealthVisitStatus =
 
 export type HealthPermissionStatus =
   | 'diajukan'
+  | 'diteruskan_kesiswaan'
   | 'disetujui'
   | 'ditolak'
   | 'dalam_perjalanan'
@@ -76,6 +75,12 @@ export interface HealthPermission {
   requiresSupervisor: boolean;
   supervisorId?: string;
   supervisorName?: string;
+  /** Santri pendamping wajib dipilih Kepala Kesiswaan saat persetujuan */
+  companionSantriId?: string;
+  companionSantriName?: string;
+  /** Forwarding info by Wali Kelas */
+  forwardedById?: string;
+  forwardedByName?: string;
   requestedById: string;
   requestedByName: string;
   approvedById?: string;
@@ -87,49 +92,7 @@ export interface HealthPermission {
   updatedAt: string;
 }
 
-// ── Firestore Types ────────────────────────────────────────────
 
-export interface FirestoreHealthVisit {
-  santriId: string;
-  santriName: string;
-  keluhan: string;
-  category: HealthVisitCategory;
-  severity: HealthSeverity;
-  status: HealthVisitStatus;
-  petugasId?: string;
-  petugasName?: string;
-  tindakan?: string;
-  catatan?: string;
-  masukAt: string;
-  selesaiAt?: string;
-  durasiMenit?: number;
-  permissionId?: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export interface FirestoreHealthPermission {
-  santriId: string;
-  santriName: string;
-  healthVisitId: string;
-  keluhan: string;
-  severity: HealthSeverity;
-  status: HealthPermissionStatus;
-  tujuanBerobat: string;
-  alasan: string;
-  requiresSupervisor: boolean;
-  supervisorId?: string;
-  supervisorName?: string;
-  requestedById: string;
-  requestedByName: string;
-  approvedById?: string;
-  approvedByName?: string;
-  keluarAt?: string;
-  kembaliAt?: string;
-  catatan?: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
 
 // ── Health Timeline Entry (computed, not stored) ───────────────
 
