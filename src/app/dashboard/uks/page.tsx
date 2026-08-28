@@ -245,7 +245,7 @@ export default function UKSPage() {
           <button
             type="button"
             onClick={() => setShowCatat(true)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm active:scale-95"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm active:scale-95 min-h-[44px]"
           >
             <Plus aria-hidden="true" className="w-4 h-4" />
             Catat Kunjungan UKS
@@ -321,7 +321,7 @@ export default function UKSPage() {
                   id="filter-status-uks"
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value as HealthVisitStatus | 'all')}
-                  className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none"
+                  className="text-sm border border-border rounded-xl px-3 py-2.5 bg-background focus:outline-none min-h-[44px]"
                 >
                   <option value="all">Semua Status</option>
                   <option value="observasi">Observasi</option>
@@ -339,7 +339,7 @@ export default function UKSPage() {
                   id="filter-severity-uks"
                   value={filterSeverity}
                   onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none"
+                  className="text-sm border border-border rounded-xl px-3 py-2.5 bg-background focus:outline-none min-h-[44px]"
                 >
                   <option value="all">Semua Tingkat</option>
                   <option value="ringan">Ringan</option>
@@ -426,21 +426,21 @@ export default function UKSPage() {
                     </div>
                     <MobileCardTitle>{v.santriName}</MobileCardTitle>
                   </div>
-                  <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold', SEVERITY_BADGE[v.severity] ?? SEVERITY_BADGE.ringan)}>
+                  <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0', SEVERITY_BADGE[v.severity] ?? SEVERITY_BADGE.ringan)}>
                     {HEALTH_SEVERITY_LABELS[v.severity]}
                   </span>
                 </MobileCardHeader>
                 <MobileCardContent>
-                  <div className="space-y-1 text-xs pt-1">
-                    <p className="font-semibold text-foreground">Keluhan: {v.keluhan}</p>
-                    <div className="flex items-center justify-between text-muted-foreground text-[11px] pt-1 border-t border-border/40">
+                  <div className="space-y-1.5 text-xs pt-1">
+                    <p className="font-semibold text-foreground leading-snug">Keluhan: {v.keluhan}</p>
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] pt-1.5 border-t border-border/40 flex-wrap gap-1">
                       <span>Kategori: {CATEGORY_LABEL[v.category] ?? v.category}</span>
                       <span>{formatDateTime(v.masukAt)}</span>
                     </div>
                   </div>
                 </MobileCardContent>
                 <MobileCardFooter>
-                  <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold', STATUS_BADGE[v.status] ?? STATUS_BADGE.observasi)}>
+                  <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold', STATUS_BADGE[v.status] ?? STATUS_BADGE.observasi)}>
                     {HEALTH_STATUS_LABELS[v.status]}
                   </span>
                   <MobileRowActions
@@ -472,7 +472,7 @@ export default function UKSPage() {
           open={!!detailVisit}
           onOpenChange={() => setDetailVisit(null)}
         >
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-base font-semibold">
                 Detail Kunjungan UKS
@@ -620,14 +620,14 @@ export default function UKSPage() {
                           }
                           disabled={statusLoading === detailVisit.id}
                           className={cn(
-                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border active:scale-95',
+                            'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all border active:scale-95 min-h-[44px]',
                             'hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed',
                             STATUS_BADGE[nextStatus] ??
                               STATUS_BADGE.observasi,
                             'bg-opacity-100',
                           )}
                         >
-                          <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                          <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                           {HEALTH_STATUS_LABELS[nextStatus]}
                         </button>
                       ),
@@ -642,6 +642,7 @@ export default function UKSPage() {
                 type="button"
                 variant="ghost"
                 onClick={() => setDetailVisit(null)}
+                className="min-h-[44px]"
               >
                 Tutup
               </Button>
