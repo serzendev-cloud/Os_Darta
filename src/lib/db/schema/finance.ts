@@ -9,9 +9,14 @@ export const wallets = pgTable('wallets', {
   balanceUangSaku: integer('balance_uang_saku').default(0).notNull(),
   balanceTabungan: integer('balance_tabungan').default(0).notNull(),
   dailyLimit: integer('daily_limit').default(20000).notNull(), // Default Rp 20.000 / hari
-  canteenStatus: text('canteen_status').default('active').notNull(), // 'active' | 'suspended_by_walikelas' | 'suspended_by_wali' | 'blocked'
+  canteenStatus: text('canteen_status').default('active').notNull(), // 'active' | 'requested_by_walikelas' | 'suspended_by_walikelas' | 'suspended_by_wali' | 'blocked'
   suspendedReason: text('suspended_reason'),
   suspendedBy: text('suspended_by'),
+  freezeRequestedBy: text('freeze_requested_by'),
+  freezeRequestedAt: timestamp('freeze_requested_at'),
+  freezeReason: text('freeze_reason'),
+  freezeDuration: text('freeze_duration'),
+  freezeExpiresAt: timestamp('freeze_expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
