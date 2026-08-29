@@ -6,7 +6,7 @@ import {
   Sliders, Sparkles, Building2, CheckCircle2, ShieldCheck, 
   CreditCard, Smartphone, HardDrive, ShoppingCart, Stethoscope, 
   Trophy, ToggleLeft, ToggleRight, Layers, Rocket, Users, Info, Check,
-  ChevronDown, Power, XCircle, Search, ExternalLink, HelpCircle
+  ChevronDown, Power, XCircle, Search, ExternalLink, HelpCircle, BookOpen
 } from 'lucide-react';
 
 interface TenantModulesConfig {
@@ -36,6 +36,7 @@ const modulesCatalog: ModuleCatalogItem[] = [
   { id: 'm6', name: 'POS Kantin Digital & Wallet Santri', category: 'Finance/IoT', description: 'Kasir kantin cashless, top-up saldo RFID, & limit belanja harian santri', icon: ShoppingCart },
   { id: 'm7', name: 'UKS & Rekam Medis Santri', category: 'Health & Care', description: 'Pencatatan santri sakit, rekam medis UKS, & rujukan rumah sakit', icon: Stethoscope },
   { id: 'm8', name: 'Modul Tahfidz & Ziyadah (Beta)', category: 'Special Feature', description: 'Monitoring hafalan Quran, ziyadah, murojaah & setoran harian santri', icon: Trophy, isBeta: true },
+  { id: 'm9', name: 'Perpustakaan & Sirkulasi Buku RFID', category: 'Academic & Care', description: 'Katalog buku, sirkulasi peminjaman/pengembalian RFID, & presensi pengunjung perpustakaan', icon: BookOpen },
 ];
 
 const mockTenantsModulesData: Record<string, TenantModulesConfig> = {};

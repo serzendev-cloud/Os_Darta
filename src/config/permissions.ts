@@ -90,6 +90,10 @@ export const Permission = {
   VIEW_ARSIP: 'view_arsip',
   VIEW_KALENDER_KEGIATAN: 'view_kalender_kegiatan',
   VIEW_BROADCAST: 'view_broadcast',
+
+  // Perpustakaan
+  VIEW_PERPUSTAKAAN: 'view_perpustakaan',
+  MANAGE_PERPUSTAKAAN: 'manage_perpustakaan',
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];
@@ -145,6 +149,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_ARSIP,
     Permission.VIEW_KALENDER_KEGIATAN,
     Permission.VIEW_BROADCAST,
+    Permission.VIEW_PERPUSTAKAAN,
+    Permission.MANAGE_PERPUSTAKAAN,
   ]),
 
   musyrif: new Set([
@@ -164,6 +170,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
     Permission.VIEW_KALENDER_KEGIATAN,
+    Permission.VIEW_PERPUSTAKAAN,
   ]),
 
   staff: new Set([
@@ -182,6 +189,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
     Permission.VIEW_KALENDER_KEGIATAN,
+    Permission.VIEW_PERPUSTAKAAN,
+    Permission.MANAGE_PERPUSTAKAAN,
   ]),
 
   guru: new Set([
@@ -195,6 +204,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
     Permission.VIEW_PENILAIAN,
+    Permission.VIEW_PERPUSTAKAAN,
   ]),
 
   wali_kelas: new Set([
@@ -208,6 +218,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
     Permission.VIEW_RAPORT,
+    Permission.VIEW_PERPUSTAKAAN,
   ]),
 
   wali: new Set([
@@ -218,6 +229,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
     Permission.VIEW_RAPORT,
+    Permission.VIEW_PERPUSTAKAAN,
   ]),
 
   santri: new Set([
@@ -228,6 +240,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_NOTIFIKASI,
     Permission.VIEW_PENGATURAN,
     Permission.VIEW_PENGUMUMAN,
+    Permission.VIEW_PERPUSTAKAAN,
   ]),
 
   alumni: new Set([
