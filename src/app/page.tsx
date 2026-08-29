@@ -1,31 +1,29 @@
 import { getTenantContext } from '@/lib/tenant/context';
-import LoginClient from './client-page';
+import { TenantPortalClient } from '@/components/portal/TenantPortalClient';
 import { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantContext();
-  const title = tenant.settings?.loginTitle || tenant.name || 'Ponpes Daruttahuid';
+  const title = tenant.name || 'Ponpes Daruttahuid';
+  const tagline = tenant.settings?.tagline || 'Sistem Informasi Pesantren Terpadu';
+  const description = tenant.settings?.loginDescription || 'Portal Resmi Pesantren & Lembaga Pendidikan Terpadu — Beranda, Profil, Program Unggulan, Prestasi, dan Informasi Publik.';
+
   return {
-    title: `${title} | Madev — Serene Zeith Corp`,
-    description: tenant.settings?.loginDescription || 'Platform tata kelola santri, pemantauan pelanggaran, pembinaan karakter, dan manajemen asrama — Powered by Serene Zeith Corp (serzen_dev).',
+    title: `${title} | Portal Resmi — ${tagline}`,
+    description: description,
+    openGraph: {
+      title: `${title} | Portal Resmi`,
+      description: description,
+      siteName: title,
+      type: 'website',
+    },
   };
 }
 
-export default async function LoginPage() {
+export default async function TenantPublicPortalPage() {
   const tenant = await getTenantContext();
-  
-  const loginTitle = tenant.settings?.loginTitle || tenant.name || 'Ponpes Daruttahuid';
-  const loginSubtitle = tenant.settings?.loginSubtitle || 'Malang';
-  const loginDescription = tenant.settings?.loginDescription || 'Platform tata kelola santri, pemantauan pelanggaran, pembinaan karakter, dan manajemen asrama — terintegrasi dalam satu sistem.';
-  const customLogoUrl = tenant.settings?.customLogoUrl || null;
 
   return (
-    <LoginClient 
-      tenantName={tenant.name}
-      loginTitle={loginTitle}
-      loginSubtitle={loginSubtitle}
-      loginDescription={loginDescription}
-      customLogoUrl={customLogoUrl}
-    />
+    <TenantPortalClient tenant={tenant} />
   );
 }
