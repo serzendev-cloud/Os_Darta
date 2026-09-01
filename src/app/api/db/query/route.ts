@@ -181,6 +181,7 @@ export async function POST(request: NextRequest) {
       governanceCases: schema.governanceCases,
       quests: schema.quests,
       notifications: schema.notifications,
+      tenantSettings: schema.tenantSettings,
     };
 
     const targetTable = tableMap[collectionName];
