@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { useCollection } from '@/hooks';
 import { StatsCard } from '@/components/shared/stats-card';
-import { hukumanService } from '@/lib/firebase/services';
+import { hukumanService } from '@/lib/db/services';
 import { createGovernanceEvent } from '@/lib/governance-events';
 import { Gavel, CheckCircle, XCircle, Clock, Scale, Search, Ban } from 'lucide-react';
 import type { Hukuman, Santri } from '@/types';

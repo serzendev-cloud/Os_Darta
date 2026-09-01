@@ -8,9 +8,7 @@ import { ErrorState } from '@/components/shared/error-state';
 import { StatsCard } from '@/components/shared/stats-card';
 import { Button } from '@/components/ui/button';
 import { useCollection } from '@/hooks';
-import { santriService } from '@/lib/firebase/services';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { santriService, alumniService } from '@/lib/db/services';
 import { AddSantriModal } from '@/components/santri/AddSantriModal';
 import { EditStatusModal } from '@/components/santri/EditStatusModal';
 import { SantriTable } from '@/components/santri/SantriTable';
@@ -23,7 +21,7 @@ import {
 export default function SantriPage() {
   const [mainTab, setMainTab] = useState<'aktif' | 'alumni'>('aktif');
 
-  // --- FIREBASE DATA ---
+  // --- REALTIME DATA ---
   const { data: santriData, loading: santriLoading, error: santriError } = useCollection<Santri>('santri', [], { realtime: true });
   const { data: alumniData, loading: alumniLoading, error: alumniError } = useCollection<Alumni>('alumni', [], { realtime: true });
 
@@ -94,8 +92,7 @@ export default function SantriPage() {
       await santriService.update(editingSantri.id, { status: editStatus as SantriStatus });
     } else if (editStatus === 'Lulus' || editStatus === 'Keluar') {
       // Create alumni record
-      const now = Timestamp.now();
-      await addDoc(collection(db, 'alumni'), {
+      await alumniService.create({
         nis: editingSantri.nis,
         name: editingSantri.name,
         tahunAlumni: parseInt(editTahun),
@@ -107,9 +104,7 @@ export default function SantriPage() {
         angkatanMasuk: editingSantri.angkatanMasuk,
         catatan: editCatatan,
         masihMemilikiAkun: editStatus === 'Lulus',
-        createdAt: now,
-        updatedAt: now,
-      });
+      } as any);
       // Remove from santri collection
       await santriService.delete(editingSantri.id);
     }

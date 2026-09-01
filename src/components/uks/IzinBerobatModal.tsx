@@ -3,10 +3,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useCollection } from '@/hooks';
 import { useAuthStore } from '@/store/auth-store';
-import { healthPermissionService, healthVisitService } from '@/lib/firebase/services';
+import { healthPermissionService, healthVisitService } from '@/lib/db/services';
 import { requiresSupervisor, HEALTH_SEVERITY_LABELS } from '@/lib/health-engine';
 import { createGovernanceEvent } from '@/lib/governance-events';
-import { where } from 'firebase/firestore';
 import type { HealthVisit } from '@/types/health';
 import { X, Search, Loader2, AlertCircle } from 'lucide-react';
 
@@ -21,7 +20,7 @@ export function IzinBerobatModal({ open, onClose }: IzinBerobatModalProps) {
   // ── Visit selector ──────────────────────────────────────────────────────────
   const { data: healthVisits, loading: loadingVisits } = useCollection<HealthVisit>(
     'healthVisits',
-    [where('status', '==', 'perlu_berobat_luar')],
+    [],
   );
 
   const [visitSearch, setVisitSearch] = useState('');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { isDemoMode, getDemoCollection } from '@/lib/firebase/demo-data';
+import { isDemoMode, getDemoCollection } from '@/lib/mock-store';
 
 export function useDocument<T>(
   collectionName: string,

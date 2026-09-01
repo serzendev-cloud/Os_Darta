@@ -2,7 +2,7 @@
 // Universal Multi-Tenant Domain Service Factory
 // ========================================
 
-import { demoDb, isDemoMode } from '@/lib/firebase/demo-data';
+import { demoDb, isDemoMode } from '@/lib/mock-store';
 import { getActiveTenantId, withTenant } from './tenant-service';
 
 export interface BaseEntity {

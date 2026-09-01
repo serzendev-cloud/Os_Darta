@@ -37,7 +37,6 @@ vi.mock('@/store/sidebar-store', () => ({
 function setAuthState(overrides: Partial<ReturnType<typeof useAuthStore.getState>>) {
   useAuthStore.setState({
     user: null,
-    firebaseUser: null,
     isAuthenticated: false,
     isLoading: false,
     error: null,

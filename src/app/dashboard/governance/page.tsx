@@ -14,7 +14,7 @@ import {
   santriService,
   hukumanService,
   masterHukumanService,
-} from '@/lib/firebase/services';
+} from '@/lib/db/services';
 import {
   Clock, ShieldAlert, AlertTriangle, Plus, Search, Eye,
   FileText, UserCheck, Gavel, MessageSquare,
@@ -34,7 +34,6 @@ import type {
   GovernanceCase, GovernanceReviewStatus,
   Santri, MasterPelanggaran, MasterHukuman, PelanggaranSeverity,
 } from '@/types';
-import type { FirestoreSantri } from '@/types/firestore';
 import type { Kelas } from '@/types/academic';
 
 export default function GovernanceReviewPage() {
@@ -162,7 +161,7 @@ export default function GovernanceReviewPage() {
         const santri = await santriService.get(reviewItem.santriId);
         if (santri) {
           const pointUpdate = computeAfterViolation(santri, reviewItem.points ?? 0);
-          await santriService.update(reviewItem.santriId, pointUpdate as unknown as Partial<FirestoreSantri>);
+          await santriService.update(reviewItem.santriId, pointUpdate as unknown as Partial<Santri>);
         }
 
         // 4. Emit events

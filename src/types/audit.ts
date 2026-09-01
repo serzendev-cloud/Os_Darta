@@ -54,9 +54,3 @@ export interface AuditLog {
   metadata?: Record<string, unknown>;
   timestamp: string;
 }
-
-// Firestore document version
-export interface FirestoreAuditLog extends Omit<AuditLog, 'id'> {
-  createdAt: import('firebase/firestore').Timestamp;
-  updatedAt: import('firebase/firestore').Timestamp;
-}

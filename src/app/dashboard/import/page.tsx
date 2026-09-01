@@ -7,8 +7,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { useCollection } from '@/hooks';
-import { writeBatch, collection as fsCollection, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { createTenantService } from '@/lib/db/services';
 import * as Papa from 'papaparse';
 import type { Santri } from '@/types';
 import {
@@ -147,27 +146,11 @@ export default function ImportPage() {
     setImportError(null);
 
     const collectionName = getCollectionName(selectedType);
-    const colRef = fsCollection(db, collectionName);
+    const service = createTenantService(collectionName);
 
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
-    let currentBatch = writeBatch(db);
-    let opsInBatch = 0;
-
-    const commitBatch = async () => {
-      if (opsInBatch === 0) return;
-      try {
-        await currentBatch.commit();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Batch write failed';
-        errors.push(`Batch commit error: ${msg}`);
-        failed += opsInBatch;
-        success -= opsInBatch;
-      }
-      currentBatch = writeBatch(db);
-      opsInBatch = 0;
-    };
 
     for (let i = 0; i < parsedData.length; i++) {
       try {
@@ -183,28 +166,16 @@ export default function ImportPage() {
           }
         }
 
-        const newDocRef = doc(colRef);
-        currentBatch.set(newDocRef, {
+        await service.create({
           ...row,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
         });
-        opsInBatch++;
         success++;
-
-        // Firestore batch limit is 500 operations
-        if (opsInBatch >= 490) {
-          await commitBatch();
-        }
       } catch (err) {
         failed++;
-        success--;
         errors.push(`Baris ${i + 1}: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
+      setUploadProgress(Math.round(((i + 1) / parsedData.length) * 100));
     }
-
-    // Commit remaining batch
-    await commitBatch();
 
     setUploadProgress(100);
     setIsUploading(false);

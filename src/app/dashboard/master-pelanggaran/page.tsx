@@ -6,7 +6,7 @@ import { StatsCard } from '@/components/shared/stats-card';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { useCollection } from '@/hooks';
-import { masterPelanggaranService, tolerancePolicyService, masterHukumanService } from '@/lib/firebase/services';
+import { masterPelanggaranService, tolerancePolicyService, masterHukumanService } from '@/lib/db/services';
 import { BookOpen, AlertTriangle, Calculator, FileText, Plus, ShieldCheck, Gavel } from 'lucide-react';
 import type { MasterPelanggaran, PelanggaranSeverity, GlobalTolerancePolicy, JenjangToleranceOverride, SeverityLimits, MasterHukuman } from '@/types';
 

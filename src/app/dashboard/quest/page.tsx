@@ -9,7 +9,7 @@ import { ErrorState } from '@/components/shared/error-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useCollection, useIsRole } from '@/hooks';
 import { useAuthStore } from '@/store/auth-store';
-import { questService, santriService } from '@/lib/firebase/services';
+import { questService, santriService } from '@/lib/db/services';
 import { createGovernanceEvent } from '@/lib/governance-events';
 import { computeAfterRedemption, computePrestasiUpdate } from '@/lib/point-engine';
 import { shouldAutoApprove, validateQuestCreation } from '@/lib/character-engine';
@@ -66,7 +66,7 @@ export default function QuestPage() {
     setSubmitError(null);
   }, []);
 
-  // ── Firebase data ──────────────────────────────────────────────────────────
+  // ── Realtime data ──────────────────────────────────────────────────────────
   const { data: allQuests, loading, error } = useCollection<Quest>('quest');
 
   // ── RBAC ───────────────────────────────────────────────────────────────────

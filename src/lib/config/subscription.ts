@@ -1,7 +1,7 @@
 // Real-time config subscription. Uses Firestore onSnapshot or demoDb subscribe.
 // Auto-invalidates cache on change.
 
-import { appConfigService } from '@/lib/firebase/services/appConfig';
+import { appConfigService } from '@/lib/db/services';
 import { mergeDefaults } from './loader';
 import { invalidateCache, setCache } from './cache';
 import type { AppConfig, ConfigLoadResult } from './types';

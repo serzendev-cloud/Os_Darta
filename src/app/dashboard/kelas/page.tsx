@@ -9,7 +9,7 @@ import { ErrorState } from '@/components/shared/error-state';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useCollection } from '@/hooks';
-import { kelasService } from '@/lib/firebase/services';
+import { kelasService } from '@/lib/db/services';
 import { getJenjangByInstansi } from '@/lib/academic-structure';
 import type { Instansi, MasterJenjang, MasterTingkat, Guru } from '@/types';
 import { INSTANSI_ORDER, INSTANSI_LABEL } from '@/types';
@@ -43,7 +43,7 @@ function buildJenjangGroups(data: Kelas[], orderedJenjang: string[]): JenjangGro
 export default function MasterKelasPage() {
   const searchParams = useSearchParams();
 
-  // ── Firebase data ─────────────────────────────────────────────────────────
+  // ── Realtime data ─────────────────────────────────────────────────────────
   const { data: allKelas, loading: kelasLoading, error: kelasError } = useCollection<Kelas>('kelas', [], { realtime: true });
   const { data: jenjangList, loading: jenjangLoading, error: jenjangError } = useCollection<MasterJenjang>('masterJenjang');
   const { data: tingkatList } = useCollection<MasterTingkat>('masterTingkat');

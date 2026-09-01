@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { isDemoMode, getDemoCollection, demoDb } from '@/lib/firebase/demo-data';
+import { isDemoMode, getDemoCollection, demoDb } from '@/lib/mock-store';
 import { getActiveTenantId } from '@/lib/db/services/tenant-service';
 
 interface UseCollectionOptions {

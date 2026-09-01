@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useCollection } from '@/hooks';
 import { useAuthStore } from '@/store/auth-store';
-import { healthVisitService } from '@/lib/firebase/services';
+import { healthVisitService } from '@/lib/db/services';
 import { createGovernanceEvent } from '@/lib/governance-events';
 import { cn } from '@/lib/utils';
 import { Search, X, Plus, AlertCircle } from 'lucide-react';

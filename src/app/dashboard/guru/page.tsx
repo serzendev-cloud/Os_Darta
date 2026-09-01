@@ -8,7 +8,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useCollection } from '@/hooks';
-import { guruService } from '@/lib/firebase/services';
+import { guruService } from '@/lib/db/services';
 import type { Guru, RanahInstansi } from '@/types';
 import { Users, Search, Plus, Pencil, Trash2, X, Briefcase } from 'lucide-react';
 

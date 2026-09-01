@@ -12,7 +12,7 @@ import { MapelGridView } from '@/components/mapel/MapelGridView';
 import { MapelListView } from '@/components/mapel/MapelListView';
 import { AddMapelModal, EditMapelModal, DeleteMapelModal } from '@/components/mapel/MapelModal';
 import { useCollection } from '@/hooks';
-import { mapelService } from '@/lib/firebase/services';
+import { mapelService } from '@/lib/db/services';
 import { getJenjangByInstansi, jenjangToInstansi } from '@/lib/academic-structure';
 import type { Instansi, MasterJenjang, MasterTingkat } from '@/types';
 import { INSTANSI_ORDER } from '@/types';

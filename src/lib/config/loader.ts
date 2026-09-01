@@ -1,7 +1,7 @@
 // Runtime config loader. Source priority: Firestore → env → defaults.
 // No business logic — pure config resolution.
 
-import { appConfigService } from '@/lib/firebase/services/appConfig';
+import { appConfigService } from '@/lib/db/services';
 import { getCached, setCache } from './cache';
 import type { ConfigLoadResult, ConfigSource } from './types';
 

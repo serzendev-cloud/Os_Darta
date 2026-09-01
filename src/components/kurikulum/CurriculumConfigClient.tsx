@@ -17,7 +17,7 @@ import {
 
 import { MasterJenjangTab, MasterTingkatTab } from '@/components/struktur-akademik';
 import { useCollection } from '@/hooks';
-import { masterJenjangService, masterTingkatService, kelasService } from '@/lib/firebase/services';
+import { masterJenjangService, masterTingkatService, kelasService } from '@/lib/db/services';
 import type { MasterJenjang, MasterTingkat, Instansi, Guru } from '@/types';
 import type { Kelas, Mapel, JenjangGroup } from '@/types/academic';
 import { KelasClusterSection } from '@/components/kelas/KelasClusterSection';

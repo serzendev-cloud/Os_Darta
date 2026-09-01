@@ -10,7 +10,7 @@ import { KamarDetailPanel } from '@/components/asrama/KamarDetailPanel';
 import { TempatkanModal } from '@/components/asrama/TempatkanModal';
 import { TarikSantriModal } from '@/components/asrama/TarikSantriModal';
 import { useCollection } from '@/hooks';
-import { santriService } from '@/lib/firebase/services';
+import { santriService } from '@/lib/db/services';
 import type { Asrama, Kamar, Santri } from '@/types';
 import {
   Building2, Users, CheckCircle2, XCircle,
@@ -90,7 +90,7 @@ function AsramaCard({ asrama, totalKamar, totalPenghuni, isActive, onClick }: As
 // Main Page
 // ---------------------------------------------------------------------------
 export default function AsramaPage() {
-  // ── Firebase data ─────────────────────────────────────────────────────────
+  // ── Realtime data ─────────────────────────────────────────────────────────
   const { data: asramaList, loading: asramaLoading, error: asramaError } = useCollection<Asrama>('asrama', [], { realtime: true });
   const { data: kamarList, loading: kamarLoading, error: kamarError } = useCollection<Kamar>('kamar', [], { realtime: true });
   const { data: santriList, loading: santriLoading, error: santriError } = useCollection<Santri>('santri', [], { realtime: true });

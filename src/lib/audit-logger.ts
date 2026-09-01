@@ -1,4 +1,4 @@
-import { auditLogService } from '@/lib/firebase/services/auditLog';
+import { auditLogService } from '@/lib/db/services';
 import type { AuditAction, AuditEntityType } from '@/types/audit';
 import type { UserRole } from '@/types';
 
