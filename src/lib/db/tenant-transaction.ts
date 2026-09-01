@@ -38,10 +38,14 @@ export async function withTenantTransaction<T>(
     // 1. Set local transaction variables (Fail-Closed)
     if (safeTenantId) {
       await tx.execute(sql.raw(`SET LOCAL app.current_tenant_id = '${safeTenantId.replace(/'/g, "''")}';`));
+    } else {
+      await tx.execute(sql.raw(`SET LOCAL app.current_tenant_id = '__unauthenticated_none__';`));
     }
     
     if (tenantSlug) {
       await tx.execute(sql.raw(`SET LOCAL app.current_tenant_slug = '${tenantSlug.replace(/'/g, "''")}';`));
+    } else {
+      await tx.execute(sql.raw(`SET LOCAL app.current_tenant_slug = '__unauthenticated_none__';`));
     }
 
     if (isSuperAdmin) {
