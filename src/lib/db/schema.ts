@@ -32,18 +32,9 @@ export const tenantSettings = pgTable('tenant_settings', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// ── Users Table ─────────────────────────────────────────────────────────────
-export const users = pgTable('users', {
-  id: text('id').primaryKey(),
-  tenantId: text('tenant_id').default('default').notNull(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  role: text('role').notNull(), // 'admin' | 'guru' | 'musyrif' | 'orang_tua' | 'santri' | 'super_admin'
-  avatar: text('avatar'),
-  childSantriId: text('child_santri_id'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+// ── Users & Identity Sub-Schema (Re-exported from ./schema/identity) ──────────
+export * from './schema/identity';
+
 
 // ── Santri Table ────────────────────────────────────────────────────────────
 export const santri = pgTable('santri', {
@@ -441,3 +432,5 @@ export * from './schema/gate_pass';
 export * from './schema/ppob';
 export * from './schema/academic_workspace';
 export * from './schema/academic_ledger';
+export * from './schema/kesiswaan_masters';
+
