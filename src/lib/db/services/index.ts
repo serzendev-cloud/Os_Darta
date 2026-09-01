@@ -19,4 +19,12 @@ export { guruService } from './guru';
 export { governanceCaseService } from './governanceCase';
 export { academicYearService, academicTermService } from './academic-workspace';
 export { academicLedgerRecordService, academicTranscriptService } from './academic-ledger';
+export { tolerancePolicyService } from './tolerancePolicy';
+export { healthVisitService } from './healthVisit';
+export { healthPermissionService } from './healthPermission';
+export { auditLogService } from './auditLog';
+export { appConfigService } from './appConfig';
+export { alumniService } from './alumni';
+
+
 
