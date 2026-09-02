@@ -9,18 +9,17 @@ import {
   getNotificationTemplate,
   type GovernanceEvent,
 } from '@/lib/governance-events';
-import type { FirestoreNotification } from '@/types/firestore';
-import type { UserRole } from '@/types';
+import type { Notification, UserRole } from '@/types';
 
 export const notificationEngine = {
   /**
-   * Takes a governance event and returns a FirestoreNotification input
-   * (without createdAt — the service layer adds the Timestamp).
+   * Takes a governance event and returns a Notification input
+   * (without id and createdAt — the service layer adds them).
    * Returns null if the event type has no matching template.
    */
   dispatchFromEvent(
     event: GovernanceEvent,
-  ): Omit<FirestoreNotification, 'createdAt'> | null {
+  ): Omit<Notification, 'id' | 'createdAt'> | null {
     const template = getNotificationTemplate(event);
     if (!template) return null;
 
