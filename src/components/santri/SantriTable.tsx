@@ -2,7 +2,7 @@
 
 import type { Santri } from '@/types';
 import { PageCard } from '@/components/shared/page-header';
-import { Edit2, Search, SlidersHorizontal } from 'lucide-react';
+import { Edit2 } from 'lucide-react';
 import {
   ResponsiveDataGrid,
   MobileCard,

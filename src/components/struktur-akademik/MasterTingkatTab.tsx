@@ -13,7 +13,6 @@ import {
   MobileCardTitle,
   MobileCardContent,
   MobileCardFooter,
-  ResponsiveFilterBar,
   MobileRowActions,
 } from '@/components/ui/responsive-data';
 

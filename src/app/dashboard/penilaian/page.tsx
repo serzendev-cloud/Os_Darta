@@ -5,30 +5,24 @@ import { PageCard } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  ClipboardCheck,
   Award,
   BookOpen,
   Save,
   CheckCircle2,
-  Lock,
   ChevronLeft,
   ChevronRight,
   Users,
   Sparkles,
   BarChart3,
-  HelpCircle,
-  FileCheck,
 } from 'lucide-react';
 import {
   ResponsiveDataGrid,
-  MobileCardStack,
   MobileCard,
   MobileCardHeader,
   MobileCardTitle,
   MobileCardContent,
   MobileCardFooter,
   ResponsiveFilterBar,
-  MobileRowActions,
 } from '@/components/ui/responsive-data';
 import {
   AssessmentTemplate,
@@ -152,8 +146,6 @@ export default function PenilaianPage() {
   const summary = useMemo(() => {
     return calculateAssessmentSummary(studentScores, components);
   }, [studentScores, components]);
-
-  const currentSession = sessions.find((s) => s.id === selectedSessionId);
 
   const handleSaveAssessment = () => {
     setIsSaving(true);

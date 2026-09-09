@@ -12,7 +12,7 @@ export const healthPermissionService = {
       ...data,
       createdAt: now,
       updatedAt: now,
-    } as any);
+    } as Omit<HealthPermission, 'id'>);
   },
 
   async forwardToKesiswaan(

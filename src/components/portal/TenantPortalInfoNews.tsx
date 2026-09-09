@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Newspaper, Calendar, Bell, ChevronRight } from 'lucide-react';
+import { Calendar, Bell } from 'lucide-react';
 import type { TenantContext } from '@/lib/tenant/context';
 
 interface InfoNewsProps {

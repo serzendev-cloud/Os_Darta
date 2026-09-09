@@ -69,7 +69,7 @@ export const demoDb = {
     return items.filter((item) => (item as Record<string, unknown>)[field] === value);
   },
 
-  create<T>(collectionName: string, data: Record<string, unknown>): string {
+  create(collectionName: string, data: Record<string, unknown>): string {
     initStore();
     if (!store[collectionName]) store[collectionName] = [];
     const id = (data.id as string) || nextId();

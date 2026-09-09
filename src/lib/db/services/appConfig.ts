@@ -20,7 +20,7 @@ export const appConfigService = {
       await baseService.create({
         id: SETTINGS_DOC_ID,
         ...data,
-      } as any);
+      } as Omit<AppConfig & { id: string }, 'id'>);
     }
   },
 

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, LogIn, Award, BookOpen, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { TenantContext } from '@/lib/tenant/context';
 
@@ -55,7 +56,7 @@ export function TenantPortalHero({ tenant }: HeroProps) {
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Program Tahfidz Al-Qur'an</span>
+                <span>Program Tahfidz Al-Qur&apos;an</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -90,10 +91,13 @@ export function TenantPortalHero({ tenant }: HeroProps) {
               {/* Card Header Logo */}
               <div className="flex items-center gap-4 border-b border-slate-700/60 pb-6">
                 {logoUrl ? (
-                  <img
+                  <Image
                     src={logoUrl}
                     alt={tenant.name}
+                    width={64}
+                    height={64}
                     className="w-16 h-16 object-contain rounded-2xl border border-slate-600 bg-white p-1.5 shadow-md"
+                    unoptimized
                   />
                 ) : (
                   <div 
@@ -117,7 +121,7 @@ export function TenantPortalHero({ tenant }: HeroProps) {
                   </div>
                   <div>
                     <h4 className="font-semibold text-white">Akreditasi & Kualitas</h4>
-                    <p className="text-slate-400">Kurikulum terpadu nasional & pesantren berbasis sains & Al-Qur'an.</p>
+                    <p className="text-slate-400">Kurikulum terpadu nasional & pesantren berbasis sains & Al-Qur&apos;an.</p>
                   </div>
                 </div>
 

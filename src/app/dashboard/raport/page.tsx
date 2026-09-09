@@ -8,18 +8,12 @@ import {
   Printer,
   Eye,
   Award,
-  BookOpen,
-  CheckCircle2,
   Lock,
   Sparkles,
-  Search,
-  Download,
   ShieldCheck,
-  FileText,
 } from 'lucide-react';
 import {
   ResponsiveDataGrid,
-  MobileCardStack,
   MobileCard,
   MobileCardHeader,
   MobileCardTitle,

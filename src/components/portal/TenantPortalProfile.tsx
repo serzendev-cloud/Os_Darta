@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Building, ShieldCheck, Heart, Sparkles, BookOpen, Users, Compass } from 'lucide-react';
+import { ShieldCheck, Sparkles, BookOpen, Compass } from 'lucide-react';
 import type { TenantContext } from '@/lib/tenant/context';
 
 interface ProfileProps {
@@ -10,7 +10,6 @@ interface ProfileProps {
 
 export function TenantPortalProfile({ tenant }: ProfileProps) {
   const primaryColor = tenant.settings?.primaryColor || '#0F766E';
-  const tagline = tenant.settings?.tagline || 'Sistem Informasi Pesantren Terpadu';
   const description = tenant.settings?.loginDescription || 'Platform pendidikan terpadu yang memadukan keunggulan akademik formal dengan kedalaman ilmu syar\'i dan hafalan Al-Qur\'an.';
 
   const features = [

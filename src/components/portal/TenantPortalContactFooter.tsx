@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Building2, LogIn, Phone, Mail, MapPin, ShieldCheck, Heart } from 'lucide-react';
+import Image from 'next/image';
+import { Building2, LogIn, Phone, Mail, MapPin, ShieldCheck } from 'lucide-react';
 import type { TenantContext } from '@/lib/tenant/context';
 
 interface ContactFooterProps {
@@ -25,10 +26,13 @@ export function TenantPortalContactFooter({ tenant }: ContactFooterProps) {
           <div className="md:col-span-5 space-y-4">
             <div className="flex items-center gap-3">
               {tenant.settings?.customLogoUrl ? (
-                <img
+                <Image
                   src={tenant.settings.customLogoUrl}
                   alt={tenant.name}
+                  width={40}
+                  height={40}
                   className="w-10 h-10 object-contain rounded-xl border border-slate-800 bg-white p-1"
+                  unoptimized
                 />
               ) : (
                 <div 
@@ -45,7 +49,7 @@ export function TenantPortalContactFooter({ tenant }: ContactFooterProps) {
             </div>
 
             <p className="text-slate-400 leading-relaxed text-sm">
-              {tagline} — Dedikasi dalam membina generasi rabbani, menghafal Al-Qur'an, dan menguasai ilmu pengetahuan modern.
+              {tagline} — Dedikasi dalam membina generasi rabbani, menghafal Al-Qur&apos;an, dan menguasai ilmu pengetahuan modern.
             </p>
 
             <div className="pt-2">
@@ -98,7 +102,7 @@ export function TenantPortalContactFooter({ tenant }: ContactFooterProps) {
           <p>© {new Date().getFullYear()} {tenant.name}. All rights reserved.</p>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Powered by Ma'had Manager ERP Platform</span>
+            <span>Powered by Ma&apos;had Manager ERP Platform</span>
           </div>
         </div>
       </div>

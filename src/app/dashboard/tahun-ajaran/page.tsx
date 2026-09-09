@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { PageHeader, PageCard } from '@/components/shared/page-header';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { 
-  Calendar, Plus, CheckCircle2, Clock, Archive, Loader2, 
-  Search, BookOpen, Layers
+  Calendar, Plus, Loader2, 
+  BookOpen
 } from 'lucide-react';
 import type { AcademicYear, AcademicTerm } from '@/lib/db/services/academic-workspace';
 import {
@@ -14,7 +14,6 @@ import {
   MobileCardHeader,
   MobileCardTitle,
   MobileCardContent,
-  MobileCardFooter,
   ResponsiveFilterBar,
 } from '@/components/ui/responsive-data';
 

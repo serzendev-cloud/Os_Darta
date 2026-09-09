@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PageCard } from '@/components/shared/page-header';
-import { Lock, Unlock, Sliders, CheckCircle2, XCircle, Clock, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Lock, Unlock, CheckCircle2, XCircle, Clock, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { walletFreezeService, WalletFreezeState, FreezeDuration } from '@/lib/services/wallet-freeze-service';
 
 export default function WaliDompetPage() {

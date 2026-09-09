@@ -4,8 +4,8 @@ import { useState, useMemo } from 'react';
 import { PageHeader, PageCard } from '@/components/shared/page-header';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { 
-  CreditCard, Lock, QrCode, Search, CheckCircle2, ShieldOff, 
-  Plus, Radio, Key, RefreshCw, X
+  CreditCard, Lock, QrCode, CheckCircle2, ShieldOff, 
+  Plus
 } from 'lucide-react';
 import { mockSantri } from '@/data/mock';
 import {
@@ -16,7 +16,6 @@ import {
   MobileCardContent,
   MobileCardFooter,
   ResponsiveFilterBar,
-  MobileRowActions,
 } from '@/components/ui/responsive-data';
 
 interface RfidRow {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, BookOpen, Edit2, Trash2, Plus, GraduationCap } from 'lucide-react';
+import { Search, Edit2, Trash2, Plus, GraduationCap } from 'lucide-react';
 import type { MasterJenjang, Instansi } from '@/types';
 import { INSTANSI_ORDER, INSTANSI_LABEL } from '@/types';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,6 @@ import {
   MobileCardTitle,
   MobileCardContent,
   MobileCardFooter,
-  ResponsiveFilterBar,
   MobileRowActions,
 } from '@/components/ui/responsive-data';
 

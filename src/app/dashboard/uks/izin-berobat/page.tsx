@@ -32,7 +32,6 @@ import {
   FileText,
   Shield,
   MapPin,
-  UserCheck,
   Check,
   X,
   ArrowRight,
@@ -44,7 +43,6 @@ import {
   Share2,
   Users,
   Power,
-  Sparkles,
 } from 'lucide-react';
 
 // ── Severity color mapping ──────────────────────────────────────────────────

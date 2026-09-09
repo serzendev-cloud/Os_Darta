@@ -1,4 +1,4 @@
-import { MoreVertical, Edit2, Trash2, Users } from 'lucide-react';
+import { Edit2, Trash2, Users } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Subject } from '@/data/mock-mapel';
 import { getTingkatLabel } from '@/lib/progression-label';

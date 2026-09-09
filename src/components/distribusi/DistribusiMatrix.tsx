@@ -12,7 +12,6 @@ import {
   MobileCardHeader,
   MobileCardTitle,
   MobileCardContent,
-  MobileCardFooter,
 } from '@/components/ui/responsive-data';
 
 const inputCls = cn(

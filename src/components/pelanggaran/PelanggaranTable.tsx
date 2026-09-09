@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import {
   SEVERITY_COLORS,
   STATUS_COLORS,

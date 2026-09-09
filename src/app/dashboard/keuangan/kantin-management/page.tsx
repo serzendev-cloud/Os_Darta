@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PageCard } from '@/components/shared/page-header';
-import { Store, Plus, Tag, Edit3, Trash2, CheckCircle2, Clock, MapPin, Sliders, RefreshCw, Shield, Eye, Lock, DollarSign, TrendingUp } from 'lucide-react';
+import { Store, Plus, Trash2, CheckCircle2, Clock, MapPin, Shield, Lock, TrendingUp } from 'lucide-react';
 import { 
   CanteenUnit, 
   CanteenCatalogItem, 
@@ -29,7 +29,7 @@ export default function KantinManagementPage() {
   // New Item Modal state
   const [showItemModal, setShowItemModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState<'makanan' | 'minuman' | 'snack' | 'alat_tulis'>('makanan');
+  const [newItemCategory] = useState<'makanan' | 'minuman' | 'snack' | 'alat_tulis'>('makanan');
   const [newItemPrice, setNewItemPrice] = useState('10000');
   const [newItemCostPrice, setNewItemCostPrice] = useState('7000');
   const [newItemStock, setNewItemStock] = useState('50');
@@ -293,7 +293,7 @@ export default function KantinManagementPage() {
                   {canteenItemsFiltered.length === 0 ? (
                     <tr>
                       <td colSpan={isManager ? 6 : 5} className="py-8 text-center text-muted-foreground text-xs">
-                        Belum ada barang di katalog kantin ini. Klik 'Tambah Barang Katalog' di atas.
+                        Belum ada barang di katalog kantin ini. Klik &apos;Tambah Barang Katalog&apos; di atas.
                       </td>
                     </tr>
                   ) : (

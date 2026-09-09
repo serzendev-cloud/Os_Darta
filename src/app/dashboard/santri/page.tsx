@@ -104,7 +104,7 @@ export default function SantriPage() {
         angkatanMasuk: editingSantri.angkatanMasuk,
         catatan: editCatatan,
         masihMemilikiAkun: editStatus === 'Lulus',
-      } as any);
+      } as Omit<Alumni, 'id'>);
       // Remove from santri collection
       await santriService.delete(editingSantri.id);
     }

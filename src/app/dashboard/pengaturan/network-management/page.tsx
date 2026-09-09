@@ -49,7 +49,7 @@ export default function NetworkManagementPage() {
               </div>
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
-                  Modul Masa Depan Ma'had Manager
+                  Modul Masa Depan Ma&apos;had Manager
                 </span>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-white">
                   Network Management (Dalam Pengembangan)
@@ -59,7 +59,7 @@ export default function NetworkManagementPage() {
 
             <p className="text-sm text-stone-300 max-w-3xl leading-relaxed">
               Pengelolaan jaringan pesantren akan memungkinkan administrator mengatur router, perangkat yang terhubung, 
-              akses WiFi, alokasi bandwidth, dan kebijakan internet dari satu antarmuka terintegrasi di Ma'had Manager.
+              akses WiFi, alokasi bandwidth, dan kebijakan internet dari satu antarmuka terintegrasi di Ma&apos;had Manager.
             </p>
 
             <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2">

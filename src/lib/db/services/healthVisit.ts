@@ -12,7 +12,7 @@ export const healthVisitService = {
       ...data,
       createdAt: now,
       updatedAt: now,
-    } as any);
+    } as Omit<HealthVisit, 'id'>);
   },
 
   async complete(id: string, data?: Partial<HealthVisit>): Promise<void> {

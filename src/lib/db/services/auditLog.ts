@@ -11,7 +11,7 @@ export const auditLogService = {
     return await baseService.create({
       ...entry,
       timestamp,
-    } as any);
+    } as Omit<AuditLog, 'id'>);
   },
 
   async list(entityType?: string, entityId?: string, maxResults = 50): Promise<AuditLog[]> {

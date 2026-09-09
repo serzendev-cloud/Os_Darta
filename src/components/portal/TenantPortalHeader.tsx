@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Building2, LogIn, Menu, X, ShieldCheck, Phone, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
+import { Building2, LogIn, Menu, X, ChevronRight } from 'lucide-react';
 import type { TenantContext } from '@/lib/tenant/context';
 
 interface HeaderProps {
@@ -32,10 +33,13 @@ export function TenantPortalHeader({ tenant }: HeaderProps) {
           {/* Tenant Logo & Name */}
           <Link href="/" className="flex items-center gap-3 group min-h-[44px]">
             {logoUrl ? (
-              <img
+              <Image
                 src={logoUrl}
                 alt={tenant.name}
+                width={40}
+                height={40}
                 className="w-10 h-10 object-contain rounded-xl border border-slate-200 p-0.5 shadow-sm group-hover:scale-105 transition-transform"
+                unoptimized
               />
             ) : (
               <div 

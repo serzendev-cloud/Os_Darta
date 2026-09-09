@@ -17,7 +17,7 @@ export const tolerancePolicyService = {
     if (existing) {
       await baseService.update('global', { isActive: data.isActive, limits: data.limits });
     } else {
-      await baseService.create({ id: 'global', type: 'global', isActive: data.isActive, limits: data.limits } as any);
+      await baseService.create({ id: 'global', type: 'global', isActive: data.isActive, limits: data.limits } as Omit<GlobalTolerancePolicy, 'id'>);
     }
   },
 
@@ -32,7 +32,7 @@ export const tolerancePolicyService = {
       jenjang: data.jenjang,
       isActive: data.isActive,
       limits: data.limits,
-    } as any);
+    } as Omit<JenjangToleranceOverride, 'id'>);
   },
 
   async updateOverride(id: string, data: Partial<JenjangToleranceOverride>): Promise<void> {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, GraduationCap, Layers, Award, CheckCircle } from 'lucide-react';
+import { BookOpen, GraduationCap, Layers, CheckCircle } from 'lucide-react';
 import type { TenantContext } from '@/lib/tenant/context';
 
 interface ProgramsProps {

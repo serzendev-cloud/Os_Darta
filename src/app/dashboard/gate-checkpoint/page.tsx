@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { PageCard } from '@/components/shared/page-header';
 import { 
   LogOut, LogIn, Clock, AlertTriangle, CheckCircle2, RefreshCw, 
-  UserCheck, ShieldCheck, Users, MapPin, Radio, Key
+  ShieldCheck, Users, Radio, Key
 } from 'lucide-react';
 
 export default function GateCheckpointPage() {

@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import * as schema from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getTenantContext } from '@/lib/tenant/context';
 import { requirePermission } from '@/lib/authz/authorization-service';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
@@ -161,7 +161,12 @@ export async function POST(request: NextRequest) {
           await tx
             .update(schema.tenantSettings)
             .set(payload)
-            .where(eq(schema.tenantSettings.id, existingDoc.id));
+            .where(
+              and(
+                eq(schema.tenantSettings.tenantId, tenant.id),
+                eq(schema.tenantSettings.id, existingDoc.id)
+              )
+            );
         } else {
           await tx.insert(schema.tenantSettings).values({
             id: `ts_${tenant.id}`,

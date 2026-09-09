@@ -6,7 +6,6 @@ import { StatsCard } from '@/components/shared/stats-card';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { EmptyState } from '@/components/shared/empty-state';
-import { StatusBadge } from '@/components/shared/status-badge';
 import { useCollection } from '@/hooks';
 import { useAuthStore } from '@/store/auth-store';
 import { healthVisitService } from '@/lib/db/services';
@@ -30,7 +29,6 @@ import {
   Clock,
   AlertCircle,
   Plus,
-  Search,
   Eye,
   ChevronRight,
 } from 'lucide-react';

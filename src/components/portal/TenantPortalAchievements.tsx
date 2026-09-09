@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Trophy, Star, ShieldCheck, HeartHandshake, CheckCircle2 } from 'lucide-react';
+import { Trophy, Star } from 'lucide-react';
 import type { TenantContext } from '@/lib/tenant/context';
 
 interface AchievementsProps {
@@ -9,7 +9,6 @@ interface AchievementsProps {
 }
 
 export function TenantPortalAchievements({ tenant }: AchievementsProps) {
-  const primaryColor = tenant.settings?.primaryColor || '#0F766E';
 
   const achievements = [
     {
