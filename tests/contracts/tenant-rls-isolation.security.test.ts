@@ -251,7 +251,7 @@ describe('WP-SAAS-SEC-002: Tenant Database RLS & Isolation Hardening Security Te
     // All must use 'SET LOCAL' so connection pool resets state automatically upon commit
     expect(queries.every((q) => q.startsWith('SET LOCAL'))).toBe(true);
     expect(queries[0]).toContain('tenant-session-1');
-    expect(queries[2]).toContain('tenant-session-2');
+    expect(queries[3]).toContain('tenant-session-2');
   });
 
   // ── TEST 11: Super Admin legitimate platform bypass ──

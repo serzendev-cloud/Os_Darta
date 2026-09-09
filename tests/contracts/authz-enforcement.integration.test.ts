@@ -16,8 +16,9 @@ vi.mock('@/lib/tenant/context', () => ({
   getTenantContext: mockGetTenantContext,
 }));
 
-vi.mock('@/lib/db', () => ({
-  db: {
+vi.mock('@/lib/db', () => {
+  const mockDb = {
+    execute: vi.fn().mockResolvedValue(undefined),
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([{ id: 'santri-1', name: 'Ahmad' }]),
@@ -34,8 +35,10 @@ vi.mock('@/lib/db', () => ({
     delete: vi.fn().mockReturnValue({
       where: vi.fn().mockResolvedValue([{ success: true }]),
     }),
-  },
-}));
+    transaction: vi.fn().mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mockDb)),
+  };
+  return { db: mockDb };
+});
 
 import { GET, POST } from '../../src/app/api/db/query/route';
 
