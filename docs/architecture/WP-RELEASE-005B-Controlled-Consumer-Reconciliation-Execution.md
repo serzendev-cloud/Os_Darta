@@ -5,7 +5,7 @@
 > **PROJECT:** Ma'had Manager / Madev SaaS Multi-Tenant Platform  
 > **BRANCH:** `preview`  
 > **BASE COMMIT:** `48e22af763beb0d65acbcad27ecb75f2fa3dd2e9`  
-> **RESULTING COMMIT:** `8093db518d6a88b56f8f55eb69bd3ff91d1e4eb1` (`chore(release): reconcile firebase consumers to postgres`)  
+> **RESULTING COMMIT:** `3ce95031b28d57579bd6dfcfd3ae52d6a7aa15f8` (`chore(release): reconcile firebase consumers to postgres`)  
 > **DATE:** 2026-09-02  
 > **STATUS:** EXECUTED & VALIDATED  
 > **FINAL VERDICT:** A — CONSUMER RECONCILIATION RELEASE CERTIFIED (HELD LOCALLY / PUSH = 0)
@@ -74,13 +74,13 @@ BASE COMMIT:
 48e22af763beb0d65acbcad27ecb75f2fa3dd2e9
 
 CURRENT HEAD:
-8093db518d6a88b56f8f55eb69bd3ff91d1e4eb1
+3ce95031b28d57579bd6dfcfd3ae52d6a7aa15f8
 
 REMOTE HEAD:
 48e22af763beb0d65acbcad27ecb75f2fa3dd2e9
 
 HEAD == ORIGIN/PREVIEW:
-NO (Local HEAD 8093db5 is 1 commit ahead of origin/preview; push held)
+NO (Local HEAD 3ce9503 is 1 commit ahead of origin/preview; push held)
 
 FIREBASE CONSUMERS IN GIT:
 0 (In commit 8093db5)

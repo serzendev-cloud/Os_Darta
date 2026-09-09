@@ -57,7 +57,7 @@ export function getNextStatuses(current: LifecycleStatus): LifecycleStatus[] {
 
 // ─── Normalizers ──────────────────────────────────────────────────
 
-// MIGRATION MAP (future: when Firestore data is migrated)
+// MIGRATION MAP (legacy status mapping)
 // 'aktif' → 'active'
 // 'nonaktif' → 'inactive'
 // 'cuti' → 'leave'
