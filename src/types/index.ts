@@ -382,3 +382,47 @@ export interface BreadcrumbItem {
   label: string;
   href?: string;
 }
+
+// ── Kesiswaan Masters (WP-310 / WP-311) ──────────────────────────────────
+
+export interface MasterInstitution {
+  id: string;
+  tenantId: string;
+  code: string;       // e.g. "MADIN", "MADQUR", "FORMAL"
+  name: string;       // e.g. "Madrasah Diniyah"
+  label?: string | null;
+  description?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ViolationSeverityLevel {
+  id: string;
+  tenantId: string;
+  code: string;       // e.g. "RINGAN", "SEDANG", "BERAT", "SANGAT_BERAT"
+  name: string;       // Display name
+  sortOrder: number;  // Higher = more severe
+  badgeColor?: string | null;
+  isActive: boolean;
+  effectiveFrom: string;
+  effectiveUntil?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CategoryStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+
+export interface ViolationCategory {
+  id: string;
+  tenantId: string;
+  code: string;       // e.g. "IBADAH", "KEDISIPLINAN", "AKHLAK"
+  name: string;       // Display name
+  description?: string | null;
+  sortOrder: number;
+  status: CategoryStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
