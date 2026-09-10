@@ -32,6 +32,18 @@ export const tenantSettings = pgTable('tenant_settings', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// ── Platform SaaS Global Settings Table ──────────────────────────────────────
+export const platformSettings = pgTable('platform_settings', {
+  id: text('id').primaryKey(),
+  companyName: text('company_name').default('SERZEN DEV').notNull(),
+  companyEmail: text('company_email'),
+  companyPhone: text('company_phone'),
+  companyWhatsApp: text('company_whatsapp'),
+  companyWebsite: text('company_website'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // ── Users & Identity Sub-Schema (Re-exported from ./schema/identity) ──────────
 export * from './schema/identity';
 

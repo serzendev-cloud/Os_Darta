@@ -46,6 +46,7 @@ function initStore() {
   store['violation_categories'] = [];
   store['auditLogs'] = [];
   store['tenantSettings'] = [];
+  store['platformSettings'] = [];
   store['healthVisits'] = [];
   store['healthPermissions'] = [];
 }

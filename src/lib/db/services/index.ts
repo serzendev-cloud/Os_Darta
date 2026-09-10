@@ -25,6 +25,7 @@ export { healthPermissionService } from './healthPermission';
 export { auditLogService } from './auditLog';
 export { appConfigService } from './appConfig';
 export { alumniService } from './alumni';
+export { platformSettingsService } from './platformSettings';
 
 
 

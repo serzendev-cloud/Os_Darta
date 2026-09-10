@@ -8,3 +8,5 @@ export * from './point-recovery';
 export * from './escalation';
 export * from './governance-policies';
 export * from './feature-groups';
+export * from './product';
+
