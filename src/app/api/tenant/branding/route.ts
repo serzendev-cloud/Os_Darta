@@ -11,8 +11,6 @@ import { getTenantContext } from '@/lib/tenant/context';
 import { requirePermission } from '@/lib/authz/authorization-service';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
 
-export const dynamic = 'force-static';
-
 /**
  * GET /api/tenant/branding
  * Retrieves server-verified tenant branding configuration from PostgreSQL tenant_settings table.

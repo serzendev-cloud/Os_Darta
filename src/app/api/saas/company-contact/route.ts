@@ -13,8 +13,6 @@ import { platformSettingsService } from '@/lib/db/services/platformSettings';
 import { auditLogService } from '@/lib/db/services/auditLog';
 import { isDemoMode } from '@/lib/mock-store';
 
-export const dynamic = 'force-static';
-
 /**
  * Validates whether an origin/referer matches the request host or application domain (CSRF Defense).
  */

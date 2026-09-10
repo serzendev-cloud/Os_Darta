@@ -1,4 +1,3 @@
-/* eslint-disable local-rules/enforce-tenant-id-param */
 // ========================================
 // Platform SaaS Global Company Settings Domain Service
 // Traceability: WP-SAAS-COMPANY-CONTACT-EXECUTION-001

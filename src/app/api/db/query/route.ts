@@ -3,8 +3,6 @@
 // Traceability: WP-101 Phase 1F Authorization Integration
 // ========================================
 
-export const dynamic = 'force-static';
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import * as schema from '@/lib/db/schema';

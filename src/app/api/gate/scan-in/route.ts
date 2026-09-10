@@ -2,8 +2,6 @@
 // Gate Checkpoint RFID Scan-In API Endpoint (Gate Arrival/Return)
 // ========================================
 
-export const dynamic = 'force-static';
-
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rfidCards, gatePasses, santri } from '@/lib/db/schema';
