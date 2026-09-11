@@ -10,6 +10,7 @@ import { db } from './index';
 export interface TenantTransactionOptions {
   isSuperAdmin?: boolean;
   tenantSlug?: string;
+  dbInstance?: typeof db;
 }
 
 /**
@@ -33,8 +34,9 @@ export async function withTenantTransaction<T>(
   const safeTenantId = (tenantId || '').trim();
   const isSuperAdmin = options?.isSuperAdmin === true;
   const tenantSlug = (options?.tenantSlug || '').trim();
+  const dbClient = options?.dbInstance || db;
 
-  return await db.transaction(async (tx) => {
+  return await dbClient.transaction(async (tx) => {
     // 1. Set local transaction variables (Fail-Closed)
     if (safeTenantId) {
       await tx.execute(sql.raw(`SET LOCAL app.current_tenant_id = '${safeTenantId.replace(/'/g, "''")}';`));

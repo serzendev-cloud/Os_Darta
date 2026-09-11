@@ -15,7 +15,8 @@ export type AuditAction =
   | 'login'
   | 'logout'
   | 'export'
-  | 'import';
+  | 'import'
+  | 'provision';
 
 export type AuditEntityType =
   | 'santri'
@@ -39,6 +40,7 @@ export type AuditEntityType =
   | 'tolerance_policy'
   | 'teacher_assignment'
   | 'import_batch'
+  | 'tenant'
   | 'system';
 
 export interface AuditLog {

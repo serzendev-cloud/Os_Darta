@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageCard } from '@/components/shared/page-header';
 import { 
   Building2, Plus, Search, CheckCircle2, Clock, 
   Key, ShieldCheck, CreditCard, Sparkles, ExternalLink, 
-  Users, Check, Sliders, Smartphone, HardDrive, ShoppingCart, 
-  Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power
+  Check, Sliders, Smartphone, HardDrive, ShoppingCart, 
+  Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power,
+  Copy, Loader2, Eye, EyeOff
 } from 'lucide-react';
 
 interface TenantModules {
@@ -27,11 +28,11 @@ interface ActiveTenant {
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
-  plan: string;
+  plan?: string;
   status: 'aktif' | 'trial' | 'suspended';
   santriCount: number;
   createdAt: string;
-  modules: TenantModules;
+  modules?: TenantModules;
 }
 
 interface TrialRequest {
@@ -58,24 +59,37 @@ const defaultModules: TenantModules = {
   questKarakter: true,
 };
 
-const mockActiveTenants: ActiveTenant[] = [];
 const mockTrialRequests: TrialRequest[] = [];
 
 export default function SaasTenantsPage() {
   const [activeTab, setActiveTab] = useState<'tenants' | 'requests'>('tenants');
-  const [tenants, setTenants] = useState<ActiveTenant[]>(mockActiveTenants);
+  const [tenants, setTenants] = useState<ActiveTenant[]>([]);
   const [requests, setRequests] = useState<TrialRequest[]>(mockTrialRequests);
   const [search, setSearch] = useState('');
+  const [isLoadingTenants, setIsLoadingTenants] = useState(false);
   
   // New Tenant Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isSubmittingTenant, setIsSubmittingTenant] = useState(false);
   const [newTenantName, setNewTenantName] = useState('');
   const [newSubdomain, setNewSubdomain] = useState('');
   const [newLocation, setNewLocation] = useState('');
   const [newOwnerName, setNewOwnerName] = useState('');
   const [newOwnerEmail, setNewOwnerEmail] = useState('');
   const [newOwnerPhone, setNewOwnerPhone] = useState('');
+  const [newInitialPassword, setNewInitialPassword] = useState('');
+  const [showInitialPassword, setShowInitialPassword] = useState(false);
   const [newPlan, setNewPlan] = useState('Pro SaaS');
+
+  // Credential Handoff Modal State (Single-view after creation)
+  const [createdCredential, setCreatedCredential] = useState<{
+    tenantName: string;
+    subdomain: string;
+    loginUrl: string;
+    ownerEmail: string;
+    temporaryPassword: string;
+  } | null>(null);
+  const [copiedCredential, setCopiedCredential] = useState(false);
 
   // Feature Toggle Modal State
   const [editingTenant, setEditingTenant] = useState<ActiveTenant | null>(null);
@@ -84,6 +98,28 @@ export default function SaasTenantsPage() {
 
   const [toast, setToast] = useState('');
 
+  const fetchTenants = async () => {
+    setIsLoadingTenants(true);
+    try {
+      const res = await fetch('/api/saas/tenants');
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data?.tenants)) {
+        setTenants(json.data.tenants);
+      }
+    } catch (e) {
+      console.warn('Gagal memuat daftar tenant dari server:', e);
+    } finally {
+      setIsLoadingTenants(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchTenants();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   const showNotification = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 4000);
@@ -91,7 +127,7 @@ export default function SaasTenantsPage() {
 
   const handleOpenModuleModal = (tenant: ActiveTenant) => {
     setEditingTenant(tenant);
-    setTempModules({ ...tenant.modules });
+    setTempModules({ ...(tenant.modules || defaultModules) });
     setTempStatus(tenant.status);
   };
 
@@ -133,7 +169,7 @@ export default function SaasTenantsPage() {
     if (!req) return;
 
     const newTenant: ActiveTenant = {
-      id: `t_${Date.now()}`,
+      id: `t_${req.id}`,
       name: req.name,
       subdomain: req.subdomainReq,
       location: req.location,
@@ -143,7 +179,7 @@ export default function SaasTenantsPage() {
       plan: req.requestedPlan,
       status: 'aktif',
       santriCount: 0,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: req.requestDate || '2026-09-11',
       modules: { ...defaultModules },
     };
 
@@ -157,34 +193,65 @@ export default function SaasTenantsPage() {
     showNotification('Pengajuan trial telah ditolak.');
   };
 
-  const handleCreateTenantSubmit = (e: React.FormEvent) => {
+  const handleGenerateRandomPassword = () => {
+    const chars = Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 8);
+    setNewInitialPassword(`Md#${chars}9!`);
+  };
+
+  const handleCreateTenantSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTenantName || !newSubdomain || !newOwnerEmail) return;
 
-    const created: ActiveTenant = {
-      id: `t_${Date.now()}`,
-      name: newTenantName,
-      subdomain: newSubdomain.toLowerCase().includes('.madev.id') ? newSubdomain : `${newSubdomain}.madev.id`,
-      location: newLocation || 'Indonesia',
-      ownerName: newOwnerName || 'Admin Pesantren',
-      ownerEmail: newOwnerEmail,
-      ownerPhone: newOwnerPhone || '-',
-      plan: newPlan,
-      status: 'aktif',
-      santriCount: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-      modules: { ...defaultModules },
-    };
+    setIsSubmittingTenant(true);
+    try {
+      const res = await fetch('/api/saas/tenants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newTenantName,
+          slug: newSubdomain.replace('.madev.id', '').toLowerCase().trim(),
+          location: newLocation || undefined,
+          plan: newPlan,
+          ownerName: newOwnerName || 'Admin Pesantren',
+          ownerEmail: newOwnerEmail,
+          ownerPhone: newOwnerPhone || undefined,
+          initialPassword: newInitialPassword || undefined,
+        }),
+      });
 
-    setTenants([created, ...tenants]);
-    setShowCreateModal(false);
-    setNewTenantName('');
-    setNewSubdomain('');
-    setNewLocation('');
-    setNewOwnerEmail('');
-    setNewOwnerName('');
-    setNewOwnerPhone('');
-    showNotification(`Tenant Baru "${created.name}" Berhasil Diprovisi!`);
+      const json = await res.json();
+
+      if (res.ok && json.success && json.data) {
+        setShowCreateModal(false);
+        setCreatedCredential({
+          tenantName: json.data.tenant.name,
+          subdomain: json.data.tenant.domain,
+          loginUrl: json.data.admin.loginUrl,
+          ownerEmail: json.data.admin.email,
+          temporaryPassword: json.data.admin.temporaryPassword,
+        });
+
+        // Reset form inputs
+        setNewTenantName('');
+        setNewSubdomain('');
+        setNewLocation('');
+        setNewOwnerEmail('');
+        setNewOwnerName('');
+        setNewOwnerPhone('');
+        setNewInitialPassword('');
+
+        showNotification(`Tenant Baru "${json.data.tenant.name}" Berhasil Diprovisi!`);
+        await fetchTenants();
+      } else {
+        showNotification(json.message || 'Gagal memprovisi tenant.');
+      }
+    } catch {
+      showNotification('Terjadi kesalahan jaringan saat memprovisi tenant.');
+    } finally {
+      setIsSubmittingTenant(false);
+    }
   };
 
   const filteredTenants = tenants.filter(t => 
@@ -243,7 +310,7 @@ export default function SaasTenantsPage() {
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>Tenant Aktif ({tenants.length})</span>
+          <span>Tenant Aktif ({isLoadingTenants ? '...' : tenants.length})</span>
         </button>
 
         <button
@@ -304,20 +371,30 @@ export default function SaasTenantsPage() {
                       <div className="text-stone-400 text-[11px] font-mono">{t.subdomain} • {t.location}</div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                        {t.plan}
-                      </span>
+                      {t.plan ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          {t.plan}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400 border border-stone-200 dark:border-stone-700">
+                          Belum Dikonfigurasi
+                        </span>
+                      )}
                     </td>
                     {/* Modul Badges */}
                     <td className="py-3.5 px-4">
-                      <div className="flex flex-wrap gap-1 max-w-xs">
-                        {t.modules.paymentGateway && <span className="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-2 py-0.5 rounded">Payment</span>}
-                        {t.modules.waGateway && <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded">WA</span>}
-                        {t.modules.rfidGate && <span className="bg-purple-100 text-purple-800 text-[10px] font-semibold px-2 py-0.5 rounded">RFID</span>}
-                        {t.modules.posKantin && <span className="bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-0.5 rounded">POS Kantin</span>}
-                        {t.modules.gdriveStorage && <span className="bg-teal-100 text-teal-800 text-[10px] font-semibold px-2 py-0.5 rounded">Drive</span>}
-                        {t.modules.uksKesehatan && <span className="bg-rose-100 text-rose-800 text-[10px] font-semibold px-2 py-0.5 rounded">UKS</span>}
-                      </div>
+                      {t.modules ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {t.modules.paymentGateway && <span className="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-2 py-0.5 rounded">Payment</span>}
+                          {t.modules.waGateway && <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded">WA</span>}
+                          {t.modules.rfidGate && <span className="bg-purple-100 text-purple-800 text-[10px] font-semibold px-2 py-0.5 rounded">RFID</span>}
+                          {t.modules.posKantin && <span className="bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-0.5 rounded">POS Kantin</span>}
+                          {t.modules.gdriveStorage && <span className="bg-teal-100 text-teal-800 text-[10px] font-semibold px-2 py-0.5 rounded">Drive</span>}
+                          {t.modules.uksKesehatan && <span className="bg-rose-100 text-rose-800 text-[10px] font-semibold px-2 py-0.5 rounded">UKS</span>}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-stone-400 italic">Dikelola terpisah (WP-SAAS-ADDON-001)</span>
+                      )}
                     </td>
                     {/* Quick Status Toggle Badge */}
                     <td className="py-3.5 px-4">
@@ -757,22 +834,158 @@ export default function SaasTenantsPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
+                    Kata Sandi Awal Admin (Opsional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateRandomPassword}
+                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Generate Password Acak</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showInitialPassword ? "text" : "password"}
+                    value={newInitialPassword}
+                    onChange={(e) => setNewInitialPassword(e.target.value)}
+                    placeholder="Kosongkan untuk auto-generate sistem"
+                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-mono text-stone-900 dark:text-stone-100"
+                  />
+                  {newInitialPassword && (
+                    <button
+                      type="button"
+                      onClick={() => setShowInitialPassword(!showInitialPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors"
+                      title={showInitialPassword ? "Sembunyikan password" : "Lihat password"}
+                    >
+                      {showInitialPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-stone-400">
+                  Password sementara akan disajikan dalam dialog sekali pakai setelah tenant berhasil diprovisi.
+                </p>
+              </div>
+
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-stone-100 dark:border-stone-800">
                 <button
                   type="button"
+                  disabled={isSubmittingTenant}
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-100 text-xs font-semibold"
+                  className="px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-100 text-xs font-semibold disabled:opacity-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+                  disabled={isSubmittingTenant}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
                 >
-                  Provisi & Aktifkan Tenant
+                  {isSubmittingTenant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span>{isSubmittingTenant ? 'Memprovisi...' : 'Provisi & Aktifkan Tenant'}</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Credential Handoff Dialog Modal */}
+      {createdCredential && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-emerald-500/30 space-y-6">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-white">Kredensial Login Administrator</h3>
+                  <p className="text-xs text-stone-500">Provisi Akun Baru Berhasil Dijalankan</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setCreatedCredential(null);
+                  setCopiedCredential(false);
+                }}
+                className="text-stone-400 hover:text-stone-600 text-lg font-bold p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">PERHATIAN:</span> Kata sandi sementara ini hanya ditampilkan <strong>satu kali</strong> demi keamanan. Salin kredensial sekarang untuk diberikan kepada pengurus pesantren.
+              </div>
+            </div>
+
+            <div className="space-y-3 bg-stone-50 dark:bg-stone-800/50 p-4 rounded-2xl border border-stone-200 dark:border-stone-700 font-mono text-xs">
+              <div>
+                <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Lembaga Pesantren</div>
+                <div className="text-stone-900 dark:text-white font-bold text-sm font-sans">{createdCredential.tenantName}</div>
+              </div>
+
+              <div>
+                <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">URL Portal Login</div>
+                <div className="text-emerald-600 dark:text-emerald-400 break-all select-all font-semibold">
+                  {createdCredential.loginUrl}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-200/60 dark:border-stone-700/60">
+                <div>
+                  <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Email Login</div>
+                  <div className="text-stone-800 dark:text-stone-200 select-all font-medium">{createdCredential.ownerEmail}</div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Kata Sandi Sementara</div>
+                  <div className="text-rose-600 dark:text-rose-400 font-bold select-all bg-rose-50 dark:bg-rose-950/50 px-2 py-1 rounded-lg inline-block border border-rose-200 dark:border-rose-900">
+                    {createdCredential.temporaryPassword}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const message = `*KREDENSIAL PORTAL PESANTREN — MADEV ERP*\n\n` +
+                    `Lembaga: ${createdCredential.tenantName}\n` +
+                    `URL Login: ${createdCredential.loginUrl}\n` +
+                    `Email: ${createdCredential.ownerEmail}\n` +
+                    `Kata Sandi Sementara: ${createdCredential.temporaryPassword}\n\n` +
+                    `_Catatan: Harap segera mengganti kata sandi setelah berhasil login pertama kali._`;
+                  navigator.clipboard.writeText(message);
+                  setCopiedCredential(true);
+                  setTimeout(() => setCopiedCredential(false), 3000);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {copiedCredential ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4 text-white" />}
+                <span>{copiedCredential ? 'Berhasil Disalin!' : 'Salin Format WhatsApp'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedCredential(null);
+                  setCopiedCredential(false);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 text-xs font-semibold"
+              >
+                Tutup Dialog
+              </button>
+            </div>
           </div>
         </div>
       )}
