@@ -331,15 +331,22 @@ export async function authorizePlatformRole(
 
   const rows = await dbInstance
     .select({
+      roleId: platformRoles.id,
       roleName: platformRoles.name,
     })
     .from(userPlatformRoles)
     .innerJoin(platformRoles, eq(userPlatformRoles.platformRoleId, platformRoles.id))
     .where(eq(userPlatformRoles.userId, userId));
 
-  const hasRole = rows.some(
-    (row) => row.roleName.toUpperCase() === requiredPlatformRole.toUpperCase()
-  );
+  const hasRole = rows.some((row) => {
+    if (row.roleId && row.roleId === requiredPlatformRole) return true;
+    if (row.roleName) {
+      const normalized = row.roleName.toUpperCase().replace(/\s+/g, '_');
+      if (normalized === requiredPlatformRole.toUpperCase()) return true;
+      if (row.roleName.toUpperCase() === requiredPlatformRole.toUpperCase()) return true;
+    }
+    return false;
+  });
 
   if (!hasRole) {
     return {

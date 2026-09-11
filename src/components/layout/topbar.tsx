@@ -27,6 +27,12 @@ export function Topbar() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+    router.refresh();
+  };
+
   // Load notifications with realtime subscription
   const { data: rawNotifications } = useCollection<Notification>('notifications', [], { realtime: true });
 
@@ -143,7 +149,7 @@ export function Topbar() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer"><LogOut className="w-4 h-4 mr-2" />Keluar</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer"><LogOut className="w-4 h-4 mr-2" />Keluar</DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>

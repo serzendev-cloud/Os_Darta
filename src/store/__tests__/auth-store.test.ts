@@ -1,11 +1,37 @@
 // ========================================
 // Auth Store — Unit Tests
-// Traceability: CIP-WP-009 | Contract Alignment
+// Canonical Authority: Supabase Auth (@supabase/ssr)
+// Traceability: WP-AUTH-SSR-INTEGRATION-002
 // ========================================
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useAuthStore } from '@/store/auth-store';
 import { mockUsers } from '@/data/mock';
+
+// Mock Supabase client
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn(() => ({
+    auth: {
+      signInWithPassword: vi.fn(async ({ email, password }: { email: string; password: string }) => {
+        if (password === 'wrong-password') {
+          return { data: { user: null }, error: { message: 'Invalid login credentials' } };
+        }
+        return {
+          data: {
+            user: {
+              id: 'fed67d26-7d19-4e3c-bf7d-2e45143e864b',
+              email,
+              app_metadata: { role: 'SUPER_ADMIN' },
+              user_metadata: { name: 'Super Admin Test' },
+            },
+          },
+          error: null,
+        };
+      }),
+      signOut: vi.fn(async () => ({ error: null })),
+    },
+  })),
+}));
 
 describe('useAuthStore', () => {
   beforeEach(() => {
@@ -33,29 +59,75 @@ describe('useAuthStore', () => {
   // --------------- login ---------------
 
   describe('login', () => {
-    it('sets user when credentials match a mock user', async () => {
-      const adminUser = mockUsers.find((u) => u.email === 'admin@mahad.sch.id');
+    it('sets user when credentials succeed via Supabase Auth', async () => {
       const { login } = useAuthStore.getState();
-      const result = await login('admin@mahad.sch.id', 'any-password');
+      const result = await login('superadmin@madev.id', 'valid-password');
 
       expect(result).toBe(true);
       const state = useAuthStore.getState();
-      expect(state.user).toEqual(adminUser);
+      expect(state.user).toEqual({
+        id: 'fed67d26-7d19-4e3c-bf7d-2e45143e864b',
+        name: 'Super Admin Test',
+        email: 'superadmin@madev.id',
+        role: 'super_admin',
+        avatar: undefined,
+      });
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
     });
 
-    it('creates fallback session when email is custom/unlisted', async () => {
+    it('rejects login when credentials fail via Supabase Auth', async () => {
       const { login } = useAuthStore.getState();
-      const result = await login('custom_teacher@mahad.sch.id', 'any-password');
+      const result = await login('superadmin@madev.id', 'wrong-password');
 
-      expect(result).toBe(true);
+      expect(result).toBe(false);
       const state = useAuthStore.getState();
-      expect(state.user).not.toBeNull();
-      expect(state.user?.email).toBe('custom_teacher@mahad.sch.id');
-      expect(state.isAuthenticated).toBe(true);
+      expect(state.user).toBeNull();
+      expect(state.isAuthenticated).toBe(false);
       expect(state.isLoading).toBe(false);
+      expect(state.error).toContain('Email atau password yang Anda masukkan salah');
+    });
+
+    it('rejects login with validation error when email or password is empty', async () => {
+      const { login } = useAuthStore.getState();
+      const result = await login('', '');
+
+      expect(result).toBe(false);
+      const state = useAuthStore.getState();
+      expect(state.user).toBeNull();
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.error).toBe('Email dan password wajib diisi');
+    });
+  });
+
+  // --------------- syncUser ---------------
+
+  describe('syncUser', () => {
+    it('hydrates derived user state from Supabase Auth user', () => {
+      const { syncUser } = useAuthStore.getState();
+      syncUser({
+        id: 'fed67d26-7d19-4e3c-bf7d-2e45143e864b',
+        email: 'superadmin@madev.id',
+        app_metadata: { role: 'SUPER_ADMIN' },
+        user_metadata: { name: 'Super Admin Platform' },
+      } as unknown as Parameters<typeof syncUser>[0]);
+
+      const state = useAuthStore.getState();
+      expect(state.user?.id).toBe('fed67d26-7d19-4e3c-bf7d-2e45143e864b');
+      expect(state.user?.role).toBe('super_admin');
+      expect(state.isAuthenticated).toBe(true);
+    });
+
+    it('clears state when syncUser receives null', () => {
+      useAuthStore.setState({ user: mockUsers[0], isAuthenticated: true });
+
+      const { syncUser } = useAuthStore.getState();
+      syncUser(null);
+
+      const state = useAuthStore.getState();
+      expect(state.user).toBeNull();
+      expect(state.isAuthenticated).toBe(false);
     });
   });
 

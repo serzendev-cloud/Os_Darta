@@ -28,40 +28,64 @@ export default function LoginClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { login } = useAuthStore();
-
-  // Pre-fill remembered account from localStorage if available
+  // Pre-fill remembered email from localStorage asynchronously to avoid cascading renders
   useEffect(() => {
-    const savedEmail = localStorage.getItem('madev_remember_email');
-    if (savedEmail) {
-      setEmail(savedEmail);
-      setPassword('password123');
-      setRememberMe(true);
-    }
+    const timer = setTimeout(() => {
+      const savedEmail = localStorage.getItem('madev_remember_email');
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setLoginError('Email dan kata sandi wajib diisi.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Save or clear remembered email based on checkbox state
     if (rememberMe) {
-      localStorage.setItem('madev_remember_email', email);
+      localStorage.setItem('madev_remember_email', trimmedEmail);
     } else {
       localStorage.removeItem('madev_remember_email');
     }
 
-    const success = await login(email, password);
+    const success = await login(trimmedEmail, password);
     setIsSubmitting(false);
+
     if (success) {
-      router.push('/dashboard');
+      // Safe internal redirect extraction (Prevent Open Redirect attacks)
+      let destination = '/dashboard';
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const candidateRedirect = params.get('redirect');
+        if (
+          candidateRedirect &&
+          candidateRedirect.startsWith('/') &&
+          !candidateRedirect.startsWith('//') &&
+          !candidateRedirect.includes('://')
+        ) {
+          destination = candidateRedirect;
+        }
+      }
+      router.push(destination);
+      router.refresh();
     } else {
       const err = useAuthStore.getState().error;
       setLoginError(err || 'Login gagal. Periksa email dan password.');
     }
   };
 
-  // Quick preset account selector for fast testing & selection
+  // Quick preset email selector for fast convenience (ONLY sets email, NEVER bypasses password)
   const quickAccounts = [
     { label: 'Developer (Owner)', email: 'dev@serzendev.com', role: 'developer', color: 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100' },
     { label: 'Super Admin Platform', email: 'superadmin@madev.id', role: 'super_admin', color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' },
@@ -73,9 +97,11 @@ export default function LoginClient({
 
   const handleSelectQuickAccount = (accountEmail: string) => {
     setEmail(accountEmail);
-    setPassword('password123');
-    setRememberMe(true);
-    localStorage.setItem('madev_remember_email', accountEmail);
+    setPassword('');
+    setLoginError('');
+    if (rememberMe) {
+      localStorage.setItem('madev_remember_email', accountEmail);
+    }
   };
 
   return (
@@ -290,7 +316,7 @@ export default function LoginClient({
           {/* Quick Account Selector */}
           <div className="mt-6 pt-5 border-t border-stone-100">
             <p className="text-[11px] font-semibold text-stone-500 mb-2 flex items-center gap-1">
-              <span>Pilih Akun Instan (Pilih Role):</span>
+              <span>Pilih Email Akun (Preset):</span>
             </p>
             <div className="flex flex-wrap gap-1.5">
               {quickAccounts.map((acc) => {
