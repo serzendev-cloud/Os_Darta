@@ -7,7 +7,7 @@ import {
   Key, ShieldCheck, CreditCard, Sparkles, ExternalLink, 
   Check, Sliders, Smartphone, HardDrive, ShoppingCart, 
   Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power,
-  Copy, Loader2, Eye, EyeOff
+  Copy, Loader2, Eye, EyeOff, Mail, Send
 } from 'lucide-react';
 
 interface TenantModules {
@@ -23,6 +23,7 @@ interface TenantModules {
 interface ActiveTenant {
   id: string;
   name: string;
+  code?: string;
   subdomain: string;
   location: string;
   ownerName: string;
@@ -30,6 +31,7 @@ interface ActiveTenant {
   ownerPhone: string;
   plan?: string;
   status: 'aktif' | 'trial' | 'suspended';
+  adminStatus?: 'ACTIVE' | 'INVITED' | 'INVITATION_FAILED' | 'MUST_CHANGE_PASSWORD';
   santriCount: number;
   createdAt: string;
   modules?: TenantModules;
@@ -77,19 +79,19 @@ export default function SaasTenantsPage() {
   const [newOwnerName, setNewOwnerName] = useState('');
   const [newOwnerEmail, setNewOwnerEmail] = useState('');
   const [newOwnerPhone, setNewOwnerPhone] = useState('');
-  const [newInitialPassword, setNewInitialPassword] = useState('');
-  const [showInitialPassword, setShowInitialPassword] = useState(false);
   const [newPlan, setNewPlan] = useState('Pro SaaS');
 
-  // Credential Handoff Modal State (Single-view after creation)
-  const [createdCredential, setCreatedCredential] = useState<{
+  // Confirmation Dialog State after creation (No password, only code & invitation status)
+  const [createdTenantInfo, setCreatedTenantInfo] = useState<{
     tenantName: string;
+    code: string;
     subdomain: string;
-    loginUrl: string;
     ownerEmail: string;
-    temporaryPassword: string;
+    invitationStatus: 'SENT' | 'FAILED';
   } | null>(null);
-  const [copiedCredential, setCopiedCredential] = useState(false);
+
+  // Resend invitation state
+  const [resendingTenantId, setResendingTenantId] = useState<string | null>(null);
 
   // Feature Toggle Modal State
   const [editingTenant, setEditingTenant] = useState<ActiveTenant | null>(null);
@@ -193,9 +195,24 @@ export default function SaasTenantsPage() {
     showNotification('Pengajuan trial telah ditolak.');
   };
 
-  const handleGenerateRandomPassword = () => {
-    const chars = Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 8);
-    setNewInitialPassword(`Md#${chars}9!`);
+  const handleResendInvitation = async (tenantId: string, tenantName: string) => {
+    setResendingTenantId(tenantId);
+    try {
+      const res = await fetch(`/api/saas/tenants/${tenantId}/resend-invitation`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showNotification(`Undangan aktivasi untuk "${tenantName}" berhasil dikirim ulang!`);
+        await fetchTenants();
+      } else {
+        showNotification(json.message || 'Gagal mengirim ulang undangan.');
+      }
+    } catch {
+      showNotification('Terjadi kesalahan jaringan saat mengirim ulang undangan.');
+    } finally {
+      setResendingTenantId(null);
+    }
   };
 
   const handleCreateTenantSubmit = async (e: React.FormEvent) => {
@@ -217,7 +234,6 @@ export default function SaasTenantsPage() {
           ownerName: newOwnerName || 'Admin Pesantren',
           ownerEmail: newOwnerEmail,
           ownerPhone: newOwnerPhone || undefined,
-          initialPassword: newInitialPassword || undefined,
         }),
       });
 
@@ -225,12 +241,12 @@ export default function SaasTenantsPage() {
 
       if (res.ok && json.success && json.data) {
         setShowCreateModal(false);
-        setCreatedCredential({
+        setCreatedTenantInfo({
           tenantName: json.data.tenant.name,
+          code: json.data.tenant.code,
           subdomain: json.data.tenant.domain,
-          loginUrl: json.data.admin.loginUrl,
           ownerEmail: json.data.admin.email,
-          temporaryPassword: json.data.admin.temporaryPassword,
+          invitationStatus: json.data.admin.invitationStatus,
         });
 
         // Reset form inputs
@@ -240,9 +256,8 @@ export default function SaasTenantsPage() {
         setNewOwnerEmail('');
         setNewOwnerName('');
         setNewOwnerPhone('');
-        setNewInitialPassword('');
 
-        showNotification(`Tenant Baru "${json.data.tenant.name}" Berhasil Diprovisi!`);
+        showNotification(`Tenant Baru "${json.data.tenant.name}" (${json.data.tenant.code}) Berhasil Diprovisi!`);
         await fetchTenants();
       } else {
         showNotification(json.message || 'Gagal memprovisi tenant.');
@@ -362,13 +377,28 @@ export default function SaasTenantsPage() {
                 {filteredTenants.map((t) => (
                   <tr key={t.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition-colors">
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
+                      <div className="font-bold text-stone-900 dark:text-white flex items-center gap-2">
                         <span>{t.name}</span>
+                        <span className="font-mono text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                          {t.code || '-'}
+                        </span>
                         <a href={`https://${t.subdomain}`} target="_blank" rel="noreferrer" className="text-emerald-600 hover:text-emerald-700">
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
-                      <div className="text-stone-400 text-[11px] font-mono">{t.subdomain} • {t.location}</div>
+                      <div className="text-stone-400 text-[11px] font-mono flex items-center gap-2 mt-0.5">
+                        <span>{t.subdomain} • {t.location}</span>
+                        {t.adminStatus === 'INVITED' && (
+                          <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                            Menunggu Aktivasi
+                          </span>
+                        )}
+                        {t.adminStatus === 'INVITATION_FAILED' && (
+                          <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                            Undangan Gagal
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
                       {t.plan ? (
@@ -414,13 +444,31 @@ export default function SaasTenantsPage() {
                       </button>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleOpenModuleModal(t)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-3.5 py-1.5 rounded-xl transition-all shadow-md active:scale-95"
-                      >
-                        <Sliders className="w-3.5 h-3.5" />
-                        <span>Toggle Fitur Modul</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {(t.adminStatus === 'INVITED' || t.adminStatus === 'INVITATION_FAILED') && (
+                          <button
+                            type="button"
+                            disabled={resendingTenantId === t.id}
+                            onClick={() => handleResendInvitation(t.id, t.name)}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                            title="Kirim ulang email undangan aktivasi akun administrator"
+                          >
+                            {resendingTenantId === t.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                            ) : (
+                              <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                            )}
+                            <span>{resendingTenantId === t.id ? 'Mengirim...' : 'Kirim Ulang Undangan'}</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleOpenModuleModal(t)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-3.5 py-1.5 rounded-xl transition-all shadow-md active:scale-95"
+                        >
+                          <Sliders className="w-3.5 h-3.5" />
+                          <span>Toggle Fitur Modul</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -834,44 +882,6 @@ export default function SaasTenantsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-                    Kata Sandi Awal Admin (Opsional)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleGenerateRandomPassword}
-                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>Generate Password Acak</span>
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showInitialPassword ? "text" : "password"}
-                    value={newInitialPassword}
-                    onChange={(e) => setNewInitialPassword(e.target.value)}
-                    placeholder="Kosongkan untuk auto-generate sistem"
-                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-mono text-stone-900 dark:text-stone-100"
-                  />
-                  {newInitialPassword && (
-                    <button
-                      type="button"
-                      onClick={() => setShowInitialPassword(!showInitialPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors"
-                      title={showInitialPassword ? "Sembunyikan password" : "Lihat password"}
-                    >
-                      {showInitialPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  )}
-                </div>
-                <p className="text-[10px] text-stone-400">
-                  Password sementara akan disajikan dalam dialog sekali pakai setelah tenant berhasil diprovisi.
-                </p>
-              </div>
-
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-stone-100 dark:border-stone-800">
                 <button
                   type="button"
@@ -887,7 +897,7 @@ export default function SaasTenantsPage() {
                   className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSubmittingTenant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  <span>{isSubmittingTenant ? 'Memprovisi...' : 'Provisi & Aktifkan Tenant'}</span>
+                  <span>{isSubmittingTenant ? 'Memprovisi & Mengirim Undangan...' : 'Provisi & Kirim Undangan'}</span>
                 </button>
               </div>
             </form>
@@ -895,95 +905,87 @@ export default function SaasTenantsPage() {
         </div>
       )}
 
-      {/* Credential Handoff Dialog Modal */}
-      {createdCredential && (
+      {/* Tenant Created Confirmation Dialog Modal (No password, displays Tenant Code & Email Status) */}
+      {createdTenantInfo && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-emerald-500/30 space-y-6">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-emerald-500/30 space-y-6 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-                  <Key className="w-5 h-5" />
+                  <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-stone-900 dark:text-white">Kredensial Login Administrator</h3>
-                  <p className="text-xs text-stone-500">Provisi Akun Baru Berhasil Dijalankan</p>
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-white">Tenant Berhasil Diprovisi!</h3>
+                  <p className="text-xs text-stone-500">Lembaga Pesantren &amp; Administrator Baru Telah Didaftarkan</p>
                 </div>
               </div>
               <button
-                onClick={() => {
-                  setCreatedCredential(null);
-                  setCopiedCredential(false);
-                }}
+                onClick={() => setCreatedTenantInfo(null)}
                 className="text-stone-400 hover:text-stone-600 text-lg font-bold p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
-              <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">PERHATIAN:</span> Kata sandi sementara ini hanya ditampilkan <strong>satu kali</strong> demi keamanan. Salin kredensial sekarang untuk diberikan kepada pengurus pesantren.
-              </div>
-            </div>
-
             <div className="space-y-3 bg-stone-50 dark:bg-stone-800/50 p-4 rounded-2xl border border-stone-200 dark:border-stone-700 font-mono text-xs">
               <div>
                 <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Lembaga Pesantren</div>
-                <div className="text-stone-900 dark:text-white font-bold text-sm font-sans">{createdCredential.tenantName}</div>
-              </div>
-
-              <div>
-                <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">URL Portal Login</div>
-                <div className="text-emerald-600 dark:text-emerald-400 break-all select-all font-semibold">
-                  {createdCredential.loginUrl}
-                </div>
+                <div className="text-stone-900 dark:text-white font-bold text-sm font-sans">{createdTenantInfo.tenantName}</div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-200/60 dark:border-stone-700/60">
                 <div>
-                  <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Email Login</div>
-                  <div className="text-stone-800 dark:text-stone-200 select-all font-medium">{createdCredential.ownerEmail}</div>
+                  <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Kode Resmi Tenant</div>
+                  <div className="text-emerald-700 dark:text-emerald-400 font-bold text-sm">
+                    {createdTenantInfo.code}
+                  </div>
                 </div>
 
                 <div>
-                  <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Kata Sandi Sementara</div>
-                  <div className="text-rose-600 dark:text-rose-400 font-bold select-all bg-rose-50 dark:bg-rose-950/50 px-2 py-1 rounded-lg inline-block border border-rose-200 dark:border-rose-900">
-                    {createdCredential.temporaryPassword}
+                  <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Domain Akses</div>
+                  <div className="text-stone-700 dark:text-stone-300 font-semibold truncate">
+                    {createdTenantInfo.subdomain}
                   </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-stone-200/60 dark:border-stone-700/60">
+                <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Email Administrator</div>
+                <div className="text-stone-800 dark:text-stone-200 font-medium">{createdTenantInfo.ownerEmail}</div>
+              </div>
+
+              <div className="pt-2 border-t border-stone-200/60 dark:border-stone-700/60">
+                <div className="text-[10px] text-stone-400 uppercase font-sans font-semibold">Status Undangan Aktivasi</div>
+                <div className="flex items-center gap-1.5 pt-1">
+                  {createdTenantInfo.invitationStatus === 'SENT' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-sans font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Undangan Terkirim ke Email</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-sans font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Email Pending / Periksa Konfigurasi Resend</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const message = `*KREDENSIAL PORTAL PESANTREN — MADEV ERP*\n\n` +
-                    `Lembaga: ${createdCredential.tenantName}\n` +
-                    `URL Login: ${createdCredential.loginUrl}\n` +
-                    `Email: ${createdCredential.ownerEmail}\n` +
-                    `Kata Sandi Sementara: ${createdCredential.temporaryPassword}\n\n` +
-                    `_Catatan: Harap segera mengganti kata sandi setelah berhasil login pertama kali._`;
-                  navigator.clipboard.writeText(message);
-                  setCopiedCredential(true);
-                  setTimeout(() => setCopiedCredential(false), 3000);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                {copiedCredential ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4 text-white" />}
-                <span>{copiedCredential ? 'Berhasil Disalin!' : 'Salin Format WhatsApp'}</span>
-              </button>
+            <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 text-xs flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <strong>Aktivasi Mandiri:</strong> Pengurus pesantren dapat langsung membuka email undangan tersebut untuk membuat kata sandi mereka sendiri secara aman. Super Admin tidak perlu membuat atau membagikan kata sandi sementara.
+              </div>
+            </div>
 
+            <div className="flex justify-end pt-2">
               <button
                 type="button"
-                onClick={() => {
-                  setCreatedCredential(null);
-                  setCopiedCredential(false);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 text-xs font-semibold"
+                onClick={() => setCreatedTenantInfo(null)}
+                className="px-5 py-2.5 rounded-xl bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold text-xs shadow-md transition-all active:scale-95"
               >
-                Tutup Dialog
+                Selesai &amp; Tutup
               </button>
             </div>
           </div>

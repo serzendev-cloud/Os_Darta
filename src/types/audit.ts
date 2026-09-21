@@ -16,7 +16,8 @@ export type AuditAction =
   | 'logout'
   | 'export'
   | 'import'
-  | 'provision';
+  | 'provision'
+  | 'RESEND_TENANT_INVITATION';
 
 export type AuditEntityType =
   | 'santri'
@@ -51,7 +52,7 @@ export interface AuditLog {
   entityLabel?: string;
   actorId: string;
   actorName: string;
-  actorRole: UserRole;
+  actorRole: UserRole | string;
   changes?: Record<string, { from: unknown; to: unknown }>;
   metadata?: Record<string, unknown>;
   timestamp: string;

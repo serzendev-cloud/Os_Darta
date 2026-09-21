@@ -7,7 +7,7 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   phone: text('phone').unique(), // Registered Wali / User Phone Number (Initial Login ID)
-  status: text('status').notNull().default('ACTIVE'), // 'ACTIVE' | 'MUST_CHANGE_PASSWORD' | 'SUSPENDED' | 'DISABLED'
+  status: text('status').notNull().default('ACTIVE'), // 'ACTIVE' | 'INVITED' | 'INVITATION_FAILED' | 'MUST_CHANGE_PASSWORD' | 'SUSPENDED' | 'DISABLED'
   avatar: text('avatar'),
   // Legacy compatibility fields (Preserved for backwards compatibility, @deprecated)
   tenantId: text('tenant_id').default('default').notNull(),

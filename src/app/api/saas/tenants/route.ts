@@ -127,10 +127,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Payload Parsing
-    let body: ProvisionTenantInput;
+    // 3. Payload Parsing (Zero-Password Ingress: initialPassword is intentionally omitted)
+    let rawBody: Record<string, unknown>;
     try {
-      body = await request.json();
+      rawBody = await request.json();
     } catch {
       return NextResponse.json(
         {
@@ -142,6 +142,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const body: ProvisionTenantInput = {
+      name: String(rawBody.name || ''),
+      slug: String(rawBody.slug || ''),
+      location: rawBody.location ? String(rawBody.location) : undefined,
+      plan: rawBody.plan ? String(rawBody.plan) : undefined,
+      ownerName: String(rawBody.ownerName || ''),
+      ownerEmail: String(rawBody.ownerEmail || ''),
+      ownerPhone: rawBody.ownerPhone ? String(rawBody.ownerPhone) : undefined,
+      modules: rawBody.modules as ProvisionTenantInput['modules'],
+    };
+
     // 4. Execute Atomic Provisioning Engine
     const result = await tenantProvisioningService.provisionTenant(body, {
       userId,
@@ -152,7 +163,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: `Tenant "${result.tenant.name}" berhasil diprovisi!`,
+        message: `Tenant "${result.tenant.name}" (${result.tenant.code}) berhasil diprovisi!`,
         data: result,
       },
       { status: 201 }

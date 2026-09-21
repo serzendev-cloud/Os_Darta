@@ -6,10 +6,16 @@ import * as provisioningService from '../../src/modules/saas/services/tenant-pro
 import * as supabaseAdminModule from '../../src/lib/supabase/admin';
 import { db } from '../../src/lib/db';
 import { auditLogService } from '../../src/lib/db/services/auditLog';
+import { tenantCodeCounterService } from '../../src/lib/tenant/tenant-code-counter-service';
 
 describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(tenantCodeCounterService, 'allocateNextTenantCode').mockResolvedValue({
+      code: 'SR2601',
+      year: 2026,
+      sequence: 1,
+    });
   });
 
   // ── 1. Super Admin Authorization ──────────────────────────────────────────
@@ -257,9 +263,10 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     expect(json.success).toBe(true);
     expect(json.data.tenant.name).toBe('Pesantren Darussalam');
     expect(json.data.tenant.slug).toBe('darussalam');
+    expect(json.data.tenant.code).toBe('SR2601');
     expect(json.data.admin.userId).toBe(mockAuthUserId);
-    expect(json.data.admin.mustChangePassword).toBe(true);
-    expect(json.data.admin.temporaryPassword).toMatch(/^Md#[A-Za-z0-9_-]{16}9!$/); // Exactly 21 chars
+    expect(json.data.admin.invitationStatus).toBeDefined();
+    expect((json.data.admin as any).temporaryPassword).toBeUndefined();
 
     // Verify Identity Chain Invariants
     expect(insertedRecords.users.id).toBe(mockAuthUserId);
@@ -275,14 +282,14 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     expect(auditPayload.action).toBe('provision');
     expect(auditPayload.entityType).toBe('tenant');
     expect(auditPayload.metadata?.authUserId).toBe(mockAuthUserId);
-    expect(JSON.stringify(auditPayload)).not.toContain(json.data.admin.temporaryPassword);
+    expect(JSON.stringify(auditPayload)).not.toContain('temporaryPassword');
   });
 
   // ── 6. Two-Phase Compensation Rollback ────────────────────────────────────
   it('8. Executes compensation rollback (deleteUser) when database mutation fails without leaking SQL error', async () => {
     const mockAuthUserId = 'orphan-auth-user-999';
 
-    const mockAuthCreateUser = vi.fn().mockResolvedValue({
+    const mockAuthGenerateLink = vi.fn().mockResolvedValue({
       data: { user: { id: mockAuthUserId, email: 'admin@failed.id' } },
       error: null,
     });
@@ -291,7 +298,8 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     vi.spyOn(supabaseAdminModule, 'createAdminClient').mockReturnValue({
       auth: {
         admin: {
-          createUser: mockAuthCreateUser,
+          generateLink: mockAuthGenerateLink,
+          createUser: vi.fn(),
           deleteUser: mockAuthDeleteUser,
         },
       },
@@ -339,7 +347,7 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
   it('9. Reports PROVISIONING_COMPENSATION_FAILED when both DB and compensation fail without leaking SQL', async () => {
     const mockAuthUserId = 'critical-orphan-000';
 
-    const mockAuthCreateUser = vi.fn().mockResolvedValue({
+    const mockAuthGenerateLink = vi.fn().mockResolvedValue({
       data: { user: { id: mockAuthUserId, email: 'admin@critical.id' } },
       error: null,
     });
@@ -351,7 +359,8 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     vi.spyOn(supabaseAdminModule, 'createAdminClient').mockReturnValue({
       auth: {
         admin: {
-          createUser: mockAuthCreateUser,
+          generateLink: mockAuthGenerateLink,
+          createUser: vi.fn(),
           deleteUser: mockAuthDeleteUser,
         },
       },
@@ -395,6 +404,7 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
         id: 't_001',
         name: 'Pesantren Al-Hikmah',
         slug: 'al-hikmah',
+        code: 'SR2601',
         subdomain: 'al-hikmah.madev.id',
         location: 'Malang',
         ownerName: 'Ustadz Ahmad',
@@ -402,6 +412,7 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
         ownerPhone: '08123456789',
         plan: undefined, // Canonical plan persistence deferred to WP-SAAS-SUB-001
         status: 'aktif',
+        adminStatus: 'INVITED',
         santriCount: 0,
         createdAt: '2026-09-11',
         modules: undefined, // Module persistence deferred to WP-SAAS-ADDON-001
@@ -500,5 +511,210 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
 
     expect(result.success).toBe(true);
     expect(mockTransactionSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // ── 10. Audit Actor Attribution Remediation (WP-SAAS-REGISTRATION-AUDIT-ACTOR-REMEDIATION-001) ──
+  it('13. Attributes public registration audit actor as public_guest, NOT super_admin', async () => {
+    const mockAuthUserId = 'auth-user-public-001';
+    vi.spyOn(supabaseAdminModule, 'createAdminClient').mockReturnValue({
+      auth: {
+        admin: {
+          createUser: vi.fn().mockResolvedValue({
+            data: { user: { id: mockAuthUserId, email: 'publik@pesantren.id' } },
+            error: null,
+          }),
+        },
+      },
+    } as any);
+
+    vi.spyOn(provisioningService.tenantProvisioningService, 'checkTenantAvailability').mockResolvedValueOnce({ available: true });
+
+    const mockTx = {
+      execute: vi.fn().mockResolvedValue([]),
+      insert: vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockResolvedValue([]),
+      })),
+      select: vi.fn().mockImplementation(() => ({
+        from: vi.fn().mockImplementation(() => ({
+          where: vi.fn().mockImplementation(() => ({
+            limit: vi.fn().mockResolvedValue([]),
+          })),
+        })),
+      })),
+    };
+
+    const mockDb = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      }),
+      transaction: vi.fn(async (cb: any) => await cb(mockTx)),
+    } as any;
+
+    const auditSpy = vi.spyOn(auditLogService, 'log').mockResolvedValue('audit_public_123');
+
+    const result = await provisioningService.tenantProvisioningService.provisionTenant(
+      {
+        name: 'Pesantren Publik 001',
+        slug: 'publik-001',
+        ownerName: 'Ustadz Publik',
+        ownerEmail: 'publik@pesantren.id',
+      },
+      {
+        userId: 'system:public-registration',
+        name: 'Public Self-Registration',
+        role: 'public_guest',
+      },
+      mockDb
+    );
+
+    expect(result.success).toBe(true);
+    expect(auditSpy).toHaveBeenCalledTimes(1);
+    const auditPayload = auditSpy.mock.calls[0][0];
+
+    // Assert canonical public actor attribution
+    expect(auditPayload.action).toBe('provision');
+    expect(auditPayload.entityType).toBe('tenant');
+    expect(auditPayload.actorId).toBe('system:public-registration');
+    expect(auditPayload.actorName).toBe('Public Self-Registration');
+    expect(auditPayload.actorRole).toBe('public_guest');
+    expect(auditPayload.actorRole).not.toBe('super_admin');
+  });
+
+  it('14. Preserves super_admin audit actor role when Super Admin provisions tenant', async () => {
+    const mockAuthUserId = 'auth-user-super-001';
+    vi.spyOn(supabaseAdminModule, 'createAdminClient').mockReturnValue({
+      auth: {
+        admin: {
+          createUser: vi.fn().mockResolvedValue({
+            data: { user: { id: mockAuthUserId, email: 'admin@super.id' } },
+            error: null,
+          }),
+        },
+      },
+    } as any);
+
+    vi.spyOn(provisioningService.tenantProvisioningService, 'checkTenantAvailability').mockResolvedValueOnce({ available: true });
+
+    const mockTx = {
+      execute: vi.fn().mockResolvedValue([]),
+      insert: vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockResolvedValue([]),
+      })),
+      select: vi.fn().mockImplementation(() => ({
+        from: vi.fn().mockImplementation(() => ({
+          where: vi.fn().mockImplementation(() => ({
+            limit: vi.fn().mockResolvedValue([]),
+          })),
+        })),
+      })),
+    };
+
+    const mockDb = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      }),
+      transaction: vi.fn(async (cb: any) => await cb(mockTx)),
+    } as any;
+
+    const auditSpy = vi.spyOn(auditLogService, 'log').mockResolvedValue('audit_super_123');
+
+    const result = await provisioningService.tenantProvisioningService.provisionTenant(
+      {
+        name: 'Pesantren Super 001',
+        slug: 'super-001',
+        ownerName: 'Ustadz Super',
+        ownerEmail: 'admin@super.id',
+      },
+      {
+        userId: 'super_admin_session_uid',
+        name: 'Super Admin',
+        role: 'super_admin',
+      },
+      mockDb
+    );
+
+    expect(result.success).toBe(true);
+    expect(auditSpy).toHaveBeenCalledTimes(1);
+    const auditPayload = auditSpy.mock.calls[0][0];
+
+    // Assert canonical super admin attribution
+    expect(auditPayload.action).toBe('provision');
+    expect(auditPayload.entityType).toBe('tenant');
+    expect(auditPayload.actorId).toBe('super_admin_session_uid');
+    expect(auditPayload.actorName).toBe('Super Admin');
+    expect(auditPayload.actorRole).toBe('super_admin');
+  });
+
+  it('15. Fallback defaults actorRole to super_admin when role is not provided', async () => {
+    const mockAuthUserId = 'auth-user-legacy-001';
+    vi.spyOn(supabaseAdminModule, 'createAdminClient').mockReturnValue({
+      auth: {
+        admin: {
+          createUser: vi.fn().mockResolvedValue({
+            data: { user: { id: mockAuthUserId, email: 'admin@legacy.id' } },
+            error: null,
+          }),
+        },
+      },
+    } as any);
+
+    vi.spyOn(provisioningService.tenantProvisioningService, 'checkTenantAvailability').mockResolvedValueOnce({ available: true });
+
+    const mockTx = {
+      execute: vi.fn().mockResolvedValue([]),
+      insert: vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockResolvedValue([]),
+      })),
+      select: vi.fn().mockImplementation(() => ({
+        from: vi.fn().mockImplementation(() => ({
+          where: vi.fn().mockImplementation(() => ({
+            limit: vi.fn().mockResolvedValue([]),
+          })),
+        })),
+      })),
+    };
+
+    const mockDb = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      }),
+      transaction: vi.fn(async (cb: any) => await cb(mockTx)),
+    } as any;
+
+    const auditSpy = vi.spyOn(auditLogService, 'log').mockResolvedValue('audit_legacy_123');
+
+    // Legacy call without role
+    const result = await provisioningService.tenantProvisioningService.provisionTenant(
+      {
+        name: 'Pesantren Legacy 001',
+        slug: 'legacy-001',
+        ownerName: 'Ustadz Legacy',
+        ownerEmail: 'admin@legacy.id',
+      },
+      {
+        userId: 'legacy_actor_uid',
+      },
+      mockDb
+    );
+
+    expect(result.success).toBe(true);
+    expect(auditSpy).toHaveBeenCalledTimes(1);
+    const auditPayload = auditSpy.mock.calls[0][0];
+
+    // Should safely fallback to super_admin
+    expect(auditPayload.actorRole).toBe('super_admin');
+    expect(auditPayload.actorName).toBe('Super Admin');
   });
 });

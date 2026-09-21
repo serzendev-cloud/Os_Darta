@@ -5,6 +5,7 @@ export const tenants = pgTable('tenants', {
   id: text('id').primaryKey(),
   name: text('name').notNull(), // e.g. "Pesantren Al-Fatih"
   slug: text('slug').notNull().unique(), // e.g. "al-fatih"
+  code: text('code').notNull(), // e.g. "SR2601"
   domain: text('domain'), // e.g. "alfatih.mahad-app.com"
   status: text('status').default('active').notNull(), // 'active' | 'suspended' | 'trial'
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -449,4 +450,5 @@ export * from './schema/academic_workspace';
 export * from './schema/academic_structure';
 export * from './schema/academic_ledger';
 export * from './schema/kesiswaan_masters';
+export * from './schema/tenant-counters';
 
