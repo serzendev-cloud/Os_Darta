@@ -153,7 +153,8 @@ export async function POST(request: NextRequest) {
     const ticketRecord = await createOriginTicket(
       callerUser!.id,
       callerUser!.email!,
-      callerRole || 'super_admin'
+      callerRole || 'super_admin',
+      requestedRole
     );
     activeTicketId = ticketRecord.ticketId;
   } else if (isSwitchingWithTicket && activeTicketId) {

@@ -47,6 +47,9 @@ export const platformSettings = pgTable('platform_settings', {
 // ── Users & Identity Sub-Schema (Re-exported from ./schema/identity) ──────────
 export * from './schema/identity';
 
+// ── Platform Role Preview Sub-Schema (Re-exported from ./schema/preview_origin_tickets) ──
+export * from './schema/preview_origin_tickets';
+
 
 // ── Santri Table ────────────────────────────────────────────────────────────
 export const santri = pgTable('santri', {
@@ -443,6 +446,7 @@ export * from './schema/rfid';
 export * from './schema/gate_pass';
 export * from './schema/ppob';
 export * from './schema/academic_workspace';
+export * from './schema/academic_structure';
 export * from './schema/academic_ledger';
 export * from './schema/kesiswaan_masters';
 

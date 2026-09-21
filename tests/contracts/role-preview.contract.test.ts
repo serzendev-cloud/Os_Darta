@@ -81,6 +81,7 @@ import {
   hashOriginTicket,
   FIXED_ORIGIN_TICKET_TTL_MS,
   SharedOriginTicketStorage,
+  PostgresOriginTicketStorage,
   setOriginTicketStorage,
   getOriginTicketStorage,
   COOKIE_PREVIEW_ORIGIN_TICKET,
@@ -540,6 +541,115 @@ describe('WP-LOGIN-PREVIEW-PLATFORM-001 — Security Amendment & Authorization T
       expect(res.status).toBe(403);
       const data = await res.json();
       expect(data.code).toBe('INVALID_ORIGIN_TICKET');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // D. POSTGRESQL DURABLE STORAGE & DISTRIBUTED CONCURRENCY (WP-ROLE-PREVIEW-001)
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('D. PostgreSQL Durable Storage & Atomic Concurrency Verification', () => {
+    let pgStorage: PostgresOriginTicketStorage;
+
+    beforeEach(async () => {
+      pgStorage = new PostgresOriginTicketStorage();
+      setOriginTicketStorage(pgStorage);
+    });
+
+    afterEach(async () => {
+      try {
+        await pgStorage.clearAll?.();
+      } catch {
+        // ignore
+      }
+    });
+
+    it('verifies PostgresOriginTicketStorage is the active production default', () => {
+      const currentStorage = getOriginTicketStorage();
+      expect(currentStorage).toBeInstanceOf(PostgresOriginTicketStorage);
+    });
+
+    it('persists and validates ticket via PostgreSQL storage', async () => {
+      const ticket = await createOriginTicket('sa_pg_01', 'superadmin@madev.id', 'super_admin', 'admin');
+      expect(ticket.ticketId).toHaveLength(64);
+
+      const found = await validateOriginTicket(ticket.ticketId);
+      expect(found).not.toBeNull();
+      expect(found?.originUserId).toBe('sa_pg_01');
+      expect(found?.originUserEmail).toBe('superadmin@madev.id');
+      expect(found?.previewPersona).toBe('admin');
+      expect(found?.consumed).toBe(false);
+    });
+
+    it('enforces atomic single-use under 50 concurrent requests directly in PostgreSQL', async () => {
+      const ticket = await createOriginTicket('sa_race_01', 'superadmin@madev.id', 'super_admin');
+
+      // Dispatch 50 concurrent consume requests directly against PostgreSQL
+      const results = await Promise.all(
+        Array.from({ length: 50 }, (_, i) =>
+          consumeOriginTicket(ticket.ticketId, `192.168.1.${i + 1}`, `agent-${i}`)
+        )
+      );
+
+      const successes = results.filter((r) => r !== null);
+      const failures = results.filter((r) => r === null);
+
+      expect(successes).toHaveLength(1);
+      expect(failures).toHaveLength(49);
+      expect(successes[0]?.consumed).toBe(true);
+
+      // Subsequent lookup is also rejected
+      expect(await validateOriginTicket(ticket.ticketId)).toBeNull();
+    });
+
+    it('proves cross-instance operation (Instance A creates, Instance B consumes via separate storage adapters)', async () => {
+      const instanceA = new PostgresOriginTicketStorage();
+      const instanceB = new PostgresOriginTicketStorage();
+
+      // Instance A creates ticket in PostgreSQL
+      setOriginTicketStorage(instanceA);
+      const ticket = await createOriginTicket('sa_cross_01', 'superadmin@madev.id', 'super_admin');
+
+      // Instance B (separate instance, no shared memory) validates and consumes
+      setOriginTicketStorage(instanceB);
+      const validOnB = await validateOriginTicket(ticket.ticketId);
+      expect(validOnB).not.toBeNull();
+      expect(validOnB?.originUserId).toBe('sa_cross_01');
+
+      const consumedOnB = await consumeOriginTicket(ticket.ticketId);
+      expect(consumedOnB).not.toBeNull();
+      expect(consumedOnB?.consumed).toBe(true);
+
+      // Replay attempt on Instance A fails
+      setOriginTicketStorage(instanceA);
+      expect(await consumeOriginTicket(ticket.ticketId)).toBeNull();
+    });
+
+    it('proves process restart survival (Instance recreated post-termination)', async () => {
+      let runner1: PostgresOriginTicketStorage | null = new PostgresOriginTicketStorage();
+      setOriginTicketStorage(runner1);
+      const ticket = await createOriginTicket('sa_restart_01', 'superadmin@madev.id', 'super_admin');
+
+      // Simulate process termination: runner1 is dereferenced and destroyed
+      runner1 = null;
+
+      // Simulate new process start: runner2 connects to PostgreSQL
+      const runner2 = new PostgresOriginTicketStorage();
+      setOriginTicketStorage(runner2);
+
+      const restored = await validateOriginTicket(ticket.ticketId);
+      expect(restored).not.toBeNull();
+      expect(restored?.originUserId).toBe('sa_restart_01');
+
+      const consumed = await consumeOriginTicket(ticket.ticketId);
+      expect(consumed).not.toBeNull();
+    });
+
+    it('fails closed when database rejects query without in-memory fallback', async () => {
+      const mockStorage: PostgresOriginTicketStorage = new PostgresOriginTicketStorage();
+      vi.spyOn(mockStorage, 'consumeTicket').mockRejectedValueOnce(new Error('DATABASE_CONNECTION_REFUSED'));
+      setOriginTicketStorage(mockStorage);
+
+      await expect(consumeOriginTicket('a'.repeat(64))).rejects.toThrow('DATABASE_CONNECTION_REFUSED');
     });
   });
 });

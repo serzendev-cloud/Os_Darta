@@ -1,17 +1,38 @@
 // ========================================
 // EEOS — Opaque Origin Ticket Manager
-// Durable & Distributed Server-Side Ticket Storage
-// Traceability: WP-LOGIN-PREVIEW-PLATFORM-ORIGIN-TICKET-AMENDMENT-001
+// Durable & Distributed Server-Side Ticket Storage (PostgreSQL Backed)
+// Traceability: WP-ROLE-PREVIEW-ORIGIN-TICKET-IMPLEMENTATION-001
 // Invariants:
 //   - Zero credentials, tokens, or JWTs stored
-//   - Client receives opaque random 64-char hex string
+//   - Client receives opaque random 64-char hex string (256 bits entropy)
 //   - Server stores ONLY SHA-256(raw_ticket) hash
 //   - Fixed 15-Minute TTL (no sliding expiration)
-//   - Atomic Single-Use Consumption (race-condition proof)
-//   - Distributed runtime compatible (cross-instance shared store)
+//   - Atomic Single-Use Consumption via PostgreSQL row-level lock
+//   - Distributed runtime compatible (shared Supabase PostgreSQL)
+//   - Fail-closed: Zero in-memory fallback in production
 // ========================================
 
 import crypto from 'crypto';
+import { db } from '@/lib/db';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from '@/lib/db/schema';
+import { previewOriginTickets } from '@/lib/db/schema/preview_origin_tickets';
+import { and, eq, gt, isNull, isNotNull, lte, or } from 'drizzle-orm';
+
+let activeDrizzleInstance: any = null;
+
+export function getDb() {
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl && dbUrl.includes('@')) {
+    if (!activeDrizzleInstance) {
+      const client = postgres(dbUrl, { prepare: false });
+      activeDrizzleInstance = drizzle(client, { schema });
+    }
+    return activeDrizzleInstance;
+  }
+  return db;
+}
 
 export interface OriginTicketRecord {
   ticketId?: string; // Only returned on creation to the issuer
@@ -19,6 +40,7 @@ export interface OriginTicketRecord {
   originUserId: string;
   originUserEmail: string;
   originUserRole: string;
+  previewPersona?: string;
   createdAt: number; // epoch ms
   expiresAt: number; // epoch ms
   consumed: boolean;
@@ -31,15 +53,22 @@ export interface StoredOriginTicket {
   originUserId: string;
   originUserEmail: string;
   originUserRole: string;
+  previewPersona?: string;
   createdAt: number; // epoch ms
   expiresAt: number; // epoch ms
   consumedAt: number | null; // epoch ms
+  consumedByIp?: string | null;
+  userAgent?: string | null;
 }
 
 export interface OriginTicketStorage {
   createTicket(ticket: StoredOriginTicket): Promise<void>;
   findValidTicket(ticketHash: string): Promise<StoredOriginTicket | null>;
-  consumeTicket(ticketHash: string): Promise<StoredOriginTicket | null>;
+  consumeTicket(
+    ticketHash: string,
+    clientIp?: string,
+    userAgent?: string
+  ): Promise<StoredOriginTicket | null>;
   purgeExpired(): Promise<number>;
   clearAll?(): Promise<void>;
 }
@@ -53,8 +82,128 @@ export function hashOriginTicket(rawTicket: string): string {
 export const FIXED_ORIGIN_TICKET_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const COOKIE_PREVIEW_ORIGIN_TICKET = 'sb-preview-origin-ticket';
 
-// ── Shared / Distributed In-Memory Storage Adapter ────────────────────────────
-// Provides cross-instance simulation & process-resilient state sharing
+// ── PostgreSQL Storage Adapter (Durable Database Storage) ─────────────────────
+export class PostgresOriginTicketStorage implements OriginTicketStorage {
+  private customDb?: any;
+
+  constructor(customDb?: any) {
+    this.customDb = customDb;
+  }
+
+  private get client() {
+    return this.customDb || getDb();
+  }
+
+  public async createTicket(ticket: StoredOriginTicket): Promise<void> {
+    await this.client.insert(previewOriginTickets).values({
+      id: ticket.id,
+      ticketHash: ticket.ticketHash,
+      originUserId: ticket.originUserId,
+      originUserEmail: ticket.originUserEmail,
+      originRole: ticket.originUserRole,
+      previewPersona: ticket.previewPersona || 'admin',
+      createdAt: new Date(ticket.createdAt),
+      expiresAt: new Date(ticket.expiresAt),
+      consumedAt: null,
+      consumedByIp: ticket.consumedByIp || null,
+      userAgent: ticket.userAgent || null,
+    });
+  }
+
+  public async findValidTicket(ticketHash: string): Promise<StoredOriginTicket | null> {
+    const rows = await this.client
+      .select()
+      .from(previewOriginTickets)
+      .where(
+        and(
+          eq(previewOriginTickets.ticketHash, ticketHash),
+          isNull(previewOriginTickets.consumedAt),
+          gt(previewOriginTickets.expiresAt, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!rows || rows.length === 0) return null;
+
+    const row = rows[0];
+    return {
+      id: row.id,
+      ticketHash: row.ticketHash,
+      originUserId: row.originUserId,
+      originUserEmail: row.originUserEmail,
+      originUserRole: row.originRole,
+      previewPersona: row.previewPersona,
+      createdAt: row.createdAt.getTime(),
+      expiresAt: row.expiresAt.getTime(),
+      consumedAt: row.consumedAt ? row.consumedAt.getTime() : null,
+      consumedByIp: row.consumedByIp,
+      userAgent: row.userAgent,
+    };
+  }
+
+  /**
+   * Atomic Single-Use Consumption in PostgreSQL.
+   * Single UPDATE query with row-lock guarantees atomic compare-and-swap.
+   */
+  public async consumeTicket(
+    ticketHash: string,
+    clientIp?: string,
+    userAgent?: string
+  ): Promise<StoredOriginTicket | null> {
+    const rows = await this.client
+      .update(previewOriginTickets)
+      .set({
+        consumedAt: new Date(),
+        consumedByIp: clientIp || null,
+        userAgent: userAgent || null,
+      })
+      .where(
+        and(
+          eq(previewOriginTickets.ticketHash, ticketHash),
+          isNull(previewOriginTickets.consumedAt),
+          gt(previewOriginTickets.expiresAt, new Date())
+        )
+      )
+      .returning();
+
+    if (!rows || rows.length === 0) return null;
+
+    const row = rows[0];
+    return {
+      id: row.id,
+      ticketHash: row.ticketHash,
+      originUserId: row.originUserId,
+      originUserEmail: row.originUserEmail,
+      originUserRole: row.originRole,
+      previewPersona: row.previewPersona,
+      createdAt: row.createdAt.getTime(),
+      expiresAt: row.expiresAt.getTime(),
+      consumedAt: row.consumedAt ? row.consumedAt.getTime() : Date.now(),
+      consumedByIp: row.consumedByIp,
+      userAgent: row.userAgent,
+    };
+  }
+
+  public async purgeExpired(): Promise<number> {
+    const deleted = await this.client
+      .delete(previewOriginTickets)
+      .where(
+        or(
+          isNotNull(previewOriginTickets.consumedAt),
+          lte(previewOriginTickets.expiresAt, new Date())
+        )
+      )
+      .returning({ id: previewOriginTickets.id });
+
+    return deleted.length;
+  }
+
+  public async clearAll(): Promise<void> {
+    await this.client.delete(previewOriginTickets);
+  }
+}
+
+// ── Shared / In-Memory Storage Adapter (@deprecated: Testing Double Only) ────
 export class SharedOriginTicketStorage implements OriginTicketStorage {
   private store: Map<string, StoredOriginTicket>;
 
@@ -73,7 +222,6 @@ export class SharedOriginTicketStorage implements OriginTicketStorage {
   }
 
   public async createTicket(ticket: StoredOriginTicket): Promise<void> {
-    // Deep clone to guarantee storage isolation
     this.store.set(ticket.ticketHash, { ...ticket });
   }
 
@@ -89,22 +237,22 @@ export class SharedOriginTicketStorage implements OriginTicketStorage {
     return { ...record };
   }
 
-  /**
-   * Atomic Single-Use Consumption.
-   * Guaranteed race-condition proof via atomic check-and-swap.
-   */
-  public async consumeTicket(ticketHash: string): Promise<StoredOriginTicket | null> {
+  public async consumeTicket(
+    ticketHash: string,
+    clientIp?: string,
+    userAgent?: string
+  ): Promise<StoredOriginTicket | null> {
     const record = this.store.get(ticketHash);
     if (!record) return null;
 
     const now = Date.now();
-    // Atomic test: already consumed or expired
     if (record.consumedAt !== null || record.expiresAt < now) {
       return null;
     }
 
-    // Atomic compare-and-swap
     record.consumedAt = now;
+    if (clientIp) record.consumedByIp = clientIp;
+    if (userAgent) record.userAgent = userAgent;
     return { ...record };
   }
 
@@ -125,182 +273,8 @@ export class SharedOriginTicketStorage implements OriginTicketStorage {
   }
 }
 
-// ── PostgreSQL Storage Adapter (Durable Database Storage) ─────────────────────
-export class PostgresOriginTicketStorage implements OriginTicketStorage {
-  private fallbackStore: SharedOriginTicketStorage;
-
-  constructor() {
-    this.fallbackStore = new SharedOriginTicketStorage();
-  }
-
-  public async createTicket(ticket: StoredOriginTicket): Promise<void> {
-    try {
-      const { db } = await import('@/lib/db');
-      const postgres = (await import('postgres')).default;
-      const dbUrl = process.env.DATABASE_URL;
-
-      if (!dbUrl || process.env.NODE_ENV === 'test') {
-        return this.fallbackStore.createTicket(ticket);
-      }
-
-      const sql = postgres(dbUrl, { prepare: false });
-      try {
-        await sql`
-          INSERT INTO public.preview_origin_tickets (
-            id, ticket_hash, origin_user_id, origin_user_email, origin_role, created_at, expires_at, consumed_at
-          ) VALUES (
-            ${ticket.id},
-            ${ticket.ticketHash},
-            ${ticket.originUserId},
-            ${ticket.originUserEmail},
-            ${ticket.originUserRole},
-            to_timestamp(${ticket.createdAt / 1000.0}),
-            to_timestamp(${ticket.expiresAt / 1000.0}),
-            NULL
-          )
-        `;
-      } finally {
-        await sql.end({ timeout: 2 });
-      }
-    } catch {
-      // Fallback to shared store if table does not exist or during test run
-      return this.fallbackStore.createTicket(ticket);
-    }
-  }
-
-  public async findValidTicket(ticketHash: string): Promise<StoredOriginTicket | null> {
-    try {
-      const postgres = (await import('postgres')).default;
-      const dbUrl = process.env.DATABASE_URL;
-
-      if (!dbUrl || process.env.NODE_ENV === 'test') {
-        return this.fallbackStore.findValidTicket(ticketHash);
-      }
-
-      const sql = postgres(dbUrl, { prepare: false });
-      try {
-        const rows = await sql`
-          SELECT 
-            id, 
-            ticket_hash as "ticketHash", 
-            origin_user_id as "originUserId", 
-            origin_user_email as "originUserEmail", 
-            origin_role as "originUserRole",
-            extract(epoch from created_at) * 1000 as "createdAt",
-            extract(epoch from expires_at) * 1000 as "expiresAt",
-            extract(epoch from consumed_at) * 1000 as "consumedAt"
-          FROM public.preview_origin_tickets
-          WHERE ticket_hash = ${ticketHash}
-            AND consumed_at IS NULL
-            AND expires_at > now()
-          LIMIT 1
-        `;
-
-        if (!rows || rows.length === 0) return null;
-
-        const row = rows[0];
-        return {
-          id: row.id,
-          ticketHash: row.ticketHash,
-          originUserId: row.originUserId,
-          originUserEmail: row.originUserEmail,
-          originUserRole: row.originUserRole,
-          createdAt: Number(row.createdAt),
-          expiresAt: Number(row.expiresAt),
-          consumedAt: row.consumedAt ? Number(row.consumedAt) : null,
-        };
-      } finally {
-        await sql.end({ timeout: 2 });
-      }
-    } catch {
-      return this.fallbackStore.findValidTicket(ticketHash);
-    }
-  }
-
-  /**
-   * Atomic Single-Use Consumption in PostgreSQL.
-   * Single query with row-lock guarantees atomic compare-and-swap.
-   */
-  public async consumeTicket(ticketHash: string): Promise<StoredOriginTicket | null> {
-    try {
-      const postgres = (await import('postgres')).default;
-      const dbUrl = process.env.DATABASE_URL;
-
-      if (!dbUrl || process.env.NODE_ENV === 'test') {
-        return this.fallbackStore.consumeTicket(ticketHash);
-      }
-
-      const sql = postgres(dbUrl, { prepare: false });
-      try {
-        const rows = await sql`
-          UPDATE public.preview_origin_tickets
-          SET consumed_at = now()
-          WHERE ticket_hash = ${ticketHash}
-            AND consumed_at IS NULL
-            AND expires_at > now()
-          RETURNING 
-            id, 
-            ticket_hash as "ticketHash", 
-            origin_user_id as "originUserId", 
-            origin_user_email as "originUserEmail", 
-            origin_role as "originUserRole",
-            extract(epoch from created_at) * 1000 as "createdAt",
-            extract(epoch from expires_at) * 1000 as "expiresAt",
-            extract(epoch from consumed_at) * 1000 as "consumedAt"
-        `;
-
-        if (!rows || rows.length === 0) return null;
-
-        const row = rows[0];
-        return {
-          id: row.id,
-          ticketHash: row.ticketHash,
-          originUserId: row.originUserId,
-          originUserEmail: row.originUserEmail,
-          originUserRole: row.originUserRole,
-          createdAt: Number(row.createdAt),
-          expiresAt: Number(row.expiresAt),
-          consumedAt: Number(row.consumedAt),
-        };
-      } finally {
-        await sql.end({ timeout: 2 });
-      }
-    } catch {
-      return this.fallbackStore.consumeTicket(ticketHash);
-    }
-  }
-
-  public async purgeExpired(): Promise<number> {
-    try {
-      const postgres = (await import('postgres')).default;
-      const dbUrl = process.env.DATABASE_URL;
-
-      if (!dbUrl || process.env.NODE_ENV === 'test') {
-        return this.fallbackStore.purgeExpired();
-      }
-
-      const sql = postgres(dbUrl, { prepare: false });
-      try {
-        const res = await sql`
-          DELETE FROM public.preview_origin_tickets
-          WHERE consumed_at IS NOT NULL OR expires_at <= now()
-        `;
-        return res.count || 0;
-      } finally {
-        await sql.end({ timeout: 2 });
-      }
-    } catch {
-      return this.fallbackStore.purgeExpired();
-    }
-  }
-
-  public async clearAll(): Promise<void> {
-    await this.fallbackStore.clearAll?.();
-  }
-}
-
-// ── Active Storage Provider Singleton ─────────────────────────────────────────
-let activeStorage: OriginTicketStorage = new SharedOriginTicketStorage();
+// ── Active Storage Provider Singleton (Defaults to Durable PostgreSQL) ───────
+let activeStorage: OriginTicketStorage = new PostgresOriginTicketStorage();
 
 /**
  * Dependency injection helper for tests or runtime storage switching.
@@ -324,13 +298,23 @@ export async function createOriginTicket(
   originUserId: string,
   originUserEmail: string,
   originUserRole: string,
+  previewPersonaOrTtl: string | number = 'admin',
   ttlMs = FIXED_ORIGIN_TICKET_TTL_MS
 ): Promise<OriginTicketRecord & { ticketId: string }> {
+  let previewPersona = 'admin';
+  let effectiveTtl = ttlMs;
+
+  if (typeof previewPersonaOrTtl === 'number') {
+    effectiveTtl = previewPersonaOrTtl;
+  } else if (typeof previewPersonaOrTtl === 'string') {
+    previewPersona = previewPersonaOrTtl;
+  }
+
   // Generate 64-character random hex string (256 bits entropy)
   const ticketId = crypto.randomBytes(32).toString('hex');
   const ticketHash = hashOriginTicket(ticketId);
   const now = Date.now();
-  const expiresAt = now + ttlMs;
+  const expiresAt = now + effectiveTtl;
 
   const stored: StoredOriginTicket = {
     id: crypto.randomUUID(),
@@ -338,6 +322,7 @@ export async function createOriginTicket(
     originUserId,
     originUserEmail,
     originUserRole,
+    previewPersona,
     createdAt: now,
     expiresAt,
     consumedAt: null,
@@ -351,6 +336,7 @@ export async function createOriginTicket(
     originUserId,
     originUserEmail,
     originUserRole,
+    previewPersona,
     createdAt: now,
     expiresAt,
     consumed: false,
@@ -378,6 +364,7 @@ export async function validateOriginTicket(
     originUserId: stored.originUserId,
     originUserEmail: stored.originUserEmail,
     originUserRole: stored.originUserRole,
+    previewPersona: stored.previewPersona,
     createdAt: stored.createdAt,
     expiresAt: stored.expiresAt,
     consumed: stored.consumedAt !== null,
@@ -390,14 +377,16 @@ export async function validateOriginTicket(
  * Computes SHA-256 hash and executes atomic compare-and-swap.
  */
 export async function consumeOriginTicket(
-  rawTicketId: string | null | undefined
+  rawTicketId: string | null | undefined,
+  clientIp?: string,
+  userAgent?: string
 ): Promise<OriginTicketRecord | null> {
   if (!rawTicketId || typeof rawTicketId !== 'string' || rawTicketId.length < 32) {
     return null;
   }
 
   const ticketHash = hashOriginTicket(rawTicketId);
-  const consumed = await activeStorage.consumeTicket(ticketHash);
+  const consumed = await activeStorage.consumeTicket(ticketHash, clientIp, userAgent);
 
   if (!consumed) return null;
 
@@ -406,6 +395,7 @@ export async function consumeOriginTicket(
     originUserId: consumed.originUserId,
     originUserEmail: consumed.originUserEmail,
     originUserRole: consumed.originUserRole,
+    previewPersona: consumed.previewPersona,
     createdAt: consumed.createdAt,
     expiresAt: consumed.expiresAt,
     consumed: true,
@@ -415,7 +405,7 @@ export async function consumeOriginTicket(
 
 /**
  * Persona switching touch verification.
- * In accordance with Section 9, maintains FIXED 15-minute expiration (NO sliding window).
+ * Maintains FIXED 15-minute expiration (NO sliding window).
  * Returns true if ticket is valid and within its original 15-minute window.
  */
 export async function touchOriginTicket(

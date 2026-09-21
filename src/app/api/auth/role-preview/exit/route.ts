@@ -15,9 +15,11 @@ import {
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
-  // 1. Retrieve & Consume Origin Ticket (Single-Use Enforcement)
+  // 1. Retrieve & Consume Origin Ticket (Single-Use Enforcement via PostgreSQL Atomic Update)
   const ticketId = request.cookies.get(COOKIE_PREVIEW_ORIGIN_TICKET)?.value;
-  const originTicket = await consumeOriginTicket(ticketId);
+  const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
+  const userAgent = request.headers.get('user-agent') || undefined;
+  const originTicket = await consumeOriginTicket(ticketId, clientIp, userAgent);
 
   if (!originTicket) {
     return NextResponse.json(
