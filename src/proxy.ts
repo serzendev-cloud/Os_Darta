@@ -12,9 +12,11 @@ import { createProxyClient } from '@/lib/supabase/proxy';
  */
 const PUBLIC_PATHS = [
   '/login',
+  '/register',
   '/maintenance',
   '/auth',
   '/api/webhooks',
+  '/api/saas/register',
 ];
 
 /**
@@ -132,6 +134,30 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // 4b. Fail-Closed Lifecycle Access Gate for Invited Users (Onboarding Incomplete)
+  const userStatus = (user?.user_metadata?.status || user?.app_metadata?.status || 'ACTIVE') as string;
+  const isInvitedUser = userStatus.toUpperCase() === 'INVITED';
+
+  if (isAuthenticated && isInvitedUser) {
+    const isAuthRoute = pathname.startsWith('/auth') || pathname.startsWith('/api/auth');
+    if (!isAuthRoute) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'UserOnboardingIncomplete',
+            message: 'Silakan selesaikan pembuatan kata sandi akun terlebih dahulu sebelum mengakses sistem.',
+          },
+          { status: 403 }
+        );
+      }
+
+      // Intercept navigation to dashboard / operational pages and redirect to set-password
+      const setPasswordUrl = new URL('/auth/set-password', request.url);
+      return NextResponse.redirect(setPasswordUrl);
+    }
+  }
+
   // 5. Build Verified Downstream Request Headers
   const requestHeaders = new Headers(request.headers);
 
@@ -144,7 +170,8 @@ export async function proxy(request: NextRequest) {
     const userRole = (user.app_metadata?.role || user.user_metadata?.role || 'user') as string;
     requestHeaders.set('x-user-role', userRole);
 
-    if (userRole === 'SUPER_ADMIN' || userRole === 'DEVELOPER') {
+    const normalizedRole = userRole.toUpperCase().replace(/\s+/g, '_');
+    if (normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'DEVELOPER') {
       requestHeaders.set('x-is-super-admin', 'true');
     }
   } else {

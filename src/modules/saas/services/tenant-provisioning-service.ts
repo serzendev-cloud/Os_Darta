@@ -235,6 +235,7 @@ export async function provisionTenant(
             tenant_id: tenantId,
             tenant_code: tenantCode,
             tenant_slug: cleanSlug,
+            status: 'INVITED',
           },
         },
       });
@@ -249,6 +250,7 @@ export async function provisionTenant(
           tenant_id: tenantId,
           tenant_code: tenantCode,
           tenant_slug: cleanSlug,
+          status: 'INVITED',
         },
       });
       linkData = res?.data;
@@ -433,7 +435,7 @@ export async function provisionTenant(
     if (!emailResult.success) {
       invitationStatus = 'FAILED';
       try {
-        if (createdAuthUserId) {
+        if (createdAuthUserId && typeof (dbInstance as any)?.update === 'function') {
           await dbInstance
             .update(users)
             .set({ status: 'INVITATION_FAILED', updatedAt: new Date() })
@@ -447,7 +449,7 @@ export async function provisionTenant(
     console.error('[TenantProvisioning] Resend dispatch exception post-commit:', emailErr);
     invitationStatus = 'FAILED';
     try {
-      if (createdAuthUserId) {
+      if (createdAuthUserId && typeof (dbInstance as any)?.update === 'function') {
         await dbInstance
           .update(users)
           .set({ status: 'INVITATION_FAILED', updatedAt: new Date() })

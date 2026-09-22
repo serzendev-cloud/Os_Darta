@@ -8,6 +8,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { MaintenanceBanner } from '@/components/shared/maintenance-banner';
+import { PreviewIndicator } from '@/components/shared/PreviewIndicator';
 import { useConfig } from '@/hooks/useConfig';
 import { DEFAULT_MAINTENANCE_CONFIG, isMaintenanceActive, canBypassMaintenance } from '@/lib/maintenance';
 import { cn } from '@/lib/utils';
@@ -21,7 +22,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { config: maintenanceConfig } = useConfig<MaintenanceConfig>('maintenance', DEFAULT_MAINTENANCE_CONFIG);
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || !user)) router.push('/');
+    if (!isLoading && (!isAuthenticated || !user)) {
+      router.push('/');
+      return;
+    }
+    if (!isLoading && user?.status?.toUpperCase() === 'INVITED') {
+      router.replace('/auth/set-password');
+      return;
+    }
   }, [isAuthenticated, user, isLoading, router]);
 
   if (isLoading) {
@@ -88,6 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
       <Sidebar />
       <div className={cn('transition-all duration-300 ease-in-out bg-sky-100/80 dark:bg-background min-h-dvh', isCollapsed ? 'lg:pl-[var(--sidebar-width-collapsed)]' : 'lg:pl-[var(--sidebar-width)]')}>
+        <PreviewIndicator />
         <Topbar />
         <main className="p-3.5 sm:p-4 lg:p-6 bg-sky-100/80 dark:bg-background min-h-[calc(100dvh-4rem)] pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Breadcrumb />

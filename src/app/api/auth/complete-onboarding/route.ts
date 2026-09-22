@@ -54,6 +54,15 @@ export async function POST(request: NextRequest) {
       })
       .where(and(eq(users.id, user.id), eq(users.status, 'INVITED')));
 
+    // 3. Update Supabase Auth user metadata so session reflects active state
+    try {
+      await supabase.auth.updateUser({
+        data: { status: 'ACTIVE' },
+      });
+    } catch (metaErr) {
+      console.warn('[CompleteOnboarding] User metadata sync warning:', metaErr);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Akun administrator berhasil diaktifkan.',

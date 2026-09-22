@@ -99,17 +99,22 @@ export default function SaasTenantsPage() {
   const [tempStatus, setTempStatus] = useState<'aktif' | 'trial' | 'suspended'>('aktif');
 
   const [toast, setToast] = useState('');
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchTenants = async () => {
     setIsLoadingTenants(true);
+    setFetchError(null);
     try {
       const res = await fetch('/api/saas/tenants');
       const json = await res.json();
       if (json.success && Array.isArray(json.data?.tenants)) {
         setTenants(json.data.tenants);
+      } else if (!json.success && json.message) {
+        setFetchError(json.message);
       }
     } catch (e) {
       console.warn('Gagal memuat daftar tenant dari server:', e);
+      setFetchError('Tidak dapat terhubung ke server untuk memuat daftar tenant.');
     } finally {
       setIsLoadingTenants(false);
     }
@@ -350,6 +355,23 @@ export default function SaasTenantsPage() {
           title="Daftar Tenant Pesantren & Pengaktifan Modul"
           description="Atur status aktif/nonaktif dan toggle pengaktifan modul fitur spesifik per-pesantren"
         >
+          {/* Error Banner */}
+          {fetchError && (
+            <div className="mb-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                <span>{fetchError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={fetchTenants}
+                className="underline font-bold hover:text-rose-800 dark:hover:text-rose-200"
+              >
+                Coba Lagi
+              </button>
+            </div>
+          )}
+
           {/* Search bar */}
           <div className="mb-4 relative max-w-sm">
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -374,7 +396,23 @@ export default function SaasTenantsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 dark:divide-stone-800 text-stone-800 dark:text-stone-200 font-medium">
-                {filteredTenants.map((t) => (
+                {isLoadingTenants ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-stone-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                        <span>Memuat daftar tenant dari database...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredTenants.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-stone-500 font-medium">
+                      Belum ada tenant yang terdaftar. Klik tombol "+ Provisi Tenant Baru" di atas untuk mendaftarkan lembaga pesantren.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTenants.map((t) => (
                   <tr key={t.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-stone-900 dark:text-white flex items-center gap-2">
@@ -471,7 +509,8 @@ export default function SaasTenantsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

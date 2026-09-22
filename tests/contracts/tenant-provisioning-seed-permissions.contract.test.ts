@@ -490,6 +490,7 @@ describe('WP-TENANT-PROVISION-SEED-PERMISSIONS-001 — Admin Role Permission See
         from: vi.fn().mockImplementation((table: any) => ({
           where: vi.fn().mockImplementation(() => ({
             limit: vi.fn().mockImplementation(() => {
+              if (table && table.email && table.phone) return [{ id: userId, status: 'ACTIVE' }];
               if (table && table.id && table.slug) return [{ id: tenantId, status: 'active' }];
               if (table && table.userId && table.primaryRoleId) return [{ id: 'utm_1', primaryRoleId: roleId, status: 'ACTIVE' }];
               if (table && table.roleCode && table.isCustom) return [{ id: roleId, roleCode: 'ADMIN', status: 'ACTIVE' }];

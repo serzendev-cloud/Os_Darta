@@ -181,16 +181,22 @@ export function SaasLandingPage() {
             <a href="#faq" className="hover:text-emerald-400 transition">FAQ</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/register"
+              className="px-3.5 py-2 rounded-xl text-xs font-bold text-stone-950 bg-emerald-400 hover:bg-emerald-300 shadow-md shadow-emerald-900/20 transition whitespace-nowrap"
+            >
+              Daftar Instansi
+            </Link>
             <Link
               href="/login"
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-stone-200 hover:text-white bg-stone-900 hover:bg-stone-800 border border-stone-700/80 transition"
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-stone-200 hover:text-white bg-stone-900 hover:bg-stone-800 border border-stone-700/80 transition whitespace-nowrap"
             >
               Masuk Portal
             </Link>
             <button
               onClick={handleContactClick}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-stone-950 bg-emerald-400 hover:bg-emerald-300 shadow-md shadow-emerald-900/20 transition"
+              className="hidden lg:inline-flex px-3.5 py-2 rounded-xl text-xs font-semibold text-stone-300 hover:text-white bg-stone-900/60 hover:bg-stone-800/80 border border-stone-800 transition whitespace-nowrap"
             >
               Konsultasi Demo
             </button>
@@ -216,22 +222,35 @@ export function SaasLandingPage() {
             {SAAS_PRODUCT_CONFIG.description}
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <button
-              onClick={handleContactClick}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-bold text-sm shadow-xl shadow-emerald-900/30 flex items-center justify-center gap-2 transition group"
-            >
-              <span>Konsultasikan Kebutuhan Pesantren</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
-            </button>
+          <div className="space-y-4 pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/register"
+                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-extrabold text-sm shadow-xl shadow-emerald-900/30 flex items-center justify-center gap-2 transition group"
+              >
+                <span>Daftar Instansi Sekarang</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+              </Link>
 
-            <Link
-              href="/login"
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-200 font-semibold text-sm flex items-center justify-center gap-2 transition"
-            >
-              <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-              <span>Masuk Portal Pesantren</span>
-            </Link>
+              <Link
+                href="/login"
+                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-200 font-semibold text-sm flex items-center justify-center gap-2 transition"
+              >
+                <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                <span>Masuk Portal Pesantren</span>
+              </Link>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-xs text-stone-400 pt-1">
+              <span>Kelola pesantren Anda dalam satu platform terpadu.</span>
+              <button
+                onClick={handleContactClick}
+                className="text-emerald-400 hover:text-emerald-300 font-medium underline underline-offset-4 transition inline-flex items-center gap-1"
+              >
+                <span>Konsultasikan Kebutuhan Pesantren</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Platform Representation Card */}
@@ -741,13 +760,19 @@ export function SaasLandingPage() {
           <p className="text-stone-300 text-xs md:text-sm max-w-2xl mx-auto leading-relaxed">
             Bergabunglah dengan ekosistem digital {SAAS_PRODUCT_CONFIG.name} untuk mewujudkan tata kelola pesantren yang transparan, teratur, dan profesional.
           </p>
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/register"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-400 hover:bg-emerald-300 text-stone-950 font-extrabold text-sm shadow-xl shadow-emerald-900/40 inline-flex items-center justify-center gap-2 transition group"
+            >
+              <span>Daftar Instansi Sekarang</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            </Link>
             <button
               onClick={handleContactClick}
-              className="px-8 py-4 rounded-2xl bg-emerald-400 hover:bg-emerald-300 text-stone-950 font-extrabold text-sm shadow-xl shadow-emerald-900/40 inline-flex items-center gap-2 transition"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-200 font-semibold text-sm inline-flex items-center justify-center gap-2 transition"
             >
               <span>Konsultasi & Demo Platform</span>
-              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -765,6 +790,7 @@ export function SaasLandingPage() {
             </div>
 
             <div className="flex items-center gap-6 text-xs text-stone-400">
+              <Link href="/register" className="hover:text-emerald-400 transition font-medium text-stone-300">Daftar Instansi</Link>
               <Link href="/login" className="hover:text-white transition">Login Portal</Link>
               <a href="#fitur" className="hover:text-white transition">Fitur</a>
               <a href="#modul" className="hover:text-white transition">Modul</a>

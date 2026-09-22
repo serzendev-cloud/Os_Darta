@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import {
+  users,
   tenants,
   platformRoles,
   userPlatformRoles,
@@ -15,6 +16,7 @@ import {
 export type AuthorizationDecision =
   | 'AUTHORIZED'
   | 'DENIED_UNAUTHENTICATED'
+  | 'DENIED_USER_LIFECYCLE_INACTIVE'
   | 'DENIED_TENANT_INACTIVE'
   | 'DENIED_TENANT_MEMBERSHIP_MISSING'
   | 'DENIED_TENANT_MEMBERSHIP_INACTIVE'
@@ -35,7 +37,7 @@ export interface AuthorizationResult {
 
 /**
  * Calculates the canonical effective permissions for a user in a target tenant.
- * Enforces Tenant Status, Membership Status, and Primary Role Status (Fail-Closed).
+ * Enforces User Lifecycle Status, Tenant Status, Membership Status, and Primary Role Status (Fail-Closed).
  */
 export async function getEffectivePermissions(
   userId: string,
@@ -60,7 +62,25 @@ export async function getEffectivePermissions(
     };
   }
 
-  // 1. Enforce Tenant Status (Fail-Closed)
+  // 1. Enforce User Lifecycle Status (Fail-Closed)
+  const userRows = await dbInstance
+    .select({ id: users.id, status: users.status })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (userRows.length === 0 || userRows[0].status.toUpperCase() !== 'ACTIVE') {
+    return {
+      authorized: false,
+      decision: 'DENIED_USER_LIFECYCLE_INACTIVE',
+      userId,
+      tenantId,
+      effectivePermissions: new Set(),
+      reason: `User ${userId} lifecycle status is not ACTIVE (current: ${userRows[0]?.status ?? 'MISSING'})`,
+    };
+  }
+
+  // 2. Enforce Tenant Status (Fail-Closed)
   const tenantRows = await dbInstance
     .select({ id: tenants.id, status: tenants.status })
     .from(tenants)

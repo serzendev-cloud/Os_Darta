@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks';
 import { PageCard } from '@/components/shared/page-header';
 import { 
   CreditCard, Key, ShieldCheck, MessageSquare, Save, CheckCircle2, 
   Building2, HardDrive, Sparkles, Check, Info, Search, X, 
-  Eye, EyeOff, AlertCircle, ChevronDown, Lock, Settings2
+  Eye, EyeOff, AlertCircle, ChevronDown, Lock, Settings2, Loader2
 } from 'lucide-react';
 
 interface TenantCredential {
@@ -23,81 +23,50 @@ interface TenantCredential {
   gdriveJson: string;
 }
 
-const initialTenantsCredentials: Record<string, TenantCredential> = {
-  t1: {
-    id: 't1',
-    name: 'Ponpes Daruttahuid',
-    subdomain: 'daruttahuid.madev.id',
-    location: 'Malang, Jawa Timur',
-    flipStatus: 'Unconfigured',
-    flipSecretKey: '',
-    flipValidationToken: '',
-    waStatus: 'Unconfigured',
-    waGatewayApiKey: '',
-    driveStatus: 'Unconfigured',
-    gdriveJson: '',
-  },
-  t2: {
-    id: 't2',
-    name: 'Ponpes Al-Hikmah',
-    subdomain: 'alhikmah.madev.id',
-    location: 'Surabaya, Jawa Timur',
-    flipStatus: 'Unconfigured',
-    flipSecretKey: '',
-    flipValidationToken: '',
-    waStatus: 'Unconfigured',
-    waGatewayApiKey: '',
-    driveStatus: 'Unconfigured',
-    gdriveJson: '',
-  },
-  t3: {
-    id: 't3',
-    name: 'Ponpes An-Nisa',
-    subdomain: 'annisa.madev.id',
-    location: 'Jakarta Selatan, DKI',
-    flipStatus: 'Unconfigured',
-    flipSecretKey: '',
-    flipValidationToken: '',
-    waStatus: 'Unconfigured',
-    waGatewayApiKey: '',
-    driveStatus: 'Unconfigured',
-    gdriveJson: '',
-  },
-  t4: {
-    id: 't4',
-    name: 'Ponpes Ar-Raudah',
-    subdomain: 'arraudah.madev.id',
-    location: 'Bandung, Jawa Barat',
-    flipStatus: 'Unconfigured',
-    flipSecretKey: '',
-    flipValidationToken: '',
-    waStatus: 'Unconfigured',
-    waGatewayApiKey: '',
-    driveStatus: 'Unconfigured',
-    gdriveJson: '',
-  },
-  t5: {
-    id: 't5',
-    name: 'Ponpes Darul Quran',
-    subdomain: 'dq.madev.id',
-    location: 'Yogyakarta, DIY',
-    flipStatus: 'Unconfigured',
-    flipSecretKey: '',
-    flipValidationToken: '',
-    waStatus: 'Unconfigured',
-    waGatewayApiKey: '',
-    driveStatus: 'Unconfigured',
-    gdriveJson: '',
-  },
-};
-
 export default function TenantIntegrationPage() {
   const { user } = useAuth();
   const isDevOrSuperAdmin = user?.role === 'developer' || user?.role === 'super_admin';
 
-  const [tenantsMap, setTenantsMap] = useState<Record<string, TenantCredential>>(initialTenantsCredentials);
+  const [tenantsMap, setTenantsMap] = useState<Record<string, TenantCredential>>({});
   const [search, setSearch] = useState('');
-  const [selectedDropdownId, setSelectedDropdownId] = useState('t1');
+  const [selectedDropdownId, setSelectedDropdownId] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTenants() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/saas/tenants');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data?.tenants)) {
+          const map: Record<string, TenantCredential> = {};
+          for (const t of json.data.tenants) {
+            map[t.id] = {
+              id: t.id,
+              name: t.name,
+              subdomain: t.subdomain || `${t.slug || t.id}.madev.id`,
+              location: t.location || 'Indonesia',
+              flipStatus: 'Unconfigured',
+              flipSecretKey: '',
+              flipValidationToken: '',
+              waStatus: 'Unconfigured',
+              waGatewayApiKey: '',
+              driveStatus: 'Unconfigured',
+              gdriveJson: '',
+            };
+          }
+          setTenantsMap(map);
+          const firstId = Object.keys(map)[0];
+          if (firstId) setSelectedDropdownId(firstId);
+        }
+      } catch (e) {
+        console.warn('Gagal memuat tenant untuk integrasi:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadTenants();
+  }, []);
 
   // Modal Panel State for Editing Credential
   const [editingTenant, setEditingTenant] = useState<TenantCredential | null>(null);
@@ -151,7 +120,7 @@ export default function TenantIntegrationPage() {
 
   const visibleTenantsList = Object.values(tenantsMap).filter(t => {
     // Non-super-admin can ONLY see their own tenant credential
-    if (!isDevOrSuperAdmin && t.id !== 't1') return false;
+    if (!isDevOrSuperAdmin && user?.tenantId && t.id !== user.tenantId) return false;
     return (
       t.name.toLowerCase().includes(search.toLowerCase()) || 
       t.subdomain.toLowerCase().includes(search.toLowerCase()) ||
@@ -249,12 +218,28 @@ export default function TenantIntegrationPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-stone-800 text-stone-800 dark:text-stone-200 font-medium">
-              {visibleTenantsList.map((t) => (
-                <tr key={t.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition-colors">
-                  <td className="py-4 px-4">
-                    <div className="font-bold text-stone-900 dark:text-white text-sm">{t.name}</div>
-                    <div className="text-stone-400 text-[11px] font-mono">{t.subdomain} • {t.location}</div>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-stone-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                      <span>Memuat data integrasi tenant...</span>
+                    </div>
                   </td>
+                </tr>
+              ) : visibleTenantsList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-stone-500 font-medium">
+                    Belum ada tenant yang terdaftar pada sistem. Silakan provisi tenant baru di menu Manajemen Tenant.
+                  </td>
+                </tr>
+              ) : (
+                visibleTenantsList.map((t) => (
+                  <tr key={t.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition-colors">
+                    <td className="py-4 px-4">
+                      <div className="font-bold text-stone-900 dark:text-white text-sm">{t.name}</div>
+                      <div className="text-stone-400 text-[11px] font-mono">{t.subdomain} • {t.location}</div>
+                    </td>
 
                   {/* Flip Status */}
                   <td className="py-4 px-4">
@@ -306,8 +291,9 @@ export default function TenantIntegrationPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
+              ))
+            )}
+          </tbody>
           </table>
         </div>
       </PageCard>

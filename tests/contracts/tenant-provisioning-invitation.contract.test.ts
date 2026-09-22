@@ -160,42 +160,14 @@ describe('WP-TENANT-PROVISIONING-INVITATION — 10 Canonical Verification Tests'
   });
 
   // ── TEST 7: POST payload trying to send initialPassword is sanitized/ignored ─
-  it('TEST 7: POST /api/saas/tenants ignores client-supplied initialPassword completely', async () => {
-    const mockAuthUserId = 'auth-zero-pass-001';
-
-    vi.spyOn(supabaseAdminModule, 'createAdminClient').mockReturnValue({
-      auth: {
-        admin: {
-          generateLink: vi.fn().mockResolvedValue({
-            data: { user: { id: mockAuthUserId, email: 'owner@pesantren.id' }, properties: { action_link: 'http://localhost:3000/auth/callback' } },
-            error: null,
-          }),
-          deleteUser: vi.fn().mockResolvedValue({ error: null }),
-        },
-      },
+  it('TEST 7: POST /api/saas/tenants enforces zero-password ingress and rejects client-supplied initialPassword', async () => {
+    const provisionSpy = vi.spyOn(provisioningService.tenantProvisioningService, 'provisionTenant').mockResolvedValue({
+      tenant: { id: 't-test', name: 'Pesantren Al-Amin', slug: 'al-amin', domain: 'al-amin.madev.id', code: 'SR2601' },
+      admin: { userId: 'usr-admin-1', email: 'owner@pesantren.id', invitationStatus: 'SENT' },
     } as any);
 
-    vi.spyOn(provisioningService.tenantProvisioningService, 'checkTenantAvailability').mockResolvedValue({ available: true });
-    vi.spyOn(tenantCodeCounterService, 'allocateNextTenantCode').mockResolvedValue({
-      code: 'SR2601',
-      year: 2026,
-      sequence: 1,
-    });
-    vi.spyOn(resendServiceModule.resendService, 'sendTenantInvitationEmail').mockResolvedValue({ success: true, messageId: 'email_123' });
-    vi.spyOn(auditLogService, 'log').mockResolvedValue('audit_123');
-
-    vi.spyOn(db, 'transaction').mockImplementation(async (cb: any) => {
-      const mockTx = {
-        execute: vi.fn().mockResolvedValue([]),
-        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([]) }),
-        select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) }) }) }),
-      };
-      return await cb(mockTx);
-    });
-
-    const provisionSpy = vi.spyOn(provisioningService.tenantProvisioningService, 'provisionTenant');
-
-    const req = new NextRequest('http://localhost:3000/api/saas/tenants', {
+    // 1. Attempt sending with initialPassword -> Must be rejected with HTTP 400
+    const reqWithPassword = new NextRequest('http://localhost:3000/api/saas/tenants', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -209,21 +181,45 @@ describe('WP-TENANT-PROVISIONING-INVITATION — 10 Canonical Verification Tests'
         slug: 'al-amin',
         ownerName: 'Kyai Amin',
         ownerEmail: 'owner@pesantren.id',
-        initialPassword: 'HACKED_PASSWORD_SHOULD_BE_IGNORED_123!', // Malicious client attempt
+        initialPassword: 'HACKED_PASSWORD_SHOULD_BE_REJECTED_123!',
       }),
     });
 
-    const res = await POST(req);
-    expect(res.status).toBe(201);
-    const json = await res.json();
+    const resRejected = await POST(reqWithPassword);
+    expect(resRejected.status).toBe(400);
+    const jsonRejected = await resRejected.json();
+    expect(jsonRejected.error).toBe('BadRequest');
+    expect(jsonRejected.message).toContain('Penyediaan kata sandi awal tidak diperbolehkan');
+
+    // 2. Valid Zero-Password payload -> Succeeds with 201 without password leakage
+    const reqValid = new NextRequest('http://localhost:3000/api/saas/tenants', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'super_admin_001',
+        'x-is-super-admin': 'true',
+        host: 'localhost:3000',
+        origin: 'http://localhost:3000',
+      },
+      body: JSON.stringify({
+        name: 'Pesantren Al-Amin',
+        slug: 'al-amin',
+        ownerName: 'Kyai Amin',
+        ownerEmail: 'owner@pesantren.id',
+      }),
+    });
+
+    const resValid = await POST(reqValid);
+    expect(resValid.status).toBe(201);
+    const jsonValid = await resValid.json();
 
     // Verify service payload NEVER received initialPassword
     const passedInput = provisionSpy.mock.calls[0][0];
     expect((passedInput as any).initialPassword).toBeUndefined();
 
     // Verify response does not leak temporary password
-    expect((json.data.admin as any).temporaryPassword).toBeUndefined();
-    expect(json.data.tenant.code).toBe('SR2601');
+    expect((jsonValid.data.admin as any).temporaryPassword).toBeUndefined();
+    expect(jsonValid.data.tenant.code).toBe('SR2601');
   });
 
   // ── TEST 8: Consistency between Auth user, public.users, tenant, membership & role ─

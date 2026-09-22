@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock DB helper for contract testing authorization service
 function createMockDb(config: {
+  userStatus?: string | null;
   tenantStatus?: string;
   membership?: { id: string; primaryRoleId: string; status: string } | null;
   primaryRole?: { id: string; roleCode: string; status: string } | null;
@@ -18,6 +19,14 @@ function createMockDb(config: {
           where: vi.fn().mockImplementation(() => {
             const resultPromise = {
               limit: vi.fn().mockImplementation((_limit: number) => {
+                // Users query
+                if (table && table.email && table.phone) {
+                  if (config.userStatus !== undefined) {
+                    return config.userStatus ? [{ id: 'user-1', status: config.userStatus }] : [];
+                  }
+                  return [{ id: 'user-1', status: 'ACTIVE' }];
+                }
+
                 // Tenants query
                 if (table && table.id && table.slug) {
                   if (config.tenantStatus !== undefined) {
@@ -149,6 +158,46 @@ describe('WP-101 Phase 1E — RBAC Authorization Engine Security Contracts', () 
       const result = await getEffectivePermissions('user-1', 'tenant-a', mockDb);
       expect(result.authorized).toBe(false);
       expect(result.decision).toBe('DENIED_TENANT_MEMBERSHIP_INACTIVE');
+    });
+
+    it('should deny authorization when user lifecycle status is INVITED (onboarding incomplete)', async () => {
+      const mockDb = createMockDb({
+        userStatus: 'INVITED',
+        tenantStatus: 'active',
+        membership: { id: 'mem-1', primaryRoleId: 'role-1', status: 'ACTIVE' },
+        primaryRole: { id: 'role-1', roleCode: 'ADMIN', status: 'ACTIVE' },
+      });
+
+      const result = await getEffectivePermissions('user-1', 'tenant-a', mockDb);
+      expect(result.authorized).toBe(false);
+      expect(result.decision).toBe('DENIED_USER_LIFECYCLE_INACTIVE');
+      expect(result.effectivePermissions.size).toBe(0);
+    });
+
+    it('should deny authorization when user lifecycle status is SUSPENDED or DISABLED', async () => {
+      const mockDb = createMockDb({
+        userStatus: 'SUSPENDED',
+        tenantStatus: 'active',
+        membership: { id: 'mem-1', primaryRoleId: 'role-1', status: 'ACTIVE' },
+        primaryRole: { id: 'role-1', roleCode: 'ADMIN', status: 'ACTIVE' },
+      });
+
+      const result = await getEffectivePermissions('user-1', 'tenant-a', mockDb);
+      expect(result.authorized).toBe(false);
+      expect(result.decision).toBe('DENIED_USER_LIFECYCLE_INACTIVE');
+    });
+
+    it('should deny authorization when user record does not exist in users table', async () => {
+      const mockDb = createMockDb({
+        userStatus: null,
+        tenantStatus: 'active',
+        membership: { id: 'mem-1', primaryRoleId: 'role-1', status: 'ACTIVE' },
+        primaryRole: { id: 'role-1', roleCode: 'ADMIN', status: 'ACTIVE' },
+      });
+
+      const result = await getEffectivePermissions('user-nonexistent', 'tenant-a', mockDb);
+      expect(result.authorized).toBe(false);
+      expect(result.decision).toBe('DENIED_USER_LIFECYCLE_INACTIVE');
     });
 
     it('should deny authorization when primary role status is INACTIVE', async () => {

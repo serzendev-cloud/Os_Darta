@@ -27,6 +27,8 @@ export interface User {
   role: UserRole;
   avatar?: string;
   childSantriId?: string; // For wali role - links to their child
+  status?: string;
+  tenantId?: string;
 }
 
 export interface NavItem {

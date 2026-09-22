@@ -72,6 +72,14 @@ export const navigationGroups: NavGroup[] = [
         requiredPermission: Permission.MANAGE_TENANTS,
         badge: 'New',
       },
+      {
+        title: '🧪 Preview Platform',
+        href: '/dashboard/saas/preview',
+        icon: 'Sparkles',
+        roles: ['developer', 'super_admin'],
+        requiredPermission: Permission.MANAGE_TENANTS,
+        badge: 'Tooling',
+      },
     ],
   },
 

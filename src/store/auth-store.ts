@@ -46,6 +46,8 @@ export function mapSupabaseUser(authUser: SupabaseAuthUser): User {
     email: authUser.email || '',
     role,
     avatar: (authUser.user_metadata?.avatar_url as string) || undefined,
+    status: (authUser.user_metadata?.status as string) || (authUser.app_metadata?.status as string) || 'ACTIVE',
+    tenantId: (authUser.app_metadata?.tenant_id as string) || (authUser.user_metadata?.tenant_id as string) || undefined,
   };
 }
 
@@ -97,10 +99,17 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (error) {
         let displayError = 'Email atau password yang Anda masukkan salah.';
-        if (error.message.toLowerCase().includes('email not confirmed')) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('email not confirmed')) {
           displayError = 'Email belum dikonfirmasi. Silakan periksa kotak masuk email Anda.';
-        } else if (error.message.toLowerCase().includes('rate limit')) {
+        } else if (msg.includes('rate limit') || error.status === 429) {
           displayError = 'Terlalu banyak percobaan login. Silakan tunggu beberapa saat.';
+        } else if (error.status === 400 || msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
+          displayError = 'Email atau password yang Anda masukkan salah.';
+        } else if (error.status === 500 || error.status === 502 || error.status === 503) {
+          displayError = 'Terjadi kesalahan pada server autentikasi. Silakan coba lagi nanti.';
+        } else if (msg.includes('network') || msg.includes('failed to fetch') || msg.includes('fetch failed')) {
+          displayError = 'Tidak dapat terhubung ke server autentikasi. Periksa koneksi internet Anda.';
         }
         set({ isLoading: false, error: displayError });
         return false;

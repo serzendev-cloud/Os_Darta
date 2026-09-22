@@ -85,22 +85,57 @@ export default function LoginClient({
     }
   };
 
-  // Quick preset email selector for fast convenience (ONLY sets email, NEVER bypasses password)
-  const quickAccounts = [
-    { label: 'Developer (Owner)', email: 'dev@serzendev.com', role: 'developer', color: 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100' },
-    { label: 'Super Admin Platform', email: 'superadmin@madev.id', role: 'super_admin', color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' },
-    { label: 'Admin Pesantren', email: 'admin@mahad.sch.id', role: 'admin', color: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' },
-    { label: 'Musyrif Asrama', email: 'musyrif@mahad.sch.id', role: 'musyrif', color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' },
-    { label: 'Wali Santri', email: 'wali@mahad.sch.id', role: 'wali', color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' },
-    { label: 'Santri', email: 'santri@mahad.sch.id', role: 'santri', color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' },
+  const [previewLoadingRole, setPreviewLoadingRole] = useState<string | null>(null);
+
+  // Production / Standard UI: Preview Platform is managed inside Super Admin SaaS Console (/dashboard/saas/preview).
+  // Public login page is kept clean (Email & Password) per Product Owner directive.
+  // Can be optionally toggled in local dev only if NEXT_PUBLIC_SHOW_LOGIN_PREVIEW_BUTTONS === 'true'.
+  const isPreviewUiEnabled = process.env.NEXT_PUBLIC_SHOW_LOGIN_PREVIEW_BUTTONS === 'true';
+
+  // Dedicated Role Preview Configuration (Development / Evaluation Only)
+  const previewRoles = [
+    { role: 'developer', label: 'Developer / Owner', badge: '👑 Developer', color: 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 hover:border-rose-300' },
+    { role: 'super_admin', label: 'Super Admin Platform', badge: '🛡 Super Admin', color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300' },
+    { role: 'admin', label: 'Admin Pesantren', badge: '🏫 Admin', color: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300' },
+    { role: 'musyrif', label: 'Musyrif Asrama', badge: '🕌 Musyrif', color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300' },
+    { role: 'wali', label: 'Wali Santri', badge: '👨‍👩‍👧 Wali', color: 'bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100 hover:border-teal-300' },
+    { role: 'santri', label: 'Santri', badge: '🎓 Santri', color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300' },
   ];
 
-  const handleSelectQuickAccount = (accountEmail: string) => {
-    setEmail(accountEmail);
-    setPassword('');
+  const handleRolePreview = async (targetRole: string) => {
     setLoginError('');
-    if (rememberMe) {
-      localStorage.setItem('madev_remember_email', accountEmail);
+    setPreviewLoadingRole(targetRole);
+
+    try {
+      const res = await fetch('/api/auth/role-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: targetRole }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setLoginError(data.error || 'Gagal memulai sesi role preview.');
+        setPreviewLoadingRole(null);
+        return;
+      }
+
+      // Synchronize client auth store with returned session
+      if (data.session) {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        useAuthStore.getState().syncUser(data.session.user);
+      }
+
+      router.push(data.redirectTo || '/dashboard');
+      router.refresh();
+    } catch (err: unknown) {
+      setLoginError((err as Error).message || 'Terjadi kesalahan saat memproses role preview.');
+      setPreviewLoadingRole(null);
     }
   };
 
@@ -313,28 +348,46 @@ export default function LoginClient({
             </button>
           </form>
 
-          {/* Quick Account Selector */}
-          <div className="mt-6 pt-5 border-t border-stone-100">
-            <p className="text-[11px] font-semibold text-stone-500 mb-2 flex items-center gap-1">
-              <span>Pilih Email Akun (Preset):</span>
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {quickAccounts.map((acc) => {
-                const isSelected = email.toLowerCase() === acc.email.toLowerCase();
-                return (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => handleSelectQuickAccount(acc.email)}
-                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all flex items-center gap-1 ${acc.color} ${isSelected ? 'ring-2 ring-emerald-500/40 font-bold scale-[1.02]' : ''}`}
-                  >
-                    {isSelected && <Check className="w-3 h-3 text-emerald-600" />}
-                    <span>{acc.label}</span>
-                  </button>
-                );
-              })}
+          {/* Role Preview Engine (Controlled Display: Active in dev by default, explicit opt-in in prod) */}
+          {isPreviewUiEnabled && (
+            <div className="mt-6 pt-5 border-t border-stone-200">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[11px] font-bold text-stone-700 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Preview Platform Berdasarkan Role</span>
+                </p>
+                <span className="text-[9px] font-semibold uppercase tracking-wider bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">
+                  Dev / Staging Preview
+                </span>
+              </div>
+              <p className="text-[10px] text-stone-500 mb-2.5">
+                Klik salah satu role untuk langsung masuk dan mengeksplorasi antarmuka platform dari sudut pandang peran tersebut:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {previewRoles.map((pr) => {
+                  const isLoadingThis = previewLoadingRole === pr.role;
+                  return (
+                    <button
+                      key={pr.role}
+                      type="button"
+                      disabled={isSubmitting || !!previewLoadingRole}
+                      onClick={() => handleRolePreview(pr.role)}
+                      className={`px-2 py-2 rounded-lg border text-[11px] font-semibold transition-all flex flex-col items-center justify-center gap-0.5 text-center ${pr.color} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {isLoadingThis ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin my-0.5" />
+                      ) : (
+                        <>
+                          <span className="text-xs">{pr.badge}</span>
+                          <span className="text-[9.5px] opacity-80">{pr.label.split(' ')[0]}</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
           
           {/* Footer inside form card */}
           <div className="mt-6 pt-5 border-t border-stone-100 text-center space-y-1">

@@ -1,28 +1,38 @@
+// ==============================================================================
+// Academic Workspace: Academic Years API Route
+// Work Package: WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001
+// Security: Server-derived Tenant Context via getTenantContext()
+// ==============================================================================
 
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { academicYears } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getTenantContext } from '@/lib/tenant/context';
+import { academicYearService } from '@/lib/services/academic-foundation-service';
 import { z } from 'zod';
 
 const createAcademicYearSchema = z.object({
   name: z.string().min(1, 'Nama tahun ajaran wajib diisi'),
-  startDate: z.string().min(1, 'Tanggal mulai wajib diisi'),
-  endDate: z.string().min(1, 'Tanggal selesai wajib diisi'),
-  status: z.enum(['planned', 'active', 'archived']).default('planned'),
-  tenantId: z.string().default('default'),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal mulai harus YYYY-MM-DD'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal selesai harus YYYY-MM-DD'),
+  status: z.enum(['planned', 'active']).optional().default('planned'),
+});
+
+const actionAcademicYearSchema = z.object({
+  action: z.enum(['activate', 'archive']),
+  yearId: z.string().min(1, 'ID tahun ajaran wajib diisi'),
 });
 
 export async function GET(request: Request) {
   try {
+    const tenant = await getTenantContext();
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'default';
+    const status = searchParams.get('status') || undefined;
 
-    const data = await db.select().from(academicYears).where(eq(academicYears.tenantId, tenantId));
+    const data = await academicYearService.getAcademicYears(tenant.id, { status });
     return NextResponse.json({ success: true, data }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Gagal mengambil data tahun ajaran';
     return NextResponse.json(
-      { success: false, message: error.message || 'Gagal mengambil data tahun ajaran' },
+      { success: false, message },
       { status: 500 }
     );
   }
@@ -30,32 +40,37 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const tenant = await getTenantContext();
     const body = await request.json();
+
+    // Check if this is a lifecycle action
+    if (body && typeof body === 'object' && 'action' in body) {
+      const { action, yearId } = actionAcademicYearSchema.parse(body);
+      if (action === 'activate') {
+        const updated = await academicYearService.activateAcademicYear(tenant.id, yearId);
+        return NextResponse.json({ success: true, data: updated }, { status: 200 });
+      } else if (action === 'archive') {
+        const updated = await academicYearService.archiveAcademicYear(tenant.id, yearId);
+        return NextResponse.json({ success: true, data: updated }, { status: 200 });
+      }
+    }
+
+    // Otherwise it's a creation request
     const validatedData = createAcademicYearSchema.parse(body);
+    const created = await academicYearService.createAcademicYear(tenant.id, validatedData);
 
-    const id = `ay_${Date.now()}`;
-    const newYear = {
-      id,
-      tenantId: validatedData.tenantId,
-      name: validatedData.name,
-      startDate: validatedData.startDate,
-      endDate: validatedData.endDate,
-      status: validatedData.status,
-    };
-
-    await db.insert(academicYears).values(newYear);
-
-    return NextResponse.json({ success: true, data: newYear }, { status: 201 });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, data: created }, { status: 201 });
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, message: 'Validasi gagal', errors: error.issues },
         { status: 400 }
       );
     }
+    const message = error instanceof Error ? error.message : 'Gagal memproses tahun ajaran';
     return NextResponse.json(
-      { success: false, message: error.message || 'Gagal membuat tahun ajaran' },
-      { status: 500 }
+      { success: false, message },
+      { status: 400 }
     );
   }
 }

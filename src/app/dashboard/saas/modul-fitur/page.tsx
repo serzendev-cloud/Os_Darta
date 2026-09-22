@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { PageCard } from '@/components/shared/page-header';
 import { 
   Sliders, Sparkles, Building2, CheckCircle2, ShieldCheck, 
   CreditCard, Smartphone, HardDrive, ShoppingCart, Stethoscope, 
   Trophy, ToggleLeft, ToggleRight, Layers, Rocket, Users, Info, Check,
-  ChevronDown, Power, XCircle, Search, ExternalLink, HelpCircle, BookOpen
+  ChevronDown, Power, XCircle, Search, ExternalLink, HelpCircle, BookOpen,
+  Loader2, Plus
 } from 'lucide-react';
 
 interface TenantModulesConfig {
@@ -39,14 +41,54 @@ const modulesCatalog: ModuleCatalogItem[] = [
   { id: 'm9', name: 'Perpustakaan & Sirkulasi Buku RFID', category: 'Academic & Care', description: 'Katalog buku, sirkulasi peminjaman/pengembalian RFID, & presensi pengunjung perpustakaan', icon: BookOpen },
 ];
 
-const mockTenantsModulesData: Record<string, TenantModulesConfig> = {};
-
 export default function SaasModulesPage() {
-  const [tenantsMap, setTenantsMap] = useState<Record<string, TenantModulesConfig>>(mockTenantsModulesData);
-  const [selectedTenantId, setSelectedTenantId] = useState('t1');
+  const [tenantsMap, setTenantsMap] = useState<Record<string, TenantModulesConfig>>({});
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState('');
 
-  const currentTenant = tenantsMap[selectedTenantId] || tenantsMap['t1'];
+  useEffect(() => {
+    async function loadTenants() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/saas/tenants');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data?.tenants)) {
+          const map: Record<string, TenantModulesConfig> = {};
+          for (const t of json.data.tenants) {
+            map[t.id] = {
+              id: t.id,
+              name: t.name,
+              subdomain: t.subdomain || `${t.slug || t.id}.madev.id`,
+              location: t.location || 'Indonesia',
+              plan: t.plan || 'Pro SaaS',
+              modules: {
+                m1: true,
+                m2: true,
+                m3: t.modules?.paymentGateway ?? true,
+                m4: true,
+                m5: t.modules?.rfidGate ?? true,
+                m6: t.modules?.posKantin ?? true,
+                m7: t.modules?.uksKesehatan ?? true,
+                m8: false,
+                m9: false,
+              },
+            };
+          }
+          setTenantsMap(map);
+          const firstId = Object.keys(map)[0];
+          if (firstId) setSelectedTenantId(firstId);
+        }
+      } catch (e) {
+        console.warn('Gagal memuat tenant untuk modul fitur:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadTenants();
+  }, []);
+
+  const currentTenant = (selectedTenantId && tenantsMap[selectedTenantId]) || Object.values(tenantsMap)[0] || null;
 
   const showNotification = (msg: string) => {
     setToast(msg);
@@ -54,15 +96,16 @@ export default function SaasModulesPage() {
   };
 
   const handleToggleModule = (moduleId: string, moduleName: string) => {
-    const currentState = currentTenant.modules[moduleId] ?? false;
+    if (!currentTenant) return;
+    const currentState = currentTenant.modules?.[moduleId] ?? false;
     const nextState = !currentState;
 
     setTenantsMap(prev => ({
       ...prev,
-      [selectedTenantId]: {
-        ...prev[selectedTenantId],
+      [currentTenant.id]: {
+        ...prev[currentTenant.id],
         modules: {
-          ...prev[selectedTenantId].modules,
+          ...(prev[currentTenant.id]?.modules || {}),
           [moduleId]: nextState
         }
       }
@@ -76,7 +119,7 @@ export default function SaasModulesPage() {
   };
 
   // Calculate active modules count for current tenant
-  const activeCount = Object.values(currentTenant.modules).filter(Boolean).length;
+  const activeCount = currentTenant?.modules ? Object.values(currentTenant.modules).filter(Boolean).length : 0;
   const totalCount = modulesCatalog.length;
 
   return (
@@ -112,137 +155,165 @@ export default function SaasModulesPage() {
         title="Pusat Kontrol Fitur & Modul Tenant"
         description="Pilih pesantren target di bawah ini untuk mengelola distribusi modul fiturnya"
       >
-        {/* Dropdown Selector Pesantren */}
-        <div className="p-5 rounded-2xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 mb-8 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 text-stone-900 dark:text-white font-extrabold text-xs uppercase tracking-wider">
-              <Building2 className="w-4 h-4 text-emerald-600" />
-              <span>1. PILIH PESANTREN TARGET (TARGET TENANT SELECTOR)</span>
-            </div>
-            <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
-              {activeCount} / {totalCount} Modul Aktif
-            </span>
+        {isLoading ? (
+          <div className="py-16 flex flex-col items-center justify-center gap-3 text-stone-500">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+            <p className="text-sm font-medium">Memuat data modul pesantren...</p>
           </div>
-
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-1">
-            <div className="relative flex-1 max-w-md">
-              <select
-                value={selectedTenantId}
-                onChange={(e) => setSelectedTenantId(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border-2 border-emerald-500/40 text-xs font-bold text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-md pr-10 appearance-none"
-              >
-                {Object.values(tenantsMap).map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} — {t.plan} ({t.subdomain})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-5 h-5 text-emerald-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none font-bold" />
+        ) : !currentTenant ? (
+          <div className="py-16 px-4 text-center border-2 border-dashed border-stone-200 dark:border-stone-800 rounded-3xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
+              <Layers className="w-6 h-6" />
             </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-stone-900 dark:text-white">Belum Ada Tenant Terdaftar</h3>
+              <p className="text-xs text-stone-500 max-w-md mx-auto">
+                Daftar tenant saat ini masih kosong. Silakan tambahkan atau provisi tenant baru melalui menu Manajemen Tenant untuk mulai mengatur fitur dan modul.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/saas/tenants"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Buka Manajemen Tenant</span>
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* Dropdown Selector Pesantren */}
+            <div className="p-5 rounded-2xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 mb-8 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5 text-stone-900 dark:text-white font-extrabold text-xs uppercase tracking-wider">
+                  <Building2 className="w-4 h-4 text-emerald-600" />
+                  <span>1. PILIH PESANTREN TARGET (TARGET TENANT SELECTOR)</span>
+                </div>
+                <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                  {activeCount} / {totalCount} Modul Aktif
+                </span>
+              </div>
 
-            {/* Tenant Info Pill */}
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-xs">
-              <div>
-                <span className="text-stone-400 text-[10px] uppercase font-semibold">Pesantren Terpilih:</span>
-                <div className="font-extrabold text-stone-900 dark:text-white flex items-center gap-1.5">
-                  <span>{currentTenant.name}</span>
-                  <span className="text-stone-400 font-mono text-[11px]">({currentTenant.subdomain})</span>
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-1">
+                <div className="relative flex-1 max-w-md">
+                  <select
+                    value={selectedTenantId}
+                    onChange={(e) => setSelectedTenantId(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border-2 border-emerald-500/40 text-xs font-bold text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-md pr-10 appearance-none"
+                  >
+                    {Object.values(tenantsMap).map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} — {t.plan} ({t.subdomain})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-5 h-5 text-emerald-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none font-bold" />
+                </div>
+
+                {/* Tenant Info Pill */}
+                <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-xs">
+                  <div>
+                    <span className="text-stone-400 text-[10px] uppercase font-semibold">Pesantren Terpilih:</span>
+                    <div className="font-extrabold text-stone-900 dark:text-white flex items-center gap-1.5">
+                      <span>{currentTenant.name}</span>
+                      <span className="text-stone-400 font-mono text-[11px]">({currentTenant.subdomain})</span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200">
+                    {currentTenant.plan}
+                  </span>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200">
-                {currentTenant.plan}
-              </span>
             </div>
-          </div>
-        </div>
 
-        {/* Header Section for Modules Catalog below */}
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-stone-900 dark:text-white">
-              Status Fitur & Modul Khusus: <span className="text-emerald-700 dark:text-emerald-400">{currentTenant.name}</span>
-            </h3>
-            <p className="text-xs text-stone-500">
-              Gunakan sakelar saklar di setiap kartu di bawah untuk mengaktifkan atau menonaktifkan fitur bagi pesantren ini.
-            </p>
-          </div>
-        </div>
+            {/* Header Section for Modules Catalog below */}
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-stone-900 dark:text-white">
+                  Status Fitur & Modul Khusus: <span className="text-emerald-700 dark:text-emerald-400">{currentTenant.name}</span>
+                </h3>
+                <p className="text-xs text-stone-500">
+                  Gunakan sakelar saklar di setiap kartu di bawah untuk mengaktifkan atau menonaktifkan fitur bagi pesantren ini.
+                </p>
+              </div>
+            </div>
 
-        {/* Modules Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {modulesCatalog.map((m) => {
-            const isActive = currentTenant.modules[m.id] ?? false;
-            const IconComponent = m.icon;
+            {/* Modules Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {modulesCatalog.map((m) => {
+                const isActive = currentTenant.modules[m.id] ?? false;
+                const IconComponent = m.icon;
 
-            return (
-              <div
-                key={m.id}
-                className={`p-5 rounded-3xl border transition-all duration-200 flex flex-col justify-between space-y-4 ${
-                  isActive
-                    ? 'bg-white dark:bg-stone-900 border-emerald-500/40 shadow-md shadow-emerald-500/5'
-                    : 'bg-stone-50/60 dark:bg-stone-900/40 border-stone-200 dark:border-stone-800 opacity-80'
-                }`}
-              >
-                {/* Top Card Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`p-2.5 rounded-2xl ${isActive ? 'bg-emerald-500/10 text-emerald-600' : 'bg-stone-200 dark:bg-stone-800 text-stone-400'}`}>
-                        <IconComponent className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                          {m.category}
-                        </span>
-                        <h4 className="text-sm font-extrabold text-stone-900 dark:text-white flex items-center gap-1.5">
-                          <span>{m.name}</span>
-                          {m.isBeta && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300">
-                              BETA
-                            </span>
-                          )}
-                        </h4>
-                      </div>
-                    </div>
-
-                    {/* Status Badge */}
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      isActive 
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-300' 
-                        : 'bg-stone-200 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
-                    }`}>
-                      {isActive ? '🟢 AKTIF' : '🔴 NONAKTIF'}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed pl-1">
-                    {m.description}
-                  </p>
-                </div>
-
-                {/* Bottom Toggle Bar inside Card */}
-                <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
-                  <div className="text-[11px] font-semibold text-stone-500">
-                    Status di <strong className="text-stone-800 dark:text-stone-200">{currentTenant.name}</strong>:
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleModule(m.id, m.name)}
-                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 ${
+                return (
+                  <div
+                    key={m.id}
+                    className={`p-5 rounded-3xl border transition-all duration-200 flex flex-col justify-between space-y-4 ${
                       isActive
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                        : 'bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 hover:bg-stone-400'
+                        ? 'bg-white dark:bg-stone-900 border-emerald-500/40 shadow-md shadow-emerald-500/5'
+                        : 'bg-stone-50/60 dark:bg-stone-900/40 border-stone-200 dark:border-stone-800 opacity-80'
                     }`}
                   >
-                    <Power className="w-3.5 h-3.5" />
-                    <span>{isActive ? 'Matikan Modul' : 'Aktifkan Modul'}</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    {/* Top Card Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`p-2.5 rounded-2xl ${isActive ? 'bg-emerald-500/10 text-emerald-600' : 'bg-stone-200 dark:bg-stone-800 text-stone-400'}`}>
+                            <IconComponent className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                              {m.category}
+                            </span>
+                            <h4 className="text-sm font-extrabold text-stone-900 dark:text-white flex items-center gap-1.5">
+                              <span>{m.name}</span>
+                              {m.isBeta && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                                  BETA
+                                </span>
+                              )}
+                            </h4>
+                          </div>
+                        </div>
+
+                        {/* Status Badge */}
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          isActive 
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-300' 
+                            : 'bg-stone-200 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
+                        }`}>
+                          {isActive ? '🟢 AKTIF' : '🔴 NONAKTIF'}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed pl-1">
+                        {m.description}
+                      </p>
+                    </div>
+
+                    {/* Bottom Toggle Bar inside Card */}
+                    <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                      <div className="text-[11px] font-semibold text-stone-500">
+                        Status di <strong className="text-stone-800 dark:text-stone-200">{currentTenant.name}</strong>:
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleModule(m.id, m.name)}
+                        className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 ${
+                          isActive
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 hover:bg-stone-400'
+                        }`}
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                        <span>{isActive ? 'Matikan Modul' : 'Aktifkan Modul'}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </PageCard>
     </div>
   );

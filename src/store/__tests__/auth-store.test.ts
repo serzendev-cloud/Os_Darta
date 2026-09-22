@@ -71,6 +71,7 @@ describe('useAuthStore', () => {
         email: 'superadmin@madev.id',
         role: 'super_admin',
         avatar: undefined,
+        status: 'ACTIVE',
       });
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);

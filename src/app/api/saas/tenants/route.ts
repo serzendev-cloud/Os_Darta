@@ -57,7 +57,9 @@ function validateOrigin(request: NextRequest): boolean {
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
+    const isSuperAdminHeader = request.headers.get('x-is-super-admin') === 'true';
+    const userRole = (request.headers.get('x-user-role') || '').toUpperCase().replace(/\s+/g, '_');
+    const isSuperAdmin = isSuperAdminHeader || userRole === 'SUPER_ADMIN' || userRole === 'DEVELOPER';
 
     // 1. Authorization Gate (Super Admin Only)
     if (!userId || !isSuperAdmin) {
@@ -101,7 +103,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
+    const isSuperAdminHeader = request.headers.get('x-is-super-admin') === 'true';
+    const userRole = (request.headers.get('x-user-role') || '').toUpperCase().replace(/\s+/g, '_');
+    const isSuperAdmin = isSuperAdminHeader || userRole === 'SUPER_ADMIN' || userRole === 'DEVELOPER';
 
     // 1. Authorization Gate (Super Admin Only)
     if (!userId || !isSuperAdmin) {
@@ -137,6 +141,18 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'BadRequest',
           message: 'Format payload JSON tidak valid.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Strict Zero-Password Ingress Assertion: Reject any password ingress attempt
+    if ('initialPassword' in rawBody || 'password' in rawBody || 'temporaryPassword' in rawBody) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'BadRequest',
+          message: 'Penyediaan kata sandi awal tidak diperbolehkan. Administrator tenant wajib membuat kata sandi mandiri melalui tautan undangan resmi.',
         },
         { status: 400 }
       );
