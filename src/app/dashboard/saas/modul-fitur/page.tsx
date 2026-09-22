@@ -56,6 +56,7 @@ export default function SaasModulesPage() {
         if (json.success && Array.isArray(json.data?.tenants)) {
           const map: Record<string, TenantModulesConfig> = {};
           for (const t of json.data.tenants) {
+            if (!t || !t.id) continue;
             map[t.id] = {
               id: t.id,
               name: t.name,
@@ -65,11 +66,11 @@ export default function SaasModulesPage() {
               modules: {
                 m1: true,
                 m2: true,
-                m3: t.modules?.paymentGateway ?? true,
+                m3: t?.modules?.paymentGateway ?? true,
                 m4: true,
-                m5: t.modules?.rfidGate ?? true,
-                m6: t.modules?.posKantin ?? true,
-                m7: t.modules?.uksKesehatan ?? true,
+                m5: t?.modules?.rfidGate ?? true,
+                m6: t?.modules?.posKantin ?? true,
+                m7: t?.modules?.uksKesehatan ?? true,
                 m8: false,
                 m9: false,
               },
@@ -77,7 +78,9 @@ export default function SaasModulesPage() {
           }
           setTenantsMap(map);
           const firstId = Object.keys(map)[0];
-          if (firstId) setSelectedTenantId(firstId);
+          if (firstId) {
+            setSelectedTenantId(prev => (prev && map[prev] ? prev : firstId));
+          }
         }
       } catch (e) {
         console.warn('Gagal memuat tenant untuk modul fitur:', e);
@@ -88,7 +91,10 @@ export default function SaasModulesPage() {
     loadTenants();
   }, []);
 
-  const currentTenant = (selectedTenantId && tenantsMap[selectedTenantId]) || Object.values(tenantsMap)[0] || null;
+  const currentTenant: TenantModulesConfig | null = 
+    (selectedTenantId && tenantsMap[selectedTenantId]) 
+      ? tenantsMap[selectedTenantId] 
+      : (Object.values(tenantsMap)[0] ?? null);
 
   const showNotification = (msg: string) => {
     setToast(msg);
@@ -97,7 +103,7 @@ export default function SaasModulesPage() {
 
   const handleToggleModule = (moduleId: string, moduleName: string) => {
     if (!currentTenant) return;
-    const currentState = currentTenant.modules?.[moduleId] ?? false;
+    const currentState = currentTenant?.modules?.[moduleId] ?? false;
     const nextState = !currentState;
 
     setTenantsMap(prev => ({
@@ -240,7 +246,7 @@ export default function SaasModulesPage() {
             {/* Modules Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {modulesCatalog.map((m) => {
-                const isActive = currentTenant.modules[m.id] ?? false;
+                const isActive = currentTenant?.modules?.[m.id] ?? false;
                 const IconComponent = m.icon;
 
                 return (
