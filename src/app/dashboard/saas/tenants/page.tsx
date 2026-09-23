@@ -7,7 +7,7 @@ import {
   Key, ShieldCheck, CreditCard, Sparkles, ExternalLink, 
   Check, Sliders, Smartphone, HardDrive, ShoppingCart, 
   Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power,
-  Copy, Loader2, Eye, EyeOff, Mail, Send
+  Loader2, Mail
 } from 'lucide-react';
 
 interface TenantModules {
@@ -936,7 +936,7 @@ export default function SaasTenantsPage() {
                   className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSubmittingTenant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  <span>{isSubmittingTenant ? 'Memprovisi & Mengirim Undangan...' : 'Provisi & Kirim Undangan'}</span>
+                  <span>{isSubmittingTenant ? 'Memprovisi & Mengaktifkan Tenant...' : 'Provisi & Aktifkan Tenant'}</span>
                 </button>
               </div>
             </form>
