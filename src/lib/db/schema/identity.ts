@@ -57,13 +57,16 @@ export const tenantRoles = pgTable('tenant_roles', {
   tenantIdx: index('tenant_roles_tenant_idx').on(table.tenantId),
 }));
 
+export type MembershipStatus = 'INVITED' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type UserLifecycleStatus = 'ACTIVE' | 'INVITED' | 'INVITATION_FAILED' | 'MUST_CHANGE_PASSWORD' | 'SUSPENDED' | 'DISABLED';
+
 // ── 5. User Tenant Memberships Table (Single Active Primary Role per Tenant) ──
 export const userTenantMemberships = pgTable('user_tenant_memberships', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   primaryRoleId: text('primary_role_id').notNull().references(() => tenantRoles.id, { onDelete: 'cascade' }),
-  status: text('status').notNull().default('ACTIVE'), // 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+  status: text('status').notNull().default('ACTIVE'), // 'INVITED' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({

@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated || !user || user?.status?.toUpperCase() === 'INVITED') {
     return null;
   }
 

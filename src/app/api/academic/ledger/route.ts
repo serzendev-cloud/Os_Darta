@@ -1,6 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { getTenantContext } from '@/lib/tenant/context';
+import { authorizeOperationalApi } from '@/lib/authz/authorization-service';
 import {
   academicLedgerRecordService,
   academicTranscriptService,
@@ -34,6 +36,15 @@ const calculateLedgerSchema = z.object({
 
 export async function GET(request: Request) {
   try {
+    const tenant = await getTenantContext();
+    const authz = await authorizeOperationalApi(request, tenant.id);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { success: false, error: authz.error, message: authz.message },
+        { status: authz.status || 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const academicTermId = searchParams.get('academicTermId');
 
@@ -56,7 +67,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const tenant = await getTenantContext();
+    const authz = await authorizeOperationalApi(request, tenant.id);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { success: false, error: authz.error, message: authz.message },
+        { status: authz.status || 403 }
+      );
+    }
+
     const body = await request.json();
+
     const validatedData = calculateLedgerSchema.parse(body);
 
     const results = [];

@@ -133,7 +133,7 @@ export async function getEffectivePermissions(
       userId,
       tenantId,
       effectivePermissions: new Set(),
-      reason: `User membership in tenant ${tenantId} is inactive or suspended`,
+      reason: `User membership in tenant ${tenantId} is ${membership.status} (requires ACTIVE)`,
     };
   }
 
@@ -385,3 +385,48 @@ export async function authorizePlatformRole(
     effectivePermissions: new Set([`platform.${requiredPlatformRole.toLowerCase()}`]),
   };
 }
+
+/**
+ * Authorizes an incoming Request for operational tenant API access.
+ * Enforces fail-closed multi-tenant boundary:
+ * 1. Super Admin / Developer via proxy header -> AUTHORIZED.
+ * 2. Regular user -> Evaluates getEffectivePermissions(userId, tenantId).
+ *    Denies if user lifecycle or tenant membership is not ACTIVE.
+ */
+export async function authorizeOperationalApi(
+  request: Request,
+  tenantId: string,
+  dbInstance = db
+): Promise<{ authorized: boolean; status?: number; error?: string; message?: string }> {
+  const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
+  if (isSuperAdmin) {
+    return { authorized: true };
+  }
+
+  const userId = request.headers.get('x-user-id');
+  if (!userId || userId.trim() === '') {
+    return {
+      authorized: false,
+      status: 401,
+      error: 'Unauthorized',
+      message: 'Autentikasi diperlukan untuk mengakses resource ini',
+    };
+  }
+
+  const result = await getEffectivePermissions(userId, tenantId, dbInstance);
+  if (!result.authorized) {
+    const isUncompleted =
+      result.decision === 'DENIED_USER_LIFECYCLE_INACTIVE' ||
+      result.decision === 'DENIED_TENANT_MEMBERSHIP_INACTIVE';
+
+    return {
+      authorized: false,
+      status: 403,
+      error: isUncompleted ? 'UserOnboardingIncomplete' : 'Forbidden',
+      message: result.reason || 'Akses ditolak untuk tenant ini',
+    };
+  }
+
+  return { authorized: true };
+}
+

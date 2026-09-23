@@ -268,6 +268,22 @@ export async function provisionTenant(
 
     createdAuthUserId = linkData.user.id;
     hashedToken = linkData.properties?.hashed_token || null;
+
+    // Hardening: Ensure server-controlled app_metadata has status: 'INVITED'
+    if (createdAuthUserId && typeof supabaseAdmin.auth?.admin?.updateUserById === 'function') {
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(createdAuthUserId, {
+          app_metadata: {
+            status: 'INVITED',
+            tenant_id: tenantId,
+            tenant_code: tenantCode,
+            role: 'admin',
+          },
+        });
+      } catch (appMetaErr) {
+        console.warn('[TenantProvisioning] app_metadata update warning (non-fatal):', appMetaErr);
+      }
+    }
   } catch (authErr: unknown) {
     const message = authErr instanceof Error ? authErr.message : 'Kesalahan pada sistem autentikasi server.';
     const statusCode = (authErr as { statusCode?: number })?.statusCode || 500;
@@ -359,7 +375,7 @@ export async function provisionTenant(
           userId: authUserId,
           tenantId,
           primaryRoleId: adminRoleId,
-          status: 'ACTIVE',
+          status: 'INVITED',
           createdAt: new Date(),
           updatedAt: new Date(),
         });
@@ -578,6 +594,22 @@ export async function resendTenantInvitation(
     throw new Error(`Gagal membuat token undangan baru: ${linkError?.message || 'Token tidak tergenerate'}`);
   }
 
+  // Hardening: Ensure server-controlled app_metadata has status: 'INVITED'
+  if (typeof supabaseAdmin.auth?.admin?.updateUserById === 'function') {
+    try {
+      await supabaseAdmin.auth.admin.updateUserById(adminMembership.userId, {
+        app_metadata: {
+          status: 'INVITED',
+          tenant_id: tenantRow.id,
+          tenant_code: tenantRow.code,
+          role: 'admin',
+        },
+      });
+    } catch (appMetaErr) {
+      console.warn('[TenantProvisioning] resend app_metadata update warning:', appMetaErr);
+    }
+  }
+
   const activationUrl = `${appUrl}/auth/callback?token_hash=${linkData.properties.hashed_token}&type=invite`;
 
   // 4. Dispatch via Resend
@@ -597,6 +629,16 @@ export async function resendTenantInvitation(
         .update(users)
         .set({ status: 'INVITED', updatedAt: new Date() })
         .where(eq(users.id, adminMembership.userId));
+
+      await dbInstance
+        .update(userTenantMemberships)
+        .set({ status: 'INVITED', updatedAt: new Date() })
+        .where(
+          and(
+            eq(userTenantMemberships.userId, adminMembership.userId),
+            eq(userTenantMemberships.tenantId, cleanTenantId)
+          )
+        );
     } else {
       invitationStatus = 'FAILED';
       await dbInstance

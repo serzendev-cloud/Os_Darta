@@ -271,7 +271,7 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     // Verify Identity Chain Invariants
     expect(insertedRecords.users.id).toBe(mockAuthUserId);
     expect(insertedRecords.userTenantMemberships.userId).toBe(mockAuthUserId);
-    expect(insertedRecords.userTenantMemberships.status).toBe('ACTIVE');
+    expect(insertedRecords.userTenantMemberships.status).toBe('INVITED');
 
     // Verify Canonical Tenant Role: 'ADMIN'
     expect(insertedRecords.tenantRoles.roleCode).toBe('ADMIN');

@@ -46,7 +46,7 @@ export function mapSupabaseUser(authUser: SupabaseAuthUser): User {
     email: authUser.email || '',
     role,
     avatar: (authUser.user_metadata?.avatar_url as string) || undefined,
-    status: (authUser.user_metadata?.status as string) || (authUser.app_metadata?.status as string) || 'ACTIVE',
+    status: (authUser.app_metadata?.status as string) || (authUser.user_metadata?.status as string) || 'ACTIVE',
     tenantId: (authUser.app_metadata?.tenant_id as string) || (authUser.user_metadata?.tenant_id as string) || undefined,
   };
 }

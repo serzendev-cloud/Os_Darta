@@ -103,7 +103,9 @@ describe('API Contract validation', () => {
   
   describe('Academic Years API Contracts', () => {
     it('should validate GET list response schema contract', async () => {
-      const request = new Request('http://localhost/api/academic/workspace/years?tenantId=default');
+      const request = new Request('http://localhost/api/academic/workspace/years?tenantId=default', {
+        headers: { 'x-is-super-admin': 'true' },
+      });
       const response = await getYears(request);
       expect(response.status).toBe(200);
 
@@ -115,6 +117,7 @@ describe('API Contract validation', () => {
     it('should validate POST creation response schema contract', async () => {
       const request = new Request('http://localhost/api/academic/workspace/years', {
         method: 'POST',
+        headers: { 'x-is-super-admin': 'true' },
         body: JSON.stringify({
           name: 'Tahun Ajaran 2026/2027',
           startDate: '2026-08-01',
@@ -134,6 +137,7 @@ describe('API Contract validation', () => {
     it('should return bad request (400) on invalid payload input structures', async () => {
       const request = new Request('http://localhost/api/academic/workspace/years', {
         method: 'POST',
+        headers: { 'x-is-super-admin': 'true' },
         body: JSON.stringify({
           name: '', // Invalid empty name
           startDate: '2026-08-01',

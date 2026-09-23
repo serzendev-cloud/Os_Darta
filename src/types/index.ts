@@ -19,6 +19,8 @@ export type AcademicDomain = 'formal' | 'pesantren' | 'quran';
 
 export type SantriStatus = 'aktif' | 'cuti' | 'skors';
 export type AlumniStatus = 'Lulus' | 'Keluar';
+export type MembershipStatus = 'INVITED' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type UserLifecycleStatus = 'ACTIVE' | 'INVITED' | 'INVITATION_FAILED' | 'MUST_CHANGE_PASSWORD' | 'SUSPENDED' | 'DISABLED';
 
 export interface User {
   id: string;

@@ -16,7 +16,11 @@ export async function GET(request: NextRequest) {
 
   // Strict anti-open-redirect validation: must begin with single '/', no '//', no '://'
   let safeNext = '/auth/set-password';
-  if (
+  if (type === 'invite') {
+    // Security Invariant: Invitation flow MUST strictly target /auth/set-password
+    // Any external 'next' query parameter is deliberately ignored.
+    safeNext = '/auth/set-password';
+  } else if (
     rawNext.startsWith('/') &&
     !rawNext.startsWith('//') &&
     !rawNext.includes('://')

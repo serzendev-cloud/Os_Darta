@@ -92,6 +92,15 @@ export async function proxy(request: NextRequest) {
   const url = request.nextUrl;
   const pathname = url.pathname;
 
+  // 0. Fast-path exemption for public static assets (prevent unwanted redirects)
+  const isStaticAsset =
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico' ||
+    /\.(png|jpg|jpeg|svg|ico|webp|gif|css|js|woff|woff2)$/i.test(pathname);
+  if (isStaticAsset) {
+    return NextResponse.next();
+  }
+
   // 1. Extract tenant slug from hostname/path (Zero-Trust: Client x-tenant-id header is IGNORED)
   const tenantSlug = extractTenantSlug(request);
   const defaultTenantId = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'default-tenant';
@@ -135,11 +144,21 @@ export async function proxy(request: NextRequest) {
   }
 
   // 4b. Fail-Closed Lifecycle Access Gate for Invited Users (Onboarding Incomplete)
-  const userStatus = (user?.user_metadata?.status || user?.app_metadata?.status || 'ACTIVE') as string;
-  const isInvitedUser = userStatus.toUpperCase() === 'INVITED';
+  // Server-controlled app_metadata is strictly authoritative over client-modifiable user_metadata.
+  const appStatus = (user?.app_metadata?.status as string) || '';
+  const userMetaStatus = (user?.user_metadata?.status as string) || '';
+  const isInvitedUser =
+    appStatus.toUpperCase() === 'INVITED' ||
+    (!appStatus && userMetaStatus.toUpperCase() === 'INVITED');
 
   if (isAuthenticated && isInvitedUser) {
-    const isAuthRoute = pathname.startsWith('/auth') || pathname.startsWith('/api/auth');
+    // Exempt auth onboarding routes and error pages to avoid redirect loops
+    const isLoginWithError = pathname === '/login' && url.searchParams.has('error');
+    const isAuthRoute =
+      pathname.startsWith('/auth') ||
+      pathname.startsWith('/api/auth') ||
+      isLoginWithError;
+
     if (!isAuthRoute) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json(

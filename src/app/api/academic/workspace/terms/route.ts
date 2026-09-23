@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { getTenantContext } from '@/lib/tenant/context';
 import { academicTermService } from '@/lib/services/academic-foundation-service';
+import { authorizeOperationalApi } from '@/lib/authz/authorization-service';
 import { z } from 'zod';
 
 const createAcademicTermSchema = z.object({
@@ -26,6 +27,14 @@ const actionAcademicTermSchema = z.object({
 export async function GET(request: Request) {
   try {
     const tenant = await getTenantContext();
+    const authz = await authorizeOperationalApi(request, tenant.id);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { success: false, error: authz.error, message: authz.message },
+        { status: authz.status || 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const academicYearId = searchParams.get('academicYearId') || undefined;
     const status = searchParams.get('status') || undefined;
@@ -47,6 +56,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const tenant = await getTenantContext();
+    const authz = await authorizeOperationalApi(request, tenant.id);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { success: false, error: authz.error, message: authz.message },
+        { status: authz.status || 403 }
+      );
+    }
+
     const body = await request.json();
 
     // Check if this is a lifecycle action

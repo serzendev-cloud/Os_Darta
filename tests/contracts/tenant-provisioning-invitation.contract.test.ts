@@ -304,6 +304,7 @@ describe('WP-TENANT-PROVISIONING-INVITATION — 10 Canonical Verification Tests'
     expect(inserted.userTenantMemberships.userId).toBe(mockAuthUserId);
     expect(inserted.userTenantMemberships.tenantId).toBe(result.tenant.id);
     expect(inserted.userTenantMemberships.primaryRoleId).toBe(inserted.tenantRoles.id);
+    expect(inserted.userTenantMemberships.status).toBe('INVITED');
   });
 
   // ── TEST 9: Resend failure: tenant & user preserved, status = INVITATION_FAILED ─

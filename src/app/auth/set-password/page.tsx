@@ -75,16 +75,17 @@ export default function SetPasswordPage() {
         throw new Error(updateError.message || 'Gagal memperbarui kata sandi.');
       }
 
-      // 2. Complete onboarding to transition public.users status to ACTIVE
+      // 2. Complete onboarding to transition status to ACTIVE
       const res = await fetch('/api/auth/complete-onboarding', {
         method: 'POST',
       });
 
       if (!res.ok) {
-        console.warn('[SetPassword] complete-onboarding status transition warning.');
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || 'Gagal mengaktifkan akun di sistem. Silakan coba lagi.');
       }
 
-      // 3. Redirect to dashboard
+      // 3. Redirect to dashboard only upon complete onboarding success
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {

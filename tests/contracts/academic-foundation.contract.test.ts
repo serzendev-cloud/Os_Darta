@@ -645,7 +645,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
     // Client maliciously attempts to send tenantId = 'tenant-victim-99'
     const spoofedRequest = new Request('http://localhost:3000/api/academic/workspace/years', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-is-super-admin': 'true' },
       body: JSON.stringify({
         name: '2026/2027 Spoofed',
         startDate: '2026-07-01',
@@ -677,7 +677,11 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
         updatedAt: new Date(),
       },
     ]);
-    const getYearsRes = await getYearsApi(new Request('http://localhost:3000/api/academic/workspace/years'));
+    const getYearsRes = await getYearsApi(
+      new Request('http://localhost:3000/api/academic/workspace/years', {
+        headers: { 'x-is-super-admin': 'true' },
+      })
+    );
     expect(getYearsRes.status).toBe(200);
     expect(getYearsSpy).toHaveBeenCalledWith('tenant-trusted-01', expect.anything());
 
@@ -697,7 +701,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
 
     const spoofedTermReq = new Request('http://localhost:3000/api/academic/workspace/terms', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-is-super-admin': 'true' },
       body: JSON.stringify({
         academicYearId: 'ay_list_1',
         name: 'Semester Ganjil',
@@ -711,7 +715,11 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
     expect(createTermSpy).toHaveBeenCalledWith('tenant-trusted-01', expect.anything());
 
     const getTermsSpy = vi.spyOn(academicTermService, 'getAcademicTerms').mockResolvedValue([]);
-    const getTermsRes = await getTermsApi(new Request('http://localhost:3000/api/academic/workspace/terms'));
+    const getTermsRes = await getTermsApi(
+      new Request('http://localhost:3000/api/academic/workspace/terms', {
+        headers: { 'x-is-super-admin': 'true' },
+      })
+    );
     expect(getTermsRes.status).toBe(200);
     expect(getTermsSpy).toHaveBeenCalledWith('tenant-trusted-01', expect.anything());
   });
@@ -728,7 +736,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
     // Invalid body with start_date > end_date
     const invalidRequest = new Request('http://localhost:3000/api/academic/workspace/years', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-is-super-admin': 'true' },
       body: JSON.stringify({
         name: '2026/2027 Inverted',
         startDate: '2027-07-01',
