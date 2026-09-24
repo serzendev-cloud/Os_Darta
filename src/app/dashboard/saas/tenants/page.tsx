@@ -7,7 +7,7 @@ import {
   Key, ShieldCheck, CreditCard, Sparkles, ExternalLink, 
   Check, Sliders, Smartphone, HardDrive, ShoppingCart, 
   Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power,
-  Loader2, Mail
+  Loader2, Mail, Trash2, AlertTriangle, UserX, UserCheck, Lock
 } from 'lucide-react';
 
 interface TenantModules {
@@ -18,6 +18,45 @@ interface TenantModules {
   uksKesehatan: boolean;
   gdriveStorage: boolean;
   questKarakter: boolean;
+}
+
+interface HardDeletePlan {
+  tenant: {
+    id: string;
+    code: string;
+    slug: string;
+    name: string;
+    createdAt: string | null;
+  };
+  isProtected: boolean;
+  protectionReason?: string;
+  confirmationCode: string;
+  dependencies: {
+    santriCount: number;
+    asramaCount: number;
+    kamarCount: number;
+    kelasCount: number;
+    mapelCount: number;
+    membershipsCount: number;
+    settingsCount: number;
+  };
+  identityImpact: {
+    totalMembers: number;
+    purgedUsersCount: number;
+    purgedUsers: Array<{
+      userId: string;
+      email: string;
+      name: string;
+      reason: string;
+    }>;
+    retainedUsersCount: number;
+    retainedUsers: Array<{
+      userId: string;
+      email: string;
+      name: string;
+      reason: string;
+    }>;
+  };
 }
 
 interface ActiveTenant {
@@ -97,6 +136,30 @@ export default function SaasTenantsPage() {
   const [editingTenant, setEditingTenant] = useState<ActiveTenant | null>(null);
   const [tempModules, setTempModules] = useState<TenantModules>(defaultModules);
   const [tempStatus, setTempStatus] = useState<'aktif' | 'trial' | 'suspended'>('aktif');
+
+  // Hard Delete Modal & Lifecycle Execution State
+  const [deletingTenant, setDeletingTenant] = useState<ActiveTenant | null>(null);
+  const [deletePlan, setDeletePlan] = useState<HardDeletePlan | null>(null);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [confirmationInput, setConfirmationInput] = useState('');
+  const [purgeOrphans, setPurgeOrphans] = useState(true);
+  const [isExecutingDelete, setIsExecutingDelete] = useState(false);
+  const [deleteExecutionResult, setDeleteExecutionResult] = useState<{
+    tenantName: string;
+    tenantCode: string;
+    deletedCounts: {
+      tenant: number;
+      santri: number;
+      asrama: number;
+      kamar: number;
+      kelas: number;
+      mapel: number;
+      settings: number;
+    };
+    purgedUsers: Array<{ userId: string; email: string; name: string; authDeleted: boolean; error?: string }>;
+    retainedUsers: Array<{ userId: string; email: string; name: string; reason: string }>;
+  } | null>(null);
 
   const [toast, setToast] = useState('');
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -217,6 +280,64 @@ export default function SaasTenantsPage() {
       showNotification('Terjadi kesalahan jaringan saat mengirim ulang undangan.');
     } finally {
       setResendingTenantId(null);
+    }
+  };
+
+  const handleOpenDeleteModal = async (tenant: ActiveTenant) => {
+    setDeletingTenant(tenant);
+    setDeletePlan(null);
+    setPlanError(null);
+    setConfirmationInput('');
+    setPurgeOrphans(true);
+    setDeleteExecutionResult(null);
+    setIsLoadingPlan(true);
+
+    try {
+      const res = await fetch(`/api/saas/tenants/${tenant.id}/hard-delete`);
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        setDeletePlan(json.data);
+      } else {
+        setPlanError(json.message || 'Gagal memuat rencana hard-delete dari server.');
+      }
+    } catch (err: any) {
+      setPlanError(err?.message || 'Terjadi kesalahan jaringan saat memuat rencana hard-delete.');
+    } finally {
+      setIsLoadingPlan(false);
+    }
+  };
+
+  const handleExecuteHardDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deletingTenant || !deletePlan || deletePlan.isProtected) return;
+    if (confirmationInput.trim() !== deletePlan.confirmationCode) return;
+
+    setIsExecutingDelete(true);
+    setPlanError(null);
+    try {
+      const res = await fetch(`/api/saas/tenants/${deletingTenant.id}/hard-delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          confirmationCode: confirmationInput.trim(),
+          purgeOrphanedIdentities: purgeOrphans,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        setDeleteExecutionResult(json.data);
+        showNotification(`Tenant "${json.data.tenantName}" (${json.data.tenantCode}) BERHASIL DIHAPUS PERMANEN!`);
+        await fetchTenants();
+      } else {
+        setPlanError(json.message || 'Gagal mengeksekusi hard-delete.');
+      }
+    } catch (err: any) {
+      setPlanError(err?.message || 'Terjadi kesalahan jaringan saat mengeksekusi penghapusan tenant.');
+    } finally {
+      setIsExecutingDelete(false);
     }
   };
 
@@ -505,6 +626,15 @@ export default function SaasTenantsPage() {
                         >
                           <Sliders className="w-3.5 h-3.5" />
                           <span>Toggle Fitur Modul</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDeleteModal(t)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95"
+                          title="Hapus permanen tenant dan seluruh data terkait (Super Admin)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                          <span>Hard Delete</span>
                         </button>
                       </div>
                     </td>
@@ -1027,6 +1157,307 @@ export default function SaasTenantsPage() {
                 Selesai &amp; Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL HARD DELETE TENANT (SUPER ADMIN ONLY) */}
+      {deletingTenant && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl border border-rose-500/30 space-y-5 animate-in fade-in zoom-in-95 my-8">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-white">
+                    Hard Delete Tenant (Pemusnahan Permanen)
+                  </h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    {deletingTenant.name} ({deletingTenant.code || deletingTenant.subdomain})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isExecutingDelete}
+                onClick={() => {
+                  setDeletingTenant(null);
+                  setDeletePlan(null);
+                  setDeleteExecutionResult(null);
+                }}
+                className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-1 disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error Message inside Modal */}
+            {planError && (
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5">
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-bold">Terjadi Kesalahan:</div>
+                  <div>{planError}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading Plan State */}
+            {isLoadingPlan && (
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-rose-600" />
+                <div className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+                  Menganalisis dependensi data &amp; dampak identitas tenant...
+                </div>
+                <div className="text-[11px] text-stone-400">
+                  Memeriksa keterkaitan santri, asrama, kelas, dan status orphan akun pengguna.
+                </div>
+              </div>
+            )}
+
+            {/* Success Execution Result Dialog */}
+            {!isLoadingPlan && deleteExecutionResult && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Penghapusan Permanen Berhasil!</span>
+                  </div>
+                  <p>
+                    Tenant <strong>{deleteExecutionResult.tenantName}</strong> ({deleteExecutionResult.tenantCode}) dan seluruh entitas database terkait telah dimusnahkan secara transaksional.
+                  </p>
+                </div>
+
+                <div className="bg-stone-50 dark:bg-stone-800/60 rounded-2xl p-4 border border-stone-200 dark:border-stone-700 space-y-3 font-mono text-xs">
+                  <div className="text-[11px] uppercase tracking-wider font-sans font-bold text-stone-500">
+                    Ringkasan Data Dimusnahkan:
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-stone-700 dark:text-stone-300 font-sans text-xs">
+                    <div>• Record Tenant: <span className="font-mono font-bold text-rose-600">1</span></div>
+                    <div>• Santri: <span className="font-mono font-bold">{deleteExecutionResult.deletedCounts?.santri ?? 0}</span></div>
+                    <div>• Asrama &amp; Kamar: <span className="font-mono font-bold">{(deleteExecutionResult.deletedCounts?.asrama ?? 0) + (deleteExecutionResult.deletedCounts?.kamar ?? 0)}</span></div>
+                    <div>• Kelas &amp; Mapel: <span className="font-mono font-bold">{(deleteExecutionResult.deletedCounts?.kelas ?? 0) + (deleteExecutionResult.deletedCounts?.mapel ?? 0)}</span></div>
+                  </div>
+
+                  <div className="pt-2 border-t border-stone-200 dark:border-stone-700 font-sans text-xs space-y-1">
+                    <div className="font-bold text-stone-800 dark:text-stone-200">
+                      Pembersihan Akun Orphan ({deleteExecutionResult.purgedUsers?.length || 0}):
+                    </div>
+                    {deleteExecutionResult.purgedUsers?.length === 0 ? (
+                      <div className="text-stone-400 italic text-[11px]">Tidak ada akun pengguna yang dipurge (semua akun retained).</div>
+                    ) : (
+                      <ul className="space-y-1 text-[11px]">
+                        {deleteExecutionResult.purgedUsers?.map((u: any, idx: number) => (
+                          <li key={idx} className="flex items-center gap-1.5 text-stone-700 dark:text-stone-300">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>{u.email} ({u.name}) — {u.authDeleted ? 'Supabase Auth Purged' : 'DB Purged (Auth Manual Logged)'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeletingTenant(null);
+                      setDeletePlan(null);
+                      setDeleteExecutionResult(null);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold text-xs shadow-md transition-all active:scale-95"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Case A: Protected Tenant Banner */}
+            {!isLoadingPlan && !deleteExecutionResult && deletePlan?.isProtected && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-800 dark:text-rose-200 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-sm text-rose-700 dark:text-rose-300">
+                    <Lock className="w-5 h-5 shrink-0" />
+                    <span>TENANT DILINDUNGI SECARA PERMANEN</span>
+                  </div>
+                  <p>
+                    {deletePlan.protectionReason || 'Tenant ini memiliki perlindungan khusus dan tidak dapat dihapus.'}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-stone-50 dark:bg-stone-800/50 rounded-2xl border border-stone-200 dark:border-stone-700 text-xs space-y-2 text-stone-600 dark:text-stone-400">
+                  <div className="font-semibold text-stone-900 dark:text-white">Invarian Keamanan Sistem:</div>
+                  <p>
+                    Server-Side Hard-Delete Lifecycle Engine menolak eksekusi penghapusan terhadap Official Protected Tenant (seperti SR2601) untuk menjamin integritas data institusi.
+                  </p>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeletingTenant(null);
+                      setDeletePlan(null);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-stone-200 dark:bg-stone-800 text-stone-800 dark:text-stone-200 font-bold text-xs hover:bg-stone-300 transition-all"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Case B: Actionable Hard-Delete Execution Form */}
+            {!isLoadingPlan && !deleteExecutionResult && deletePlan && !deletePlan.isProtected && (
+              <form onSubmit={handleExecuteHardDelete} className="space-y-4 text-xs">
+                {/* Warning Alert */}
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>PERINGATAN OPERASI BERBAHAYA (DESTRUCTIVE)</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+                    Operasi ini akan <strong>menghapus database tenant secara permanen</strong> dan <strong>tidak dapat dibatalkan</strong>. Nomor urut kode tenant tidak akan di-reuse.
+                  </p>
+                </div>
+
+                {/* Dependencies Count Grid */}
+                <div className="bg-stone-50 dark:bg-stone-800/50 p-4 rounded-2xl border border-stone-200 dark:border-stone-700 space-y-3">
+                  <div className="font-bold text-stone-800 dark:text-stone-200 flex items-center justify-between">
+                    <span>Dampak Data Terkait (Kaskade Database)</span>
+                    <span className="text-[10px] font-mono text-stone-400">ID: {deletePlan.tenant.id}</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80">
+                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Santri</div>
+                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">{deletePlan.dependencies.santriCount}</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80">
+                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Asrama / Kamar</div>
+                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">{deletePlan.dependencies.asramaCount + deletePlan.dependencies.kamarCount}</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80">
+                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Kelas / Mapel</div>
+                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">{deletePlan.dependencies.kelasCount + deletePlan.dependencies.mapelCount}</div>
+                    </div>
+                  </div>
+
+                  {/* Identity Impact Breakdown */}
+                  <div className="pt-2 border-t border-stone-200 dark:border-stone-700 space-y-2">
+                    <div className="text-[11px] font-bold text-stone-700 dark:text-stone-300">
+                      Dampak Identitas Akun Pengguna ({deletePlan.identityImpact.totalMembers} Total Member):
+                    </div>
+
+                    {/* Purged Users List */}
+                    {deletePlan.identityImpact.purgedUsersCount > 0 && (
+                      <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-rose-800 dark:text-rose-300 text-[11px]">
+                          <UserX className="w-3.5 h-3.5 text-rose-600" />
+                          <span>{deletePlan.identityImpact.purgedUsersCount} Akun Orphan Akan Dimusnahkan &amp; Email Dilepas:</span>
+                        </div>
+                        <ul className="text-[11px] space-y-0.5 text-rose-700 dark:text-rose-400 font-mono">
+                          {deletePlan.identityImpact.purgedUsers.map(u => (
+                            <li key={u.userId}>• {u.email} ({u.name}) — {u.reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Retained Users List */}
+                    {deletePlan.identityImpact.retainedUsersCount > 0 && (
+                      <div className="p-2.5 rounded-xl bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-200 text-[11px]">
+                          <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>{deletePlan.identityImpact.retainedUsersCount} Akun Tetap Dipertahankan (Multi-Tenant / Platform):</span>
+                        </div>
+                        <ul className="text-[11px] space-y-0.5 text-stone-600 dark:text-stone-400 font-mono">
+                          {deletePlan.identityImpact.retainedUsers.map(u => (
+                            <li key={u.userId}>• {u.email} ({u.name}) — {u.reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Confirmation Code Input */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-stone-800 dark:text-stone-200">
+                    Ketik Kode Konfirmasi:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-800 select-all shrink-0">
+                      {deletePlan.confirmationCode}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={confirmationInput}
+                    onChange={(e) => setConfirmationInput(e.target.value)}
+                    placeholder={deletePlan.confirmationCode}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-xs font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/40 text-stone-900 dark:text-white"
+                    required
+                  />
+                  <p className="text-[11px] text-stone-500">
+                    Ketik persis kode di atas untuk mengaktifkan tombol eksekusi hard delete.
+                  </p>
+                </div>
+
+                {/* Checkbox purge orphan auth */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="purgeOrphansCheckbox"
+                    checked={purgeOrphans}
+                    onChange={(e) => setPurgeOrphans(e.target.checked)}
+                    className="rounded text-rose-600 focus:ring-rose-500 w-4 h-4"
+                  />
+                  <label htmlFor="purgeOrphansCheckbox" className="text-xs text-stone-700 dark:text-stone-300 font-medium cursor-pointer">
+                    Purge akun orphan dari Supabase Auth (Membebaskan email untuk registrasi ulang)
+                  </label>
+                </div>
+
+                {/* Modal Footer Buttons */}
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-stone-100 dark:border-stone-800">
+                  <button
+                    type="button"
+                    disabled={isExecutingDelete}
+                    onClick={() => {
+                      setDeletingTenant(null);
+                      setDeletePlan(null);
+                    }}
+                    className="px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 text-xs font-semibold disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isExecutingDelete || confirmationInput.trim() !== deletePlan.confirmationCode}
+                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 dark:disabled:bg-rose-950/40 text-white font-bold text-xs shadow-md transition-all active:scale-95 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isExecutingDelete ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Mengeksekusi Hard Delete...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        <span>Hapus Permanen Tenant &amp; Data</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
           </div>
         </div>
       )}
