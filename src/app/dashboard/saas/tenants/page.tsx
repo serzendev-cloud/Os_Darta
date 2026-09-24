@@ -268,6 +268,7 @@ export default function SaasTenantsPage() {
   };
 
   const handleResendInvitation = async (tenantId: string, tenantName: string) => {
+    if (resendingTenantId) return;
     setResendingTenantId(tenantId);
     try {
       const res = await fetch(`/api/saas/tenants/${tenantId}/resend-invitation`, {
@@ -549,18 +550,14 @@ export default function SaasTenantsPage() {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
-                      <div className="text-stone-400 text-[11px] font-mono flex items-center gap-2 mt-0.5">
+                      <div className="text-stone-500 text-[11px] font-mono mt-0.5">
                         <span>{t.subdomain} • {t.location}</span>
-                        {t.adminStatus === 'INVITED' && (
-                          <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                            Menunggu Aktivasi
-                          </span>
-                        )}
-                        {t.adminStatus === 'INVITATION_FAILED' && (
-                          <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                            Undangan Gagal
-                          </span>
-                        )}
+                      </div>
+                      <div className="text-[11px] text-stone-600 dark:text-stone-400 mt-1 flex items-center gap-1.5">
+                        <span className="font-semibold text-stone-700 dark:text-stone-300">Admin:</span>
+                        <span>{t.ownerName}</span>
+                        <span className="text-stone-300 dark:text-stone-600">•</span>
+                        <span className="font-mono text-[10px] text-stone-500">{t.ownerEmail}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
@@ -589,37 +586,74 @@ export default function SaasTenantsPage() {
                         <span className="text-[11px] text-stone-400 italic">Dikelola terpisah (WP-SAAS-ADDON-001)</span>
                       )}
                     </td>
-                    {/* Quick Status Toggle Badge */}
+                    {/* Status Tenant Column with Visual Hierarchy */}
                     <td className="py-3.5 px-4">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickStatusToggle(t.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all shadow-sm active:scale-95 ${
-                          t.status === 'aktif'
-                            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                            : t.status === 'trial'
-                            ? 'bg-amber-500 text-white hover:bg-amber-600'
-                            : 'bg-rose-600 text-white hover:bg-rose-700'
-                        }`}
-                      >
-                        <Power className="w-3 h-3" />
-                        <span>{t.status}</span>
-                      </button>
+                      {t.adminStatus === 'INVITED' || t.adminStatus === 'MUST_CHANGE_PASSWORD' ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                            <span>Undangan Terkirim</span>
+                          </span>
+                          <div className="text-[10px] text-stone-500 dark:text-stone-400 font-medium">
+                            Menunggu admin mengatur password
+                          </div>
+                        </div>
+                      ) : t.adminStatus === 'INVITATION_FAILED' ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                            <span className="w-2 h-2 rounded-full bg-rose-500" />
+                            <span>Undangan Gagal</span>
+                          </span>
+                          <div className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">
+                            Undangan belum berhasil dikirim
+                          </div>
+                        </div>
+                      ) : t.status === 'suspended' ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
+                            <span className="w-2 h-2 rounded-full bg-stone-400" />
+                            <span>Nonaktif</span>
+                          </span>
+                          <div className="text-[10px] text-stone-500 dark:text-stone-400 font-medium">
+                            Akses sistem ditangguhkan
+                          </div>
+                        </div>
+                      ) : t.status === 'trial' ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span>Trial Aktif</span>
+                          </span>
+                          <div className="text-[10px] text-stone-500 dark:text-stone-400 font-medium">
+                            Masa uji coba 14 hari
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span>Aktif</span>
+                          </span>
+                          <div className="text-[10px] text-stone-500 dark:text-stone-400 font-medium">
+                            Admin sudah menyelesaikan aktivasi
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {(t.adminStatus === 'INVITED' || t.adminStatus === 'INVITATION_FAILED') && (
+                        {(t.adminStatus === 'INVITED' || t.adminStatus === 'INVITATION_FAILED' || t.adminStatus === 'MUST_CHANGE_PASSWORD') && (
                           <button
                             type="button"
                             disabled={resendingTenantId === t.id}
                             onClick={() => handleResendInvitation(t.id, t.name)}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Kirim ulang email undangan aktivasi akun administrator"
                           >
                             {resendingTenantId === t.id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
                             ) : (
-                              <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                              <Mail className="w-3.5 h-3.5 text-amber-600" />
                             )}
                             <span>{resendingTenantId === t.id ? 'Mengirim...' : 'Kirim Ulang Undangan'}</span>
                           </button>
