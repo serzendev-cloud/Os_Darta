@@ -84,7 +84,6 @@ export const santri = pgTable('santri', {
 // ── Asrama & Kamar ──────────────────────────────────────────────────────────
 export const asrama = pgTable('asrama', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   musyrif: text('musyrif').notNull(),
   capacity: integer('capacity').notNull(),
@@ -97,7 +96,6 @@ export const asrama = pgTable('asrama', {
 
 export const kamar = pgTable('kamar', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').default('default').notNull(),
   asramaId: text('asrama_id').notNull(),
   name: text('name').notNull(),
   capacity: integer('capacity').notNull(),
@@ -131,7 +129,6 @@ export const masterTingkat = pgTable('master_tingkat', {
 
 export const kelas = pgTable('kelas', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   jenjang: text('jenjang').notNull(),
   tingkat: integer('tingkat').notNull(),
@@ -145,7 +142,6 @@ export const kelas = pgTable('kelas', {
 
 export const mapel = pgTable('mapel', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').default('default').notNull(),
   name: text('name').notNull(),
   code: text('code'),
   jenjang: text('jenjang').notNull(),

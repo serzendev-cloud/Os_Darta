@@ -59,7 +59,7 @@ function createMockDb(config: {
               whereCallIndex++;
               // If querying surviving memberships or platform roles for affected users
               let val = defaultCounts;
-              if (survivingCount > 0 && whereCallIndex > 14) {
+              if (survivingCount > 0 && whereCallIndex > 10) {
                 val = survivingCount;
               }
               return {
@@ -394,5 +394,124 @@ describe('Tenant Hard-Delete Lifecycle Engine Contract & Safety Suite', () => {
     expect(result.purgedUsers[0].dbDeleted).toBe(true);
     expect(result.purgedUsers[0].authDeleted).toBe(false);
     expect(result.purgedUsers[0].error).toContain('Supabase Auth Network Timeout');
+  });
+
+  // ── TEST 9: Legacy Tables (Asrama, Kamar, Kelas, Mapel) are Not Queried or Deleted ─
+  it('TEST 9: strictly avoids querying or deleting legacy non-tenant-scoped tables (asrama, kamar, kelas, mapel)', async () => {
+    const queriedTables: any[] = [];
+    const deletedTables: any[] = [];
+
+    const mockTx = {
+      delete: vi.fn((table: any) => {
+        deletedTables.push(table);
+        return {
+          where: vi.fn().mockResolvedValue({ rowCount: 1 }),
+        };
+      }),
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn().mockResolvedValue([{ val: 0 }]),
+        })),
+      })),
+    };
+
+    const mockDb = {
+      select: vi.fn(() => ({
+        from: vi.fn((table: any) => {
+          queriedTables.push(table);
+          return {
+            innerJoin: vi.fn(() => ({
+              where: vi.fn().mockResolvedValue([]),
+            })),
+            where: vi.fn(() => ({
+              limit: vi.fn().mockResolvedValue([
+                {
+                  id: 't_test_007',
+                  name: 'Legacy Safety Tenant',
+                  slug: 'legacy-safety',
+                  code: 'LEG07',
+                  status: 'active',
+                },
+              ]),
+              then: (resolve: any) => resolve([{ val: 0 }]),
+            })),
+            limit: vi.fn().mockResolvedValue([
+              {
+                id: 't_test_007',
+                name: 'Legacy Safety Tenant',
+                slug: 'legacy-safety',
+                code: 'LEG07',
+                status: 'active',
+              },
+            ]),
+          };
+        }),
+      })),
+      transaction: vi.fn(async (cb: any) => cb(mockTx)),
+    };
+
+    const plan = await service.planHardDelete(
+      't_test_007',
+      { userId: 'admin_1', role: 'SUPER_ADMIN', isSuperAdmin: true },
+      mockDb as any
+    );
+
+    expect(plan.isEligible).toBe(true);
+    // Ensure dependentCounts only has verified tenant-scoped keys
+    expect(plan.dependentCounts).not.toHaveProperty('asrama');
+    expect(plan.dependentCounts).not.toHaveProperty('kamar');
+    expect(plan.dependentCounts).not.toHaveProperty('kelas');
+    expect(plan.dependentCounts).not.toHaveProperty('mapel');
+    expect(plan.dependentCounts).toHaveProperty('santri');
+    expect(plan.dependentCounts).toHaveProperty('academicYears');
+    expect(plan.dependentCounts).toHaveProperty('academicTerms');
+    expect(plan.dependentCounts).toHaveProperty('madrasah');
+    expect(plan.dependentCounts).toHaveProperty('jenjang');
+    expect(plan.dependentCounts).toHaveProperty('tingkat');
+    expect(plan.dependentCounts).toHaveProperty('rombel');
+    expect(plan.dependentCounts).toHaveProperty('settings');
+
+    const result = await service.executeHardDelete(
+      {
+        targetTenantId: 't_test_007',
+        confirmationCode: 'DELETE-LEG07-legacy-safety',
+      },
+      { userId: 'admin_1', role: 'SUPER_ADMIN', isSuperAdmin: true },
+      mockDb as any
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.deletedCounts).not.toHaveProperty('asrama');
+    expect(result.deletedCounts).not.toHaveProperty('kamar');
+    expect(result.deletedCounts).not.toHaveProperty('kelas');
+    expect(result.deletedCounts).not.toHaveProperty('mapel');
+  });
+
+  // ── TEST 10: Drizzle Schema Contract Verification for Legacy Tables ────────
+  it('TEST 10: verifies schema.ts reflects physical database with ZERO tenantId on legacy tables', async () => {
+    const { asrama, kamar, kelas, mapel } = await import('@/lib/db/schema');
+
+    // Drizzle table objects contain column definitions in their schema metadata
+    expect((asrama as any).tenantId).toBeUndefined();
+    expect((kamar as any).tenantId).toBeUndefined();
+    expect((kelas as any).tenantId).toBeUndefined();
+    expect((mapel as any).tenantId).toBeUndefined();
+  });
+
+  // ── TEST 11: Drizzle Schema Contract Verification for Tenant-Scoped Tables ─
+  it('TEST 11: verifies schema.ts contains valid tenantId definitions for active tenant-scoped tables', async () => {
+    const { santri, madrasah, jenjang, tingkat, rombel, tenantSettings, tenantRoles, userTenantMemberships } = await import('@/lib/db/schema');
+    const { academicYears, academicTerms } = await import('@/lib/db/schema/academic_workspace');
+
+    expect((santri as any).tenantId).toBeDefined();
+    expect((madrasah as any).tenantId).toBeDefined();
+    expect((jenjang as any).tenantId).toBeDefined();
+    expect((tingkat as any).tenantId).toBeDefined();
+    expect((rombel as any).tenantId).toBeDefined();
+    expect((academicYears as any).tenantId).toBeDefined();
+    expect((academicTerms as any).tenantId).toBeDefined();
+    expect((tenantSettings as any).tenantId).toBeDefined();
+    expect((tenantRoles as any).tenantId).toBeDefined();
+    expect((userTenantMemberships as any).tenantId).toBeDefined();
   });
 });

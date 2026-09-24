@@ -21,42 +21,42 @@ interface TenantModules {
 }
 
 interface HardDeletePlan {
-  tenant: {
-    id: string;
-    code: string;
-    slug: string;
-    name: string;
-    createdAt: string | null;
-  };
+  tenantId: string;
+  tenantCode: string;
+  tenantName: string;
+  tenantSlug: string;
+  isEligible: boolean;
   isProtected: boolean;
   protectionReason?: string;
+  dependentCounts: {
+    memberships: number;
+    roles: number;
+    santri: number;
+    academicYears: number;
+    academicTerms: number;
+    madrasah: number;
+    jenjang: number;
+    tingkat: number;
+    rombel: number;
+    settings: number;
+  };
+  affectedUsers: Array<{
+    userId: string;
+    email: string;
+    name: string;
+    roleInTenant: string;
+    survivingMembershipsCount: number;
+    platformRolesCount: number;
+    isPlatformUser: boolean;
+    isProtectedUser: boolean;
+    willBePurged: boolean;
+    retentionReason?: string;
+  }>;
+  purgeCandidatesCount: number;
+  retainedUsersCount: number;
   confirmationCode: string;
-  dependencies: {
-    santriCount: number;
-    asramaCount: number;
-    kamarCount: number;
-    kelasCount: number;
-    mapelCount: number;
-    membershipsCount: number;
-    settingsCount: number;
-  };
-  identityImpact: {
-    totalMembers: number;
-    purgedUsersCount: number;
-    purgedUsers: Array<{
-      userId: string;
-      email: string;
-      name: string;
-      reason: string;
-    }>;
-    retainedUsersCount: number;
-    retainedUsers: Array<{
-      userId: string;
-      email: string;
-      name: string;
-      reason: string;
-    }>;
-  };
+  requiredConfirmationText: string;
+  plannedAt: string;
 }
 
 interface ActiveTenant {
@@ -151,14 +151,18 @@ export default function SaasTenantsPage() {
     deletedCounts: {
       tenant: number;
       santri: number;
-      asrama: number;
-      kamar: number;
-      kelas: number;
-      mapel: number;
+      madrasah: number;
+      jenjang: number;
+      tingkat: number;
+      rombel: number;
+      academicYears: number;
+      academicTerms: number;
       settings: number;
+      memberships: number;
+      roles: number;
     };
-    purgedUsers: Array<{ userId: string; email: string; name: string; authDeleted: boolean; error?: string }>;
-    retainedUsers: Array<{ userId: string; email: string; name: string; reason: string }>;
+    purgedUsers: Array<{ userId: string; email: string; authDeleted: boolean; error?: string }>;
+    retainedUsers: Array<{ userId: string; email: string; reason: string }>;
   } | null>(null);
 
   const [toast, setToast] = useState('');
@@ -1234,13 +1238,15 @@ export default function SaasTenantsPage() {
 
                 <div className="bg-stone-50 dark:bg-stone-800/60 rounded-2xl p-4 border border-stone-200 dark:border-stone-700 space-y-3 font-mono text-xs">
                   <div className="text-[11px] uppercase tracking-wider font-sans font-bold text-stone-500">
-                    Ringkasan Data Dimusnahkan:
+                    Ringkasan Data Dimusnahkan (Tenant-Scoped):
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-stone-700 dark:text-stone-300 font-sans text-xs">
                     <div>• Record Tenant: <span className="font-mono font-bold text-rose-600">1</span></div>
                     <div>• Santri: <span className="font-mono font-bold">{deleteExecutionResult.deletedCounts?.santri ?? 0}</span></div>
-                    <div>• Asrama &amp; Kamar: <span className="font-mono font-bold">{(deleteExecutionResult.deletedCounts?.asrama ?? 0) + (deleteExecutionResult.deletedCounts?.kamar ?? 0)}</span></div>
-                    <div>• Kelas &amp; Mapel: <span className="font-mono font-bold">{(deleteExecutionResult.deletedCounts?.kelas ?? 0) + (deleteExecutionResult.deletedCounts?.mapel ?? 0)}</span></div>
+                    <div>• Struktur Akademik: <span className="font-mono font-bold">{(deleteExecutionResult.deletedCounts?.madrasah ?? 0) + (deleteExecutionResult.deletedCounts?.jenjang ?? 0) + (deleteExecutionResult.deletedCounts?.tingkat ?? 0) + (deleteExecutionResult.deletedCounts?.rombel ?? 0)}</span></div>
+                    <div>• Kalender Akademik: <span className="font-mono font-bold">{(deleteExecutionResult.deletedCounts?.academicYears ?? 0) + (deleteExecutionResult.deletedCounts?.academicTerms ?? 0)}</span></div>
+                    <div>• Pengaturan &amp; Akses: <span className="font-mono font-bold">{(deleteExecutionResult.deletedCounts?.settings ?? 0) + (deleteExecutionResult.deletedCounts?.roles ?? 0) + (deleteExecutionResult.deletedCounts?.memberships ?? 0)}</span></div>
+                    <div className="text-stone-400 italic">• Legacy Tables: <span className="font-sans font-normal text-stone-400">Excluded (Non-tenant)</span></div>
                   </div>
 
                   <div className="pt-2 border-t border-stone-200 dark:border-stone-700 font-sans text-xs space-y-1">
@@ -1254,7 +1260,7 @@ export default function SaasTenantsPage() {
                         {deleteExecutionResult.purgedUsers?.map((u: any, idx: number) => (
                           <li key={idx} className="flex items-center gap-1.5 text-stone-700 dark:text-stone-300">
                             <span className="text-emerald-600 font-bold">✓</span>
-                            <span>{u.email} ({u.name}) — {u.authDeleted ? 'Supabase Auth Purged' : 'DB Purged (Auth Manual Logged)'}</span>
+                            <span>{u.email} — {u.authDeleted ? 'Supabase Auth Purged' : 'DB Purged (Auth Manual Logged)'}</span>
                           </li>
                         ))}
                       </ul>
@@ -1330,56 +1336,72 @@ export default function SaasTenantsPage() {
                 {/* Dependencies Count Grid */}
                 <div className="bg-stone-50 dark:bg-stone-800/50 p-4 rounded-2xl border border-stone-200 dark:border-stone-700 space-y-3">
                   <div className="font-bold text-stone-800 dark:text-stone-200 flex items-center justify-between">
-                    <span>Dampak Data Terkait (Kaskade Database)</span>
-                    <span className="text-[10px] font-mono text-stone-400">ID: {deletePlan.tenant.id}</span>
+                    <span>Dampak Data Terkait (Tenant-Scoped Cascade)</span>
+                    <span className="text-[10px] font-mono text-stone-400">ID: {deletePlan.tenantId}</span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                     <div className="p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80">
                       <div className="text-[10px] text-stone-400 font-semibold uppercase">Santri</div>
-                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">{deletePlan.dependencies.santriCount}</div>
+                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">{deletePlan.dependentCounts?.santri ?? 0}</div>
                     </div>
                     <div className="p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80">
-                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Asrama / Kamar</div>
-                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">{deletePlan.dependencies.asramaCount + deletePlan.dependencies.kamarCount}</div>
+                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Struktur Akademik</div>
+                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">
+                        {(deletePlan.dependentCounts?.madrasah ?? 0) + (deletePlan.dependentCounts?.jenjang ?? 0) + (deletePlan.dependentCounts?.tingkat ?? 0) + (deletePlan.dependentCounts?.rombel ?? 0)}
+                      </div>
                     </div>
                     <div className="p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80">
-                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Kelas / Mapel</div>
-                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">{deletePlan.dependencies.kelasCount + deletePlan.dependencies.mapelCount}</div>
+                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Tahun &amp; Term</div>
+                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">
+                        {(deletePlan.dependentCounts?.academicYears ?? 0) + (deletePlan.dependentCounts?.academicTerms ?? 0)}
+                      </div>
                     </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80">
+                      <div className="text-[10px] text-stone-400 font-semibold uppercase">Akses &amp; Settings</div>
+                      <div className="text-sm font-bold font-mono text-stone-800 dark:text-stone-200">
+                        {(deletePlan.dependentCounts?.memberships ?? 0) + (deletePlan.dependentCounts?.roles ?? 0) + (deletePlan.dependentCounts?.settings ?? 0)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legacy Excluded Notice */}
+                  <div className="px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 text-[10px] text-stone-500 flex items-center justify-between">
+                    <span>Data Legacy Global (Asrama, Kamar, Kelas, Mapel):</span>
+                    <span className="font-semibold text-stone-600 dark:text-stone-400">Tidak termasuk / Excluded</span>
                   </div>
 
                   {/* Identity Impact Breakdown */}
                   <div className="pt-2 border-t border-stone-200 dark:border-stone-700 space-y-2">
                     <div className="text-[11px] font-bold text-stone-700 dark:text-stone-300">
-                      Dampak Identitas Akun Pengguna ({deletePlan.identityImpact.totalMembers} Total Member):
+                      Dampak Identitas Akun Pengguna ({deletePlan.affectedUsers?.length ?? 0} Total Member):
                     </div>
 
                     {/* Purged Users List */}
-                    {deletePlan.identityImpact.purgedUsersCount > 0 && (
+                    {deletePlan.purgeCandidatesCount > 0 && (
                       <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 space-y-1">
                         <div className="flex items-center gap-1.5 font-bold text-rose-800 dark:text-rose-300 text-[11px]">
                           <UserX className="w-3.5 h-3.5 text-rose-600" />
-                          <span>{deletePlan.identityImpact.purgedUsersCount} Akun Orphan Akan Dimusnahkan &amp; Email Dilepas:</span>
+                          <span>{deletePlan.purgeCandidatesCount} Akun Orphan Akan Dimusnahkan &amp; Email Dilepas:</span>
                         </div>
                         <ul className="text-[11px] space-y-0.5 text-rose-700 dark:text-rose-400 font-mono">
-                          {deletePlan.identityImpact.purgedUsers.map(u => (
-                            <li key={u.userId}>• {u.email} ({u.name}) — {u.reason}</li>
+                          {deletePlan.affectedUsers.filter(u => u.willBePurged).map(u => (
+                            <li key={u.userId}>• {u.email} ({u.name}) — {u.retentionReason || 'Orphan account without other memberships'}</li>
                           ))}
                         </ul>
                       </div>
                     )}
 
                     {/* Retained Users List */}
-                    {deletePlan.identityImpact.retainedUsersCount > 0 && (
+                    {deletePlan.retainedUsersCount > 0 && (
                       <div className="p-2.5 rounded-xl bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 space-y-1">
                         <div className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-200 text-[11px]">
                           <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>{deletePlan.identityImpact.retainedUsersCount} Akun Tetap Dipertahankan (Multi-Tenant / Platform):</span>
+                          <span>{deletePlan.retainedUsersCount} Akun Tetap Dipertahankan (Multi-Tenant / Platform):</span>
                         </div>
                         <ul className="text-[11px] space-y-0.5 text-stone-600 dark:text-stone-400 font-mono">
-                          {deletePlan.identityImpact.retainedUsers.map(u => (
-                            <li key={u.userId}>• {u.email} ({u.name}) — {u.reason}</li>
+                          {deletePlan.affectedUsers.filter(u => !u.willBePurged).map(u => (
+                            <li key={u.userId}>• {u.email} ({u.name}) — {u.retentionReason}</li>
                           ))}
                         </ul>
                       </div>

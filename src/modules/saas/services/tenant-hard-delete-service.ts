@@ -15,10 +15,6 @@ import {
   userTenantMemberships,
   userPlatformRoles,
   santri,
-  asrama,
-  kamar,
-  kelas,
-  mapel,
   madrasah,
   jenjang,
   tingkat,
@@ -52,10 +48,6 @@ export interface DependentRecordsSummary {
   memberships: number;
   roles: number;
   santri: number;
-  asrama: number;
-  kamar: number;
-  kelas: number;
-  mapel: number;
   academicYears: number;
   academicTerms: number;
   madrasah: number;
@@ -104,11 +96,15 @@ export interface HardDeleteExecutionResult {
   deletedCounts: {
     tenant: number;
     santri: number;
-    asrama: number;
-    kamar: number;
-    kelas: number;
-    mapel: number;
+    madrasah: number;
+    jenjang: number;
+    tingkat: number;
+    rombel: number;
+    academicYears: number;
+    academicTerms: number;
     settings: number;
+    memberships: number;
+    roles: number;
   };
   purgedUsers: UserPurgeResult[];
   retainedUsers: Array<{
@@ -226,10 +222,6 @@ export class TenantHardDeleteService {
       membershipCountRes,
       rolesCountRes,
       santriCountRes,
-      asramaCountRes,
-      kamarCountRes,
-      kelasCountRes,
-      mapelCountRes,
       yearsCountRes,
       termsCountRes,
       madrasahCountRes,
@@ -241,10 +233,6 @@ export class TenantHardDeleteService {
       dbInstance.select({ val: count() }).from(userTenantMemberships).where(eq(userTenantMemberships.tenantId, cleanTenantId)),
       dbInstance.select({ val: count() }).from(tenantRoles).where(eq(tenantRoles.tenantId, cleanTenantId)),
       dbInstance.select({ val: count() }).from(santri).where(eq(santri.tenantId, cleanTenantId)),
-      dbInstance.select({ val: count() }).from(asrama).where(eq(asrama.tenantId, cleanTenantId)),
-      dbInstance.select({ val: count() }).from(kamar).where(eq(kamar.tenantId, cleanTenantId)),
-      dbInstance.select({ val: count() }).from(kelas).where(eq(kelas.tenantId, cleanTenantId)),
-      dbInstance.select({ val: count() }).from(mapel).where(eq(mapel.tenantId, cleanTenantId)),
       dbInstance.select({ val: count() }).from(academicYears).where(eq(academicYears.tenantId, cleanTenantId)),
       dbInstance.select({ val: count() }).from(academicTerms).where(eq(academicTerms.tenantId, cleanTenantId)),
       dbInstance.select({ val: count() }).from(madrasah).where(eq(madrasah.tenantId, cleanTenantId)),
@@ -258,10 +246,6 @@ export class TenantHardDeleteService {
       memberships: Number(membershipCountRes[0]?.val || 0),
       roles: Number(rolesCountRes[0]?.val || 0),
       santri: Number(santriCountRes[0]?.val || 0),
-      asrama: Number(asramaCountRes[0]?.val || 0),
-      kamar: Number(kamarCountRes[0]?.val || 0),
-      kelas: Number(kelasCountRes[0]?.val || 0),
-      mapel: Number(mapelCountRes[0]?.val || 0),
       academicYears: Number(yearsCountRes[0]?.val || 0),
       academicTerms: Number(termsCountRes[0]?.val || 0),
       madrasah: Number(madrasahCountRes[0]?.val || 0),
@@ -406,11 +390,15 @@ export class TenantHardDeleteService {
     const deletedCounts = {
       tenant: 0,
       santri: 0,
-      asrama: 0,
-      kamar: 0,
-      kelas: 0,
-      mapel: 0,
+      madrasah: 0,
+      jenjang: 0,
+      tingkat: 0,
+      rombel: 0,
+      academicYears: 0,
+      academicTerms: 0,
       settings: 0,
+      memberships: 0,
+      roles: 0,
     };
 
     const purgedUsers: UserPurgeResult[] = [];
@@ -423,27 +411,23 @@ export class TenantHardDeleteService {
     // 5. ATOMIC DATABASE TRANSACTION (Phase 4 & 5)
     await dbInstance.transaction(async (tx) => {
       // 5.1 Delete unconstrained / restricted operational tables first to avoid RESTRICT violations
-      const santriDel = await tx.delete(santri).where(eq(santri.tenantId, cleanTenantId));
+      await tx.delete(santri).where(eq(santri.tenantId, cleanTenantId));
       deletedCounts.santri = plan.dependentCounts.santri;
-
-      await tx.delete(asrama).where(eq(asrama.tenantId, cleanTenantId));
-      deletedCounts.asrama = plan.dependentCounts.asrama;
-
-      await tx.delete(kamar).where(eq(kamar.tenantId, cleanTenantId));
-      deletedCounts.kamar = plan.dependentCounts.kamar;
-
-      await tx.delete(kelas).where(eq(kelas.tenantId, cleanTenantId));
-      deletedCounts.kelas = plan.dependentCounts.kelas;
-
-      await tx.delete(mapel).where(eq(mapel.tenantId, cleanTenantId));
-      deletedCounts.mapel = plan.dependentCounts.mapel;
 
       await tx.delete(tenantSettings).where(eq(tenantSettings.tenantId, cleanTenantId));
       deletedCounts.settings = plan.dependentCounts.settings;
 
       // 5.2 Delete the core Tenant row (Cascades to user_tenant_memberships, tenant_roles, academic_*)
-      const tenantDel = await tx.delete(tenants).where(eq(tenants.id, cleanTenantId));
+      await tx.delete(tenants).where(eq(tenants.id, cleanTenantId));
       deletedCounts.tenant = 1;
+      deletedCounts.madrasah = plan.dependentCounts.madrasah;
+      deletedCounts.jenjang = plan.dependentCounts.jenjang;
+      deletedCounts.tingkat = plan.dependentCounts.tingkat;
+      deletedCounts.rombel = plan.dependentCounts.rombel;
+      deletedCounts.academicYears = plan.dependentCounts.academicYears;
+      deletedCounts.academicTerms = plan.dependentCounts.academicTerms;
+      deletedCounts.memberships = plan.dependentCounts.memberships;
+      deletedCounts.roles = plan.dependentCounts.roles;
 
       // 5.3 Database Purge of Orphaned User Identities (if enabled)
       if (shouldPurgeOrphans && purgeCandidates.length > 0) {
