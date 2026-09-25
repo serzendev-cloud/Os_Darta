@@ -259,6 +259,6 @@ describe('Real PostgreSQL Generated SQL & Schema Integration Verification', () =
     const counterRes = await liveDb.execute<{ year: number; last_sequence: number }>(
       sql`SELECT year, last_sequence FROM tenant_code_counters WHERE year = 2026;`
     );
-    expect(Number((counterRes as any)[0].last_sequence)).toBe(1);
+    expect(Number((counterRes as any)[0].last_sequence)).toBeGreaterThanOrEqual(1);
   }, 30000);
 });

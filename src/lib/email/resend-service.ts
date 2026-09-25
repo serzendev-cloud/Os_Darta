@@ -19,6 +19,10 @@ export interface SendInvitationEmailResult {
 
 let resendInstance: Resend | null = null;
 
+export function _resetResendInstanceForTesting(): void {
+  resendInstance = null;
+}
+
 function getResendClient(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -28,6 +32,29 @@ function getResendClient(): Resend | null {
     resendInstance = new Resend(apiKey);
   }
   return resendInstance;
+}
+
+/**
+ * Resolves and validates the production sender email address.
+ * Standard format: "Ma'had Manager <noreply@serzen-dev.my.id>"
+ */
+export function resolveSenderEmail(): string {
+  const envSender = process.env.RESEND_FROM_EMAIL || process.env.RESEND_SENDER_EMAIL;
+  let sender = envSender ? envSender.trim() : "Ma'had Manager <noreply@serzen-dev.my.id>";
+  
+  if (!sender.includes('<')) {
+    sender = `Ma'had Manager <${sender}>`;
+  }
+
+  const lower = sender.toLowerCase();
+  if (lower.includes('@resend.dev')) {
+    throw new Error('PROHIBITED_SENDER_DOMAIN: Sender cannot use testing domain resend.dev.');
+  }
+  if (lower.includes('@gmail.com')) {
+    throw new Error('PROHIBITED_SENDER_DOMAIN: Sender cannot use gmail.com as FROM address.');
+  }
+
+  return sender;
 }
 
 /**
@@ -52,8 +79,17 @@ export async function sendTenantInvitationEmail(
     };
   }
 
-  // Sender resolution: Fallback to onboarding@resend.dev if custom sender not configured
-  const sender = process.env.RESEND_SENDER_EMAIL || "Ma'had Manager <onboarding@resend.dev>";
+  let sender: string;
+  try {
+    sender = resolveSenderEmail();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Invalid sender configuration';
+    console.error('[ResendService] Sender resolution error:', message);
+    return {
+      success: false,
+      error: message,
+    };
+  }
   const html = renderTenantInvitationHtml(emailProps);
 
   try {
