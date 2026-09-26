@@ -8,6 +8,7 @@ import {
   Building2, HardDrive, Sparkles, Check, Info, Search, X, 
   Eye, EyeOff, AlertCircle, ChevronDown, Lock, Settings2, Loader2
 } from 'lucide-react';
+import { getTenantDomain } from '@/config/tenant';
 
 interface TenantCredential {
   id: string;
@@ -44,7 +45,7 @@ export default function TenantIntegrationPage() {
             map[t.id] = {
               id: t.id,
               name: t.name,
-              subdomain: t.subdomain || `${t.slug || t.id}.madev.id`,
+              subdomain: t.subdomain || (t.slug ? getTenantDomain(t.slug) : getTenantDomain(t.id)),
               location: t.location || 'Indonesia',
               flipStatus: 'Unconfigured',
               flipSecretKey: '',

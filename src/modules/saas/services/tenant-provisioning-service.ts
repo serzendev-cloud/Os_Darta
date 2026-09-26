@@ -19,6 +19,7 @@ import { auditLogService } from '@/lib/db/services/auditLog';
 import { seedTenantAdminPermissions } from '@/lib/authz/canonical-permissions';
 import { tenantCodeCounterService } from '@/lib/tenant/tenant-code-counter-service';
 import { resendService } from '@/lib/email/resend-service';
+import { getTenantDomain } from '@/config/tenant';
 
 export interface TenantModulesConfig {
   paymentGateway?: boolean;
@@ -210,7 +211,7 @@ export async function provisionTenant(
   const tenantCode = allocation.code;
 
   const tenantId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const candidateDomain = `${cleanSlug}.madev.id`;
+  const candidateDomain = getTenantDomain(cleanSlug);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.serzen-dev.my.id';
   const redirectTo = `${appUrl}/auth/callback`;
   const supabaseAdmin = createAdminClient();
@@ -619,7 +620,7 @@ export async function resendTenantInvitation(
       adminName: adminMembership.userName,
       tenantName: tenantRow.name,
       tenantCode: tenantRow.code,
-      subdomain: tenantRow.domain || `${tenantRow.slug}.madev.id`,
+      subdomain: tenantRow.domain || getTenantDomain(tenantRow.slug),
       activationUrl,
       appUrl,
     });
@@ -754,7 +755,7 @@ export async function listActiveTenants(dbInstance = db): Promise<ActiveTenantDt
       name: t.name,
       slug: t.slug,
       code: t.code || '-',
-      subdomain: t.domain || `${t.slug}.madev.id`,
+      subdomain: t.domain || getTenantDomain(t.slug),
       location: settings?.loginSubtitle || 'Indonesia',
       ownerName: adminMembership?.userName || 'Admin Pesantren',
       ownerEmail: adminMembership?.userEmail || '-',

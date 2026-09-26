@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createProxyClient } from '@/lib/supabase/proxy';
+import { getTenantRootDomain } from '@/config/tenant';
 
 /**
  * Public routes that do not require authentication
@@ -33,6 +34,7 @@ function isPublicPath(pathname: string): boolean {
 export const RESERVED_HOSTNAMES = new Set([
   'www',
   'madev',
+  'serzen-dev',
   'app',
   'saas',
   'admin',
@@ -52,12 +54,16 @@ export const RESERVED_HOSTNAMES = new Set([
  * Extract tenant slug safely from hostname or path without trusting raw client headers.
  * Classification logic:
  * 1. Path route /t/:slug -> extracts :slug if valid and not reserved
- * 2. Hostname subdomain -> extracts candidate slug if domain has subdomains and not reserved/localhost
- * 3. Default fallback -> 'default' for platform routes
+ * 2. Ignore local dev / loopback (returns 'default')
+ * 3. Deterministic hostname resolution against authorized NEXT_PUBLIC_TENANT_ROOT_DOMAIN (e.g. serzen-dev.my.id)
+ *    - Apex or www -> 'default'
+ *    - <slug>.<rootDomain> -> extracts :slug if valid and not reserved
+ * 4. Strict Fail-Closed default: Vercel preview domains and all foreign/unauthorized hostnames return 'default'
  */
 export function extractTenantSlug(request: NextRequest): string {
   const url = request.nextUrl;
-  const hostname = request.headers.get('host') || '';
+  const rawHost = request.headers.get('host') || '';
+  const hostname = rawHost.split(':')[0].toLowerCase().trim();
 
   // 1. Check path route /t/:slug
   if (url.pathname.startsWith('/t/')) {
@@ -70,21 +76,31 @@ export function extractTenantSlug(request: NextRequest): string {
     }
   }
 
-  // 2. Extract subdomain if hostname contains domain dots and is not localhost/IP
-  if (
-    hostname.includes('.') &&
-    !hostname.includes('localhost') &&
-    !hostname.startsWith('127.0.0.1')
-  ) {
-    const parts = hostname.split('.');
-    if (parts.length > 2) {
-      const candidateSlug = parts[0].toLowerCase().trim();
-      if (!RESERVED_HOSTNAMES.has(candidateSlug)) {
-        return candidateSlug;
-      }
-    }
+  // 2. Ignore local dev / loopback
+  if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
+    return 'default';
   }
 
+  // 3. Deterministic resolution against configured Tenant Root Domain
+  const rootDomain = getTenantRootDomain();
+
+  // Apex platform root or www -> platform default
+  if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
+    return 'default';
+  }
+
+  // Subdomain of configured root domain: e.g. <slug>.serzen-dev.my.id
+  if (hostname.endsWith(`.${rootDomain}`)) {
+    const prefix = hostname.slice(0, -(rootDomain.length + 1));
+    const subParts = prefix.split('.');
+    const candidateSlug = subParts[0].toLowerCase().trim();
+    if (candidateSlug && !RESERVED_HOSTNAMES.has(candidateSlug)) {
+      return candidateSlug;
+    }
+    return 'default';
+  }
+
+  // 4. Fail-closed: Vercel preview domains and all foreign/unauthorized hostnames default to platform
   return 'default';
 }
 

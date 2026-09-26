@@ -27,7 +27,8 @@ describe('WP-TENANT-PROVISIONING-UI-ZERO-PASSWORD-INGRESS-001 — Zero Password 
 
     // Positive assertions: Form contains all 7 required business fields
     expect(content).toContain('Nama Pesantren');
-    expect(content).toContain('Subdomain Target (.madev.id)');
+    expect(content).toContain('Subdomain Target');
+    expect(content).toContain('getTenantRootDomain()');
     expect(content).toContain('Lokasi (Kota/Prov)');
     expect(content).toContain('Paket SaaS');
     expect(content).toContain('Nama Kyai / Owner Pesantren');

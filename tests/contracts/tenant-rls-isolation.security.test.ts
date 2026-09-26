@@ -152,7 +152,7 @@ describe('WP-SAAS-SEC-002: Tenant Database RLS & Isolation Hardening Security Te
       nextUrl: { pathname: '/dashboard/santri' },
       headers: {
         get: vi.fn().mockImplementation((h: string) => {
-          if (h === 'host') return 'alfatih.madev.id';
+          if (h === 'host') return 'alfatih.serzen-dev.my.id';
           if (h === 'x-tenant-id') return 'victim-tenant-id';
           if (h === 'x-tenant-slug') return 'victim-slug';
           return null;
@@ -167,7 +167,7 @@ describe('WP-SAAS-SEC-002: Tenant Database RLS & Isolation Hardening Security Te
 
   // ── TEST 7: Proxy fails-closed on reserved hostnames ──
   it('TEST 7: fails-closed on reserved administrative hostnames', () => {
-    const reservedList = ['www.madev.id', 'api.madev.id', 'saas.madev.id', 'dashboard.madev.id'];
+    const reservedList = ['www.serzen-dev.my.id', 'api.serzen-dev.my.id', 'saas.serzen-dev.my.id', 'dashboard.serzen-dev.my.id'];
     for (const host of reservedList) {
       const req = {
         nextUrl: { pathname: '/login' },

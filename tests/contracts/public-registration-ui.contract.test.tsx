@@ -34,12 +34,12 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Mobile-First Registration 
 
     // Expect slug auto-suggested
     expect((slugInput as HTMLInputElement).value).toBe('pesantren-al-hikmah');
-    expect(screen.getByText(/https:\/\/pesantren-al-hikmah\.madev\.id/i)).toBeDefined();
+    expect(screen.getByText(/https:\/\/pesantren-al-hikmah\.serzen-dev\.my\.id/i)).toBeDefined();
 
     // Manual slug customization
     fireEvent.change(slugInput, { target: { value: 'alhikmah' } });
     expect((slugInput as HTMLInputElement).value).toBe('alhikmah');
-    expect(screen.getByText(/https:\/\/alhikmah\.madev\.id/i)).toBeDefined();
+    expect(screen.getByText(/https:\/\/alhikmah\.serzen-dev\.my\.id/i)).toBeDefined();
   });
 
   // ── 3. Client Validation ──────────────────────────────────────────────────

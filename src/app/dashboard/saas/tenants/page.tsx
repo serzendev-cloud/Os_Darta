@@ -9,6 +9,7 @@ import {
   Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power,
   Loader2, Mail, Trash2, AlertTriangle, UserX, UserCheck, Lock
 } from 'lucide-react';
+import { getTenantRootDomain } from '@/config/tenant';
 
 interface TenantModules {
   paymentGateway: boolean;
@@ -359,7 +360,7 @@ export default function SaasTenantsPage() {
         },
         body: JSON.stringify({
           name: newTenantName,
-          slug: newSubdomain.replace('.madev.id', '').toLowerCase().trim(),
+          slug: newSubdomain.replace(new RegExp(`\\.?${getTenantRootDomain()}$`, 'i'), '').toLowerCase().trim(),
           location: newLocation || undefined,
           plan: newPlan,
           ownerName: newOwnerName || 'Admin Pesantren',
@@ -1014,7 +1015,7 @@ export default function SaasTenantsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">Subdomain Target (.madev.id)</label>
+                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">Subdomain Target (.{getTenantRootDomain()})</label>
                 <div className="flex items-center">
                   <input
                     type="text"
@@ -1024,7 +1025,7 @@ export default function SaasTenantsPage() {
                     className="w-full px-3.5 py-2.5 rounded-l-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                     required
                   />
-                  <span className="bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 px-3 py-2.5 rounded-r-xl text-xs font-mono font-semibold">.madev.id</span>
+                  <span className="bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 px-3 py-2.5 rounded-r-xl text-xs font-mono font-semibold">.{getTenantRootDomain()}</span>
                 </div>
               </div>
 

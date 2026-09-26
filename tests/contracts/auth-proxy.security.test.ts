@@ -22,16 +22,16 @@ describe('WP-101 Phase 1D — Supabase Auth Boundary & Zero-Trust Proxy Security
 
   describe('WP-SAAS-PORTAL-003 — Subdomain & Hostname Resolution Classification', () => {
     it('should extract valid tenant slug from hostname subdomain', () => {
-      const req = new NextRequest('http://daruttauhid.mahad-app.com/login', {
-        headers: { host: 'daruttauhid.mahad-app.com' },
+      const req = new NextRequest('http://daruttauhid.serzen-dev.my.id/login', {
+        headers: { host: 'daruttauhid.serzen-dev.my.id' },
       });
       expect(extractTenantSlug(req)).toBe('daruttauhid');
     });
 
     it('should classify reserved hostnames (www, admin, saas, api, app) as default platform hostnames', () => {
       ['www', 'admin', 'saas', 'api', 'app', 'status', 'cdn'].forEach((reserved) => {
-        const req = new NextRequest(`http://${reserved}.mahad-app.com/`, {
-          headers: { host: `${reserved}.mahad-app.com` },
+        const req = new NextRequest(`http://${reserved}.serzen-dev.my.id/`, {
+          headers: { host: `${reserved}.serzen-dev.my.id` },
         });
         expect(extractTenantSlug(req)).toBe('default');
       });
@@ -106,10 +106,10 @@ describe('WP-101 Phase 1D — Supabase Auth Boundary & Zero-Trust Proxy Security
         error: null,
       });
 
-      // Attacker sends spoofed header 'x-tenant-id: tenant-evil' on 'alfatih.mahad-app.com'
-      const request = new NextRequest('http://alfatih.mahad-app.com/dashboard', {
+      // Attacker sends spoofed header 'x-tenant-id: tenant-evil' on 'alfatih.serzen-dev.my.id'
+      const request = new NextRequest('http://alfatih.serzen-dev.my.id/dashboard', {
         headers: {
-          host: 'alfatih.mahad-app.com',
+          host: 'alfatih.serzen-dev.my.id',
           'x-tenant-id': 'tenant-evil',
         },
       });

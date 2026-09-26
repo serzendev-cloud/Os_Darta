@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
+import { getTenantRootDomain } from '@/config/tenant';
 
 interface FormState {
   name: string;
@@ -322,14 +323,14 @@ export function RegisterForm() {
             }`}
           />
           <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500 font-mono text-xs">
-            .madev.id
+            .{getTenantRootDomain()}
           </div>
         </div>
         {/* Live Subdomain Preview */}
         <p className="text-[11px] text-stone-400 pl-1">
           Alamat portal:{' '}
           <span className="font-mono text-emerald-400 font-medium">
-            https://{formData.slug ? formData.slug : 'subdomain'}.madev.id
+            https://{formData.slug ? formData.slug : 'subdomain'}.{getTenantRootDomain()}
           </span>
         </p>
         {fieldErrors.slug && (

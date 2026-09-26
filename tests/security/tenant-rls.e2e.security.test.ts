@@ -173,7 +173,7 @@ describe('WP-SAAS-SEC-003: Real Database RLS & End-to-End Security Hardening Tes
       nextUrl: { pathname: '/dashboard' },
       headers: {
         get: vi.fn().mockImplementation((h: string) => {
-          if (h === 'host') return 'alfatih.madev.id';
+          if (h === 'host') return 'alfatih.serzen-dev.my.id';
           if (h === 'x-tenant-id') return 'attacker-tenant';
           return null;
         }),

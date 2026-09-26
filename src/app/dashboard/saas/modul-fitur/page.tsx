@@ -10,6 +10,7 @@ import {
   ChevronDown, Power, XCircle, Search, ExternalLink, HelpCircle, BookOpen,
   Loader2, Plus
 } from 'lucide-react';
+import { getTenantDomain } from '@/config/tenant';
 
 interface TenantModulesConfig {
   id: string;
@@ -60,7 +61,7 @@ export default function SaasModulesPage() {
             map[t.id] = {
               id: t.id,
               name: t.name,
-              subdomain: t.subdomain || `${t.slug || t.id}.madev.id`,
+              subdomain: t.subdomain || (t.slug ? getTenantDomain(t.slug) : getTenantDomain(t.id)),
               location: t.location || 'Indonesia',
               plan: t.plan || 'Pro SaaS',
               modules: {
