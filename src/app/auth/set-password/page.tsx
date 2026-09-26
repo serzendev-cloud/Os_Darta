@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useAuthStore } from '@/store/auth-store';
 import { Lock, ShieldCheck, CheckCircle2, Eye, EyeOff, Loader2, Sparkles, Building2 } from 'lucide-react';
 
 export default function SetPasswordPage() {
@@ -85,9 +86,35 @@ export default function SetPasswordPage() {
         throw new Error(errJson?.message || 'Gagal mengaktifkan akun di sistem. Silakan coba lagi.');
       }
 
-      // 3. Redirect to dashboard only upon complete onboarding success
-      router.push('/dashboard');
-      router.refresh();
+      // 3. Refresh Supabase session so client cookies & JWT contain app_metadata.status = 'ACTIVE'
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        throw new Error('Sesi berhasil diaktifkan, namun gagal memperbarui token autentikasi. Silakan muat ulang halaman atau login kembali.');
+      }
+
+      // 4. Retrieve refreshed user and verify strict ACTIVE status
+      const { data: { user: refreshedUser }, error: getUserError } = await supabase.auth.getUser();
+      if (getUserError || !refreshedUser) {
+        throw new Error('Tidak dapat memverifikasi status pengguna aktif setelah aktivasi.');
+      }
+
+      const appStatus = (refreshedUser.app_metadata?.status as string | undefined)?.toUpperCase();
+      const isStrictlyActive = appStatus === 'ACTIVE';
+
+      if (!isStrictlyActive) {
+        throw new Error('Status akun belum aktif. Silakan tunggu sesaat atau login kembali.');
+      }
+
+      // 5. Synchronize derived client auth store
+      useAuthStore.getState().syncUser(refreshedUser);
+
+      // 6. Clean navigation to dashboard
+      if (typeof window !== 'undefined') {
+        window.location.href = '/dashboard';
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menyimpan kata sandi.';
       setError(msg);
