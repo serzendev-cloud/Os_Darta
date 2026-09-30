@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { GraduationCap, Loader2, Mail, Lock, LogIn, Building2, Sparkles, ShieldCheck, UserCheck, Check } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface LoginClientProps {
   tenantName: string;
@@ -312,7 +313,7 @@ export default function LoginClient({
               </div>
             </div>
 
-            {/* Checkbox Simpan Akun / Ingat Saya */}
+            {/* Checkbox Simpan Akun / Ingat Saya & Lupa Password */}
             <div className="flex items-center justify-between py-1">
               <label className="flex items-center gap-2.5 text-xs text-stone-600 font-medium cursor-pointer select-none group">
                 <input
@@ -323,9 +324,16 @@ export default function LoginClient({
                 />
                 <span className="group-hover:text-stone-900 transition-colors flex items-center gap-1">
                   <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  Simpan & ingat akun di perangkat ini
+                  Simpan &amp; ingat akun di perangkat ini
                 </span>
               </label>
+
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline transition-colors"
+              >
+                Lupa Password?
+              </Link>
             </div>
 
             {loginError && (

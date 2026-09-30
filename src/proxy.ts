@@ -15,7 +15,11 @@ const PUBLIC_PATHS = [
   '/login',
   '/register',
   '/maintenance',
-  '/auth',
+  '/auth/callback',
+  '/auth/set-password',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/api/auth/forgot-password',
   '/api/webhooks',
   '/api/saas/register',
 ];

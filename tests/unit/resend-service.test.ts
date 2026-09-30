@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { resolveSenderEmail, sendTenantInvitationEmail, _resetResendInstanceForTesting } from '@/lib/email/resend-service';
+import { resolveSenderEmail, sendTenantInvitationEmail, sendPasswordResetEmail, _resetResendInstanceForTesting } from '@/lib/email/resend-service';
 import { Resend } from 'resend';
 
 const mockSend = vi.fn();
@@ -121,6 +121,53 @@ describe('WP-RESEND-SENDER-DOMAIN-MIGRATION-001 — Resend Sender & Service Test
       process.env.RESEND_FROM_EMAIL = 'onboarding@resend.dev';
 
       const result = await sendTenantInvitationEmail('admin@alhikmah.id', mockEmailProps);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('PROHIBITED_SENDER_DOMAIN');
+    });
+  });
+
+  describe('sendPasswordResetEmail()', () => {
+    const mockResetProps = {
+      userName: 'Ustadz Ahmad',
+      resetUrl: 'https://alhikmah.serzen-dev.my.id/auth/callback?token_hash=xyz&type=recovery',
+      tenantName: 'Pesantren Al-Hikmah',
+    };
+
+    it('returns RESEND_API_KEY_MISSING when RESEND_API_KEY is missing', async () => {
+      delete process.env.RESEND_API_KEY;
+      const result = await sendPasswordResetEmail('admin@alhikmah.id', mockResetProps);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('RESEND_API_KEY_MISSING');
+    });
+
+    it('dispatches password reset email with verified sender domain when configured', async () => {
+      process.env.RESEND_API_KEY = 're_test_valid_key';
+      process.env.RESEND_FROM_EMAIL = 'noreply@serzen-dev.my.id';
+
+      mockSend.mockResolvedValueOnce({
+        data: { id: 'msg_reset_123' },
+        error: null,
+      });
+
+      const result = await sendPasswordResetEmail('admin@alhikmah.id', mockResetProps);
+
+      expect(result.success).toBe(true);
+      expect(result.messageId).toBe('msg_reset_123');
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: "Ma'had Manager <noreply@serzen-dev.my.id>",
+          to: 'admin@alhikmah.id',
+          subject: 'Pemulihan Kata Sandi - Pesantren Al-Hikmah',
+        })
+      );
+    });
+
+    it('handles prohibited sender domain cleanly for password reset', async () => {
+      process.env.RESEND_API_KEY = 're_test_valid_key';
+      process.env.RESEND_FROM_EMAIL = 'onboarding@resend.dev';
+
+      const result = await sendPasswordResetEmail('admin@alhikmah.id', mockResetProps);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('PROHIBITED_SENDER_DOMAIN');

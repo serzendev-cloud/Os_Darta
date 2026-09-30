@@ -10,8 +10,18 @@ import {
   renderTenantInvitationHtml,
   TenantInvitationEmailProps,
 } from './templates/tenant-invitation';
+import {
+  renderPasswordResetHtml,
+  PasswordResetEmailProps,
+} from './templates/password-reset';
 
 export interface SendInvitationEmailResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
+
+export interface SendPasswordResetEmailResult {
   success: boolean;
   messageId?: string;
   error?: string;
@@ -122,6 +132,74 @@ export async function sendTenantInvitationEmail(
   }
 }
 
+/**
+ * Dispatches the official Password Recovery Email via Resend.
+ *
+ * SECURITY DIRECTIVES:
+ * - API Key is kept strictly server-side.
+ * - Recovery tokens are NEVER printed to logs.
+ * - Strictly enforces verified domain sender.
+ */
+export async function sendPasswordResetEmail(
+  toEmail: string,
+  emailProps: PasswordResetEmailProps
+): Promise<SendPasswordResetEmailResult> {
+  const resend = getResendClient();
+
+  if (!resend) {
+    console.warn('[ResendService] RESEND_API_KEY is not configured in environment. Skipping email dispatch.');
+    return {
+      success: false,
+      error: 'RESEND_API_KEY_MISSING',
+    };
+  }
+
+  let sender: string;
+  try {
+    sender = resolveSenderEmail();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Invalid sender configuration';
+    console.error('[ResendService] Sender resolution error:', message);
+    return {
+      success: false,
+      error: message,
+    };
+  }
+
+  const html = renderPasswordResetHtml(emailProps);
+
+  try {
+    const brandTitle = emailProps.tenantName || "Ma'had Manager";
+    const { data, error } = await resend.emails.send({
+      from: sender,
+      to: toEmail,
+      subject: `Pemulihan Kata Sandi - ${brandTitle}`,
+      html,
+    });
+
+    if (error) {
+      console.error('[ResendService] Password reset dispatch failed with error name:', error.name);
+      return {
+        success: false,
+        error: error.message || 'Resend dispatch failed',
+      };
+    }
+
+    return {
+      success: true,
+      messageId: data?.id,
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown email dispatch error';
+    console.error('[ResendService] Network/system exception during password reset dispatch:', message);
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
 export const resendService = {
   sendTenantInvitationEmail,
+  sendPasswordResetEmail,
 };
