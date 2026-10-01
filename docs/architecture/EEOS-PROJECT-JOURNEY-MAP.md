@@ -56,7 +56,7 @@ Agent **MUST** identify and align with:
 1. **Current Phase**: `TENANT INFRASTRUCTURE, DOMAIN BOUNDARIES & PRE-PRODUCTION VERIFICATION`
 2. **Current Work Package**: `WP-LIVE-PREVIEW-TENANT-DOMAIN-E2E-VERIFICATION-001`
 3. **Current Status**: `DNS AUTHORITY TRANSITIONED; WILDCARD SSL GENERATING; AWAITING LIVE PREVIEW E2E`
-4. **Closed Gates**: Clean-Slate Reset, MB-01, MB-02, MB-03, MB-04, MB-06, WP-02, Role Preview Platform Hardening, Origin Ticket PostgreSQL Storage, Module Feature Flags, Tenant Provisioning & Zero-Password Flow, Tenant Hard Delete Lifecycle Engine, Resend Verified Domain Dispatch, Tenant Onboarding Session Refresh, Tenant Root Domain & Fail-Closed Proxy Boundary
+4. **Closed Gates**: Clean-Slate Reset, MB-01, MB-02, MB-03, MB-04, MB-06, WP-02, Role Preview Platform Hardening, Origin Ticket PostgreSQL Storage, Module Feature Flags, Tenant Provisioning & Zero-Password Flow, Tenant Hard Delete Lifecycle Engine, Resend Verified Domain Dispatch, Tenant Onboarding Session Refresh, Tenant Root Domain & Fail-Closed Proxy Boundary, Password Recovery Flow (WP-AUTH-PASSWORD-RESET-FLOW-001 / WP-AUTH-PASSWORD-RESET-FLOW-002 / WP-AUTH-PASSWORD-RESET-FLOW-002H)
 5. **Locked Decisions**: HIST-1, GURU-2, RLS-2, MB-06 Ratified Tenant Resolution & Identity Model, Storage Candidate A (PostgreSQL), PROD-MOBILE-01 White-Label Mobile Add-on
 6. **Last Verified Commits**:
    - `7c41141` (`feat(db): tenantize santri and scope nis per tenant`)
@@ -71,6 +71,8 @@ Agent **MUST** identify and align with:
    - `d6483cf` (`feat(email): migrate resend sender to verified domain`)
    - `9b5f57f` (`fix(auth): refresh onboarding session before dashboard`)
    - `d5a3a53` (`fix(domain): enforce tenant hostname root boundary`)
+   - `3e9b2e1` (`feat(auth): implement secure forgot password and recovery flow`)
+   - `13db025` (`docs(audit): add WP-AUTH-PASSWORD-RESET-FLOW-002 preview e2e audit report`)
 7. **Current Blockers**: `WILDCARD SSL / LIVE DNS PROPAGATION`
 8. **Next Gate**: `LIVE PREVIEW TENANT DOMAIN E2E VERIFICATION`
 
@@ -130,6 +132,7 @@ The following milestones, architecture decisions, and implementation packages ar
 | **Resend Verified Domain Dispatch** | Resend Email Sender Domain Migration | **IMPLEMENTED & VERIFIED** in commit `d6483cf`. Verified domain sender `no-reply@serzen-dev.my.id`. | **CLOSED / IMPLEMENTED & VERIFIED** |
 | **Tenant Onboarding Session Refresh** | Strict ACTIVE app_metadata Token Refresh | **IMPLEMENTED & VERIFIED** in commit `9b5f57f`. Strict `ACTIVE` status validation before dashboard routing. | **CLOSED / IMPLEMENTED & VERIFIED** |
 | **Tenant Root Domain & Proxy Boundary** | Tenant Root Domain & Fail-Closed Proxy Boundary | **IMPLEMENTED & VERIFIED** in commit `d5a3a53`. Root domain `serzen-dev.my.id`, strict tenant slug matching, fail-closed resolution. | **CLOSED / IMPLEMENTED & VERIFIED** |
+| **Password Recovery Flow** | Secure Forgot Password / Password Recovery Flow (`WP-AUTH-PASSWORD-RESET-FLOW-001`, `002`, `002H`) | **IMPLEMENTED & VERIFIED IN PREVIEW VIA REAL E2E**: Real E2E verification pass on `pp-darululum` (`budgetinbyserzen@gmail.com`). Resend message `01a0f5f6-5671-71df-8d97-49b7200e912b` delivered. Production baseline `main=a4a7e1a` untouched. Ready for scheduled production release. | **CLOSED / VERIFIED (PREVIEW PASS; PROD NOT YET PROMOTED)** |
 | **PROD-MOBILE-01** | White-Label Native Mobile App as Tenant Add-on | **APPROVED / ROADMAP LOCKED**: Paid add-on per tenant producing a white-labeled native mobile app with tenant-specific branding while sharing the exact same Tenant, identity, backend, and data without tenant duplication. | **LOCKED (FUTURE ROADMAP — NOT CURRENT SPRINT)** |
 
 ---
@@ -464,6 +467,80 @@ LIVE PREVIEW TENANT DOMAIN E2E VERIFICATION (WP-LIVE-PREVIEW-TENANT-DOMAIN-E2E-V
 
 ---
 
+## 8. Password Recovery Flow System (WP-AUTH-PASSWORD-RESET-FLOW-001 / 002 / 002H)
+
+```text
+PASSWORD RECOVERY FLOW — CLOSED & VERIFIED
+
+WP-AUTH-PASSWORD-RESET-FLOW-001
+Secure Forgot Password / Password Recovery Implementation
+
+WP-AUTH-PASSWORD-RESET-FLOW-002
+Real Preview E2E Verification
+
+WP-AUTH-PASSWORD-RESET-FLOW-002H
+Final Post-E2E Forensic Verification
+
+Status:
+CLOSED / VERIFIED
+
+Verification:
+Real Preview E2E PASS
+
+Verified flow:
+Forgot Password
+→ Resend email
+→ Recovery callback
+→ Reset password
+→ Session invalidation
+→ Login with new password
+→ Dashboard access
+
+Verified test tenant:
+pp-darululum.serzen-dev.my.id
+
+Verified test identity:
+budgetinbyserzen@gmail.com
+
+Resend:
+verified domain serzen-dev.my.id
+sender noreply@serzen-dev.my.id
+real delivery confirmed
+
+Production:
+NOT YET PROMOTED
+
+Production baseline:
+main = a4a7e1a
+
+Production tenant:
+pp-darunnajah / SR2601
+
+Production status:
+UNTOUCHED
+
+Next gate:
+Scheduled Production Release / Password Recovery Promotion
+```
+
+### Future Production Promotion State:
+- **Preview**: `VERIFIED (Real E2E Pass)`
+- **Production**: `NOT PROMOTED`
+- **Future Gate**: Production promotion must be handled by a separate controlled Work Package.
+  That future WP must include:
+  - Production preflight
+  - Production deployment / source verification
+  - Production password recovery E2E
+  - Resend delivery verification
+  - Rollback plan
+  - SR2601 safety
+  - Zero unintended tenant impact
+
+### Known Limitations / Backlog:
+- **Legacy Dashboard Tenantization Warnings**: Some secondary dashboard widgets still have legacy tenantization warnings, including queries on tables not yet tenantized such as `health_visits` and `pelanggaran`. These belong to the separate *Santri Core Tenantization Remediation* backlog and do not block Password Recovery.
+
+---
+
 # PERMISSIBLE VS FORBIDDEN OPERATIONS
 
 For the current project position:
@@ -494,3 +571,4 @@ For the current project position:
 | 2026-09-22 | 1.1.0 | Antigravity (AI System Architect) | Update status following successful implementation of `WP-TENANT-PROVISIONING-INVITATION-001` (automated SRYYNN counter, Supabase invite links, Resend email dispatch, and first-time password onboarding flow). |
 | 2026-09-28 | 1.2.0 | Antigravity (AI System Architect) | Record locked product decision for White-Label Native Mobile App as paid Tenant Add-on (`PROD-MOBILE-01`), documenting product evolution model, 12 non-negotiable invariants, future architecture intent, and 7-stage roadmap sequence. |
 | 2026-09-28 | 1.3.0 | Antigravity (AI System Architect) | Reconciled authoritative project current state after tenant infrastructure and domain-boundary milestones; aligned Agent Startup Contract with current Preview verification phase; closed obsolete origin-ticket blocker; recorded completed tenant/domain milestones; and established Live Preview Tenant Domain E2E Verification as the next active gate. |
+| 2026-10-01 | 1.4.0 | Antigravity (AI System Architect) | Administrative closure and reconciliation of Password Recovery Flow (`WP-AUTH-PASSWORD-RESET-FLOW-001`, `002`, `002H`) following real browser E2E verification pass on Preview; recorded Resend delivery confirmation, Preview runtime logs, Supabase Auth verification, and strict Production protection baseline (`main = a4a7e1a`, SR2601 untouched). |
