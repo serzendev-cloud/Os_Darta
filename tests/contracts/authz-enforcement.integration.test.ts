@@ -3,18 +3,31 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Use vi.hoisted for top-level mock functions in Vitest
-const { mockRequirePermission, mockGetTenantContext } = vi.hoisted(() => ({
+const { mockRequirePermission, mockGetTenantContext, mockWithTenantTransaction } = vi.hoisted(() => ({
   mockRequirePermission: vi.fn(),
   mockGetTenantContext: vi.fn(),
+  mockWithTenantTransaction: vi.fn(),
 }));
 
 vi.mock('@/lib/authz/authorization-service', () => ({
   requirePermission: mockRequirePermission,
 }));
 
-vi.mock('@/lib/tenant/context', () => ({
-  getTenantContext: mockGetTenantContext,
-}));
+vi.mock('@/lib/tenant/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/tenant/context')>();
+  return {
+    ...actual,
+    getTenantContext: mockGetTenantContext,
+  };
+});
+
+vi.mock('@/lib/db/tenant-transaction', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db/tenant-transaction')>();
+  return {
+    ...actual,
+    withTenantTransaction: mockWithTenantTransaction.mockImplementation(actual.withTenantTransaction),
+  };
+});
 
 vi.mock('@/lib/db', () => {
   const mockDb = {
@@ -41,6 +54,7 @@ vi.mock('@/lib/db', () => {
 });
 
 import { GET, POST } from '../../src/app/api/db/query/route';
+import { TenantNotFoundError, TenantUnavailableError } from '@/lib/tenant/context';
 
 describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () => {
   beforeEach(() => {
@@ -146,6 +160,48 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.tenantId).toBe('tenant-alfatih');
+    });
+  });
+
+  describe('3. Tenant Resolution Failure Isolation (GET /api/db/query)', () => {
+    it('should abort without calling requirePermission or withTenantTransaction when tenant is not found', async () => {
+      mockGetTenantContext.mockRejectedValue(new TenantNotFoundError('non-existent-tenant'));
+
+      const req = new NextRequest('http://localhost/api/db/query?collection=santri', {
+        headers: {
+          'x-user-id': 'user-authorized',
+        },
+      });
+
+      const res = await GET(req);
+      expect(res.status).toBe(500);
+      expect(mockRequirePermission).not.toHaveBeenCalled();
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
+
+      const json = await res.json();
+      expect(json.tenantId).toBeUndefined();
+      expect(json.data).toBeUndefined();
+      expect(json.error).toBe('Failed to query database');
+    });
+
+    it('should abort without calling requirePermission or withTenantTransaction when tenant query is unavailable', async () => {
+      mockGetTenantContext.mockRejectedValue(new TenantUnavailableError('Database query failed'));
+
+      const req = new NextRequest('http://localhost/api/db/query?collection=santri', {
+        headers: {
+          'x-user-id': 'user-authorized',
+        },
+      });
+
+      const res = await GET(req);
+      expect(res.status).toBe(500);
+      expect(mockRequirePermission).not.toHaveBeenCalled();
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
+
+      const json = await res.json();
+      expect(json.tenantId).toBeUndefined();
+      expect(json.data).toBeUndefined();
+      expect(json.error).toBe('Failed to query database');
     });
   });
 });
