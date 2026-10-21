@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import { getTenantRootDomain } from '@/config/tenant';
+import { getTenantRootDomain, isValidTenantSlug } from '@/config/tenant';
 
 interface FormState {
   name: string;
@@ -49,6 +49,7 @@ export function RegisterForm() {
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
+  const rootDomain = getTenantRootDomain();
 
   // Helper to auto-suggest slug when user types name (if slug hasn't been manually customized)
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
@@ -112,10 +113,11 @@ export function RegisterForm() {
       errors.name = 'Nama instansi pesantren wajib diisi minimal 3 karakter.';
     }
 
-    if (!formData.slug.trim()) {
+    const cleanSlug = formData.slug.trim();
+    if (!cleanSlug) {
       errors.slug = 'Subdomain / Slug wajib diisi.';
-    } else if (!/^[a-z0-9-]+$/.test(formData.slug) || formData.slug.length < 3 || formData.slug.length > 50) {
-      errors.slug = 'Subdomain harus 3-50 karakter huruf kecil, angka, atau tanda hubung (-).';
+    } else if (cleanSlug.length < 3 || cleanSlug.length > 50 || !isValidTenantSlug(cleanSlug)) {
+      errors.slug = 'Subdomain harus 3-50 karakter huruf kecil, angka, atau tanda hubung (-), dan tidak diawali atau diakhiri tanda hubung.';
     }
 
     if (!formData.ownerName.trim() || formData.ownerName.trim().length < 2) {
@@ -323,15 +325,21 @@ export function RegisterForm() {
             }`}
           />
           <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500 font-mono text-xs">
-            .{getTenantRootDomain()}
+            {rootDomain ? `.${rootDomain}` : '(Domain tidak tersedia)'}
           </div>
         </div>
         {/* Live Subdomain Preview */}
         <p className="text-[11px] text-stone-400 pl-1">
           Alamat portal:{' '}
-          <span className="font-mono text-emerald-400 font-medium">
-            https://{formData.slug ? formData.slug : 'subdomain'}.{getTenantRootDomain()}
-          </span>
+          {rootDomain ? (
+            <span className="font-mono text-emerald-400 font-medium">
+              https://{formData.slug ? formData.slug : 'subdomain'}.{rootDomain}
+            </span>
+          ) : (
+            <span className="font-mono text-amber-400 font-medium">
+              (Konfigurasi domain belum tersedia di lingkungan ini)
+            </span>
+          )}
         </p>
         {fieldErrors.slug && (
           <p className="text-xs text-rose-400 font-medium pl-1">{fieldErrors.slug}</p>

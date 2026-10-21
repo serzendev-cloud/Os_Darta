@@ -9,7 +9,12 @@ import {
   Stethoscope, Trophy, ToggleLeft, ToggleRight, X, ShieldAlert, Power,
   Loader2, Mail, Trash2, AlertTriangle, UserX, UserCheck, Lock
 } from 'lucide-react';
-import { getTenantRootDomain } from '@/config/tenant';
+import {
+  getTenantRootDomain,
+  isValidHostname,
+  isCustomTenantDomain,
+  extractSlugFromSubdomainInput,
+} from '@/config/tenant';
 
 interface TenantModules {
   paymentGateway: boolean;
@@ -353,17 +358,20 @@ export default function SaasTenantsPage() {
 
     setIsSubmittingTenant(true);
     try {
-      const res = await fetch('/api/saas/tenants', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newTenantName,
-          slug: newSubdomain.replace(new RegExp(`\\.?${getTenantRootDomain()}$`, 'i'), '').toLowerCase().trim(),
-          location: newLocation || undefined,
-          plan: newPlan,
-          ownerName: newOwnerName || 'Admin Pesantren',
+        const configuredRoot = getTenantRootDomain();
+        const extractedSlug = extractSlugFromSubdomainInput(newSubdomain, configuredRoot);
+
+        const res = await fetch('/api/saas/tenants', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: newTenantName,
+            slug: extractedSlug,
+            location: newLocation || undefined,
+            plan: newPlan,
+            ownerName: newOwnerName || 'Admin Pesantren',
           ownerEmail: newOwnerEmail,
           ownerPhone: newOwnerPhone || undefined,
         }),
@@ -547,12 +555,25 @@ export default function SaasTenantsPage() {
                         <span className="font-mono text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                           {t.code || '-'}
                         </span>
-                        <a href={`https://${t.subdomain}`} target="_blank" rel="noreferrer" className="text-emerald-600 hover:text-emerald-700">
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                        {t.subdomain && isValidHostname(t.subdomain) && !isCustomTenantDomain(t.subdomain) ? (
+                          <a
+                            href={`https://${t.subdomain}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-emerald-600 hover:text-emerald-700"
+                            title="Buka Portal Tenant"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : null}
                       </div>
-                      <div className="text-stone-500 text-[11px] font-mono mt-0.5">
-                        <span>{t.subdomain} • {t.location}</span>
+                      <div className="text-stone-500 text-[11px] font-mono mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <span>{t.subdomain || 'Domain tidak tersedia'} • {t.location}</span>
+                        {t.subdomain && isCustomTenantDomain(t.subdomain) ? (
+                          <span className="text-[10px] font-sans font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                            Custom domain (routing belum didukung)
+                          </span>
+                        ) : null}
                       </div>
                       <div className="text-[11px] text-stone-600 dark:text-stone-400 mt-1 flex items-center gap-1.5">
                         <span className="font-semibold text-stone-700 dark:text-stone-300">Admin:</span>
@@ -1015,7 +1036,9 @@ export default function SaasTenantsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">Subdomain Target (.{getTenantRootDomain()})</label>
+                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Subdomain Target {getTenantRootDomain() ? `(.${getTenantRootDomain()})` : '(Domain belum dikonfigurasi)'}
+                </label>
                 <div className="flex items-center">
                   <input
                     type="text"
@@ -1025,7 +1048,9 @@ export default function SaasTenantsPage() {
                     className="w-full px-3.5 py-2.5 rounded-l-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                     required
                   />
-                  <span className="bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 px-3 py-2.5 rounded-r-xl text-xs font-mono font-semibold">.{getTenantRootDomain()}</span>
+                  <span className="bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 px-3 py-2.5 rounded-r-xl text-xs font-mono font-semibold">
+                    {getTenantRootDomain() ? `.${getTenantRootDomain()}` : '(N/A)'}
+                  </span>
                 </div>
               </div>
 

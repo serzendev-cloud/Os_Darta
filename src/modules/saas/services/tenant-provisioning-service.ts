@@ -19,7 +19,7 @@ import { auditLogService } from '@/lib/db/services/auditLog';
 import { seedTenantAdminPermissions } from '@/lib/authz/canonical-permissions';
 import { tenantCodeCounterService } from '@/lib/tenant/tenant-code-counter-service';
 import { resendService } from '@/lib/email/resend-service';
-import { getTenantDomain } from '@/config/tenant';
+import { getTenantDomain, resolveTenantDomain, isValidTenantSlug, getAppUrl } from '@/config/tenant';
 
 export interface TenantModulesConfig {
   paymentGateway?: boolean;
@@ -106,10 +106,14 @@ export interface ResendInvitationResult {
 }
 
 /**
- * Validates slug format: lowercase letters, numbers, hyphens.
+ * Validates slug format: lowercase letters, numbers, hyphens (RFC 1123 label compliant).
+ * Disallows leading/trailing hyphens, underscores, UUIDs, or length < 3 or > 50.
  */
 export function validateSlug(slug: string): boolean {
-  return /^[a-z0-9-]+$/.test(slug) && slug.length >= 3 && slug.length <= 50;
+  if (!slug || typeof slug !== 'string') return false;
+  const clean = slug.trim().toLowerCase();
+  if (clean.length < 3 || clean.length > 50) return false;
+  return isValidTenantSlug(clean);
 }
 
 /**
@@ -195,6 +199,16 @@ export async function provisionTenant(
     throw new Error('Nama pengurus / admin pesantren wajib diisi.');
   }
 
+  // Pre-validate Domain Resolution & App URL Configuration BEFORE any side effects or counter allocation
+  const candidateDomain = getTenantDomain(cleanSlug);
+  if (!candidateDomain) {
+    throw new Error('Subdomain atau konfigurasi root domain tidak valid.');
+  }
+  const appUrl = getAppUrl();
+  if (!appUrl) {
+    throw new Error('Konfigurasi URL aplikasi (APP_URL) tidak tersedia.');
+  }
+
   // 2. Pre-flight Idempotency & Collision Checks
   const availability = await tenantProvisioningService.checkTenantAvailability(cleanSlug, cleanEmail, dbInstance);
   if (!availability.available) {
@@ -211,8 +225,6 @@ export async function provisionTenant(
   const tenantCode = allocation.code;
 
   const tenantId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const candidateDomain = getTenantDomain(cleanSlug);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.serzen-dev.my.id';
   const redirectTo = `${appUrl}/auth/callback`;
   const supabaseAdmin = createAdminClient();
 
@@ -571,7 +583,10 @@ export async function resendTenantInvitation(
     throw err;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.serzen-dev.my.id';
+  const appUrl = getAppUrl();
+  if (!appUrl) {
+    throw new Error('Konfigurasi URL aplikasi (APP_URL) tidak tersedia.');
+  }
   const redirectTo = `${appUrl}/auth/callback`;
   const supabaseAdmin = createAdminClient();
 
@@ -620,7 +635,7 @@ export async function resendTenantInvitation(
       adminName: adminMembership.userName,
       tenantName: tenantRow.name,
       tenantCode: tenantRow.code,
-      subdomain: tenantRow.domain || getTenantDomain(tenantRow.slug),
+      subdomain: resolveTenantDomain(tenantRow.slug, tenantRow.domain) || 'Domain tidak tersedia',
       activationUrl,
       appUrl,
     });
@@ -755,7 +770,7 @@ export async function listActiveTenants(dbInstance = db): Promise<ActiveTenantDt
       name: t.name,
       slug: t.slug,
       code: t.code || '-',
-      subdomain: t.domain || getTenantDomain(t.slug),
+      subdomain: resolveTenantDomain(t.slug, t.domain) || 'Domain tidak tersedia',
       location: settings?.loginSubtitle || 'Indonesia',
       ownerName: adminMembership?.userName || 'Admin Pesantren',
       ownerEmail: adminMembership?.userEmail || '-',
