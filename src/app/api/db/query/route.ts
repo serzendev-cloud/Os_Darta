@@ -10,6 +10,46 @@ import { eq, and } from 'drizzle-orm';
 import { getTenantContext } from '@/lib/tenant/context';
 import { requirePermission } from '@/lib/authz/authorization-service';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
+import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
+
+interface AuthResolution {
+  userId: string | null;
+  isSuperAdmin: boolean;
+}
+
+/**
+ * Resolves the authenticated user identity with fail-closed security.
+ * In production, identity MUST originate from a cryptographically verified Supabase
+ * server session (cookies). Raw client-supplied headers are strictly untrusted standalone.
+ * In automated test suites (Vitest), verified mock test headers are accepted.
+ */
+async function resolveAuthUser(request: NextRequest): Promise<AuthResolution> {
+  // 1. Primary Authority: Cryptographic server-side Supabase session
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data?.user?.id) {
+      const user = data.user;
+      const appRole = (user.app_metadata?.role || '') as string;
+      const normalizedRole = appRole.toUpperCase().replace(/\s+/g, '_');
+      const isSuper = normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'DEVELOPER';
+      return { userId: user.id, isSuperAdmin: isSuper };
+    }
+  } catch {
+    // Session resolution unavailable in current context (e.g. test harness)
+  }
+
+  // 2. Controlled Test Harness Support (Strictly gated to test environments)
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+    const headerUserId = request.headers.get('x-user-id');
+    if (headerUserId && headerUserId.trim() !== '') {
+      const isSuper = request.headers.get('x-is-super-admin') === 'true';
+      return { userId: headerUserId.trim(), isSuperAdmin: isSuper };
+    }
+  }
+
+  return { userId: null, isSuperAdmin: false };
+}
 
 /**
  * Maps database collection names to required read permission codes
@@ -30,7 +70,7 @@ const COLLECTION_READ_PERMISSIONS: Record<string, string> = {
   hukuman: 'view_hukuman',
   governanceCases: 'view_governance',
   healthVisits: 'view_uks',
-  healthPermissions: 'view_izins_berobat',
+  healthPermissions: 'view_izin_berobat',
   quests: 'view_quest',
   tolerancePolicies: 'view_pengaturan',
   notifications: 'view_notifikasi',
@@ -59,7 +99,7 @@ const COLLECTION_WRITE_PERMISSIONS: Record<string, string> = {
   hukuman: 'manage_hukuman',
   governanceCases: 'manage_governance',
   healthVisits: 'manage_uks',
-  healthPermissions: 'manage_izins_berobat',
+  healthPermissions: 'manage_izin_berobat',
   quests: 'manage_quest',
   tolerancePolicies: 'manage_pengaturan',
   notifications: 'manage_notifikasi',
@@ -68,7 +108,20 @@ const COLLECTION_WRITE_PERMISSIONS: Record<string, string> = {
 export async function GET(request: NextRequest) {
   try {
     const tenant = await getTenantContext();
-    const userId = request.headers.get('x-user-id') || '';
+
+    // 1. Enforce Fail-Closed Server Authentication
+    const auth = await resolveAuthUser(request);
+    if (!auth.userId || auth.userId.trim() === '') {
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          code: 'UNAUTHENTICATED',
+          message: 'Autentikasi diperlukan: Sesi pengguna tidak ditemukan atau kedaluwarsa',
+        },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const collectionName = searchParams.get('collection');
 
@@ -109,20 +162,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: `Unknown collection "${collectionName}"` }, { status: 400 });
     }
 
-    // Enforce RBAC Permission Check if user is present
+    // 2. Mandatory RBAC Permission Check (Zero-Trust)
     const requiredPermission = COLLECTION_READ_PERMISSIONS[collectionName] || 'view_dashboard';
-    if (userId) {
-      const authz = await requirePermission(userId, tenant.id, requiredPermission);
-      if (!authz.authorized) {
-        return NextResponse.json(
-          { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk membaca resource ini' },
-          { status: 403 }
-        );
-      }
+    const authz = await requirePermission(auth.userId, tenant.id, requiredPermission);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk membaca resource ini' },
+        { status: 403 }
+      );
     }
 
-    // Scoped query by tenant_id within transaction-safe RLS context
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
+    // 3. Scoped query by tenant_id within transaction-safe RLS context
     const records = await withTenantTransaction(
       tenant.id,
       async (tx) => {
@@ -135,7 +185,7 @@ export async function GET(request: NextRequest) {
           return await tx.select().from(targetTable);
         }
       },
-      { isSuperAdmin, tenantSlug: tenant.slug }
+      { isSuperAdmin: auth.isSuperAdmin, tenantSlug: tenant.slug }
     );
 
     return NextResponse.json({ data: records, tenantId: tenant.id });
@@ -151,8 +201,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const tenant = await getTenantContext();
-    const userId = request.headers.get('x-user-id') || '';
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
+
+    // 1. Enforce Fail-Closed Server Authentication
+    const auth = await resolveAuthUser(request);
+    if (!auth.userId || auth.userId.trim() === '') {
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          code: 'UNAUTHENTICATED',
+          message: 'Autentikasi diperlukan: Sesi pengguna tidak ditemukan atau kedaluwarsa',
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { collectionName, action, data, id } = body;
 
@@ -186,23 +248,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Unknown collection "${collectionName}"` }, { status: 400 });
     }
 
-    // Enforce RBAC Permission Check if user is present
+    // 2. Mandatory RBAC Permission Check (Zero-Trust)
     const requiredPermission = COLLECTION_WRITE_PERMISSIONS[collectionName] || 'manage_pengaturan';
-    if (userId) {
-      const authz = await requirePermission(userId, tenant.id, requiredPermission);
-      if (!authz.authorized) {
-        return NextResponse.json(
-          { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk mengubah resource ini' },
-          { status: 403 }
-        );
-      }
+    const authz = await requirePermission(auth.userId, tenant.id, requiredPermission);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk mengubah resource ini' },
+        { status: 403 }
+      );
     }
 
+    // 3. Scoped mutation within transaction-safe tenant context
     return await withTenantTransaction(
       tenant.id,
       async (tx) => {
         if (action === 'create') {
-          const newId = data.id || `${collectionName}_${Date.now()}`;
+          const newId = data?.id || `${collectionName}_${Date.now()}`;
           const payload = {
             ...data,
             id: newId,
@@ -237,7 +298,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ error: `Unsupported action "${action}"` }, { status: 400 });
       },
-      { isSuperAdmin, tenantSlug: tenant.slug }
+      { isSuperAdmin: auth.isSuperAdmin, tenantSlug: tenant.slug }
     );
   } catch (error) {
     console.error('[API /api/db/query POST] Error:', error);

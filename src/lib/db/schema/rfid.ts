@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp } from 'drizzle-orm/pg-core';
 
 // ── RFID Cards Table (KTA Smart Card Santri) ─────────────────────────────────
 export const rfidCards = pgTable('rfid_cards', {
@@ -11,6 +11,16 @@ export const rfidCards = pgTable('rfid_cards', {
   pairedAt: timestamp('paired_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Hardening fields (M2-WALLET-MASTER-001)
+  salt: text('salt'),
+  pinFailedAttempts: integer('pin_failed_attempts').default(0).notNull(),
+  lockedUntil: timestamp('locked_until'),
+  lastPinResetAt: timestamp('last_pin_reset_at'),
+  lastPinResetBy: text('last_pin_reset_by'),
+  kdfVersion: text('kdf_version').default('pbkdf2-v1').notNull(),
+  pepperVersion: text('pepper_version').default('pep-2026-v1').notNull(),
+  iterations: integer('iterations').default(100000).notNull(),
 });
 
 // ── Attendance Logs (Fast Tap Presensi Sekolah / Asrama / Sholat) ─────────────

@@ -93,7 +93,7 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Mobile-First Registration 
         data: {
           tenantName: 'Pesantren Al-Hikmah',
           tenantSlug: 'alhikmah',
-          domain: 'alhikmah.madev.id',
+          domain: 'alhikmah.serzen-dev.my.id',
           ownerEmail: 'admin@alhikmah.sch.id',
           status: 'PROVISIONED',
           nextStep: 'ONBOARDING',
@@ -113,7 +113,7 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Mobile-First Registration 
     await waitFor(() => {
       expect(screen.getByText(/Pendaftaran Berhasil/i)).toBeDefined();
       expect(screen.getByText(/Pesantren Al-Hikmah/i)).toBeDefined();
-      expect(screen.getByText(/https:\/\/alhikmah\.madev\.id/i)).toBeDefined();
+      expect(screen.getByText(/https:\/\/alhikmah\.serzen-dev\.my.id/i)).toBeDefined();
       expect(screen.getByText(/Langkah Selanjutnya/i)).toBeDefined();
     });
 

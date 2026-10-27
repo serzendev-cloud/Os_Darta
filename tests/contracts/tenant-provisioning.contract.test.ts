@@ -7,6 +7,7 @@ import * as supabaseAdminModule from '../../src/lib/supabase/admin';
 import { db } from '../../src/lib/db';
 import { auditLogService } from '../../src/lib/db/services/auditLog';
 import { tenantCodeCounterService } from '../../src/lib/tenant/tenant-code-counter-service';
+import * as authorizationService from '../../src/lib/authz/authorization-service';
 
 describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', () => {
   beforeEach(() => {
@@ -16,10 +17,19 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
       year: 2026,
       sequence: 1,
     });
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: true,
+      userId: 'super_admin_001',
+      role: 'SUPER_ADMIN',
+    });
   });
 
   // ── 1. Super Admin Authorization ──────────────────────────────────────────
   it('1. Rejects unauthenticated request (missing x-user-id)', async () => {
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: false,
+      status: 401,
+    });
     const req = new NextRequest('http://localhost:3000/api/saas/tenants', {
       method: 'POST',
       headers: {
@@ -36,19 +46,25 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     });
 
     const res = await POST(req);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.success).toBe(false);
-    expect(json.error).toBe('Forbidden');
+    expect(json.error).toBe('Unauthorized');
   });
 
   it('2. Rejects non-superadmin authenticated user (x-is-super-admin !== true)', async () => {
+    const provisionSpy = vi.spyOn(provisioningService.tenantProvisioningService, 'provisionTenant');
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: false,
+      status: 403,
+    });
     const req = new NextRequest('http://localhost:3000/api/saas/tenants', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-user-id': 'normal_user_123',
-        'x-is-super-admin': 'false',
+        'x-is-super-admin': 'true',
+        'x-user-role': 'SUPER_ADMIN',
         'host': 'localhost:3000',
         'origin': 'http://localhost:3000',
       },
@@ -64,6 +80,32 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     expect(res.status).toBe(403);
     const json = await res.json();
     expect(json.success).toBe(false);
+    expect(provisionSpy).not.toHaveBeenCalled();
+  });
+
+  it('denies provisioning when platform-role lookup is unavailable and never calls the service', async () => {
+    const provisionSpy = vi.spyOn(provisioningService.tenantProvisioningService, 'provisionTenant');
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: false,
+      status: 503,
+    });
+
+    const req = new NextRequest('http://localhost:3000/api/saas/tenants', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'forged-user',
+        'x-is-super-admin': 'true',
+        'x-user-role': 'DEVELOPER',
+        host: 'localhost:3000',
+        origin: 'http://localhost:3000',
+      },
+      body: JSON.stringify({ name: 'Pesantren Amanah', slug: 'amanah', ownerName: 'Admin', ownerEmail: 'admin@example.test' }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(503);
+    expect(provisionSpy).not.toHaveBeenCalled();
   });
 
   // ── 2. CSRF & Origin Mismatch ─────────────────────────────────────────────
@@ -439,6 +481,10 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
   });
 
   it('11. Denies non-superadmin access to GET /api/saas/tenants', async () => {
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: false,
+      status: 403,
+    });
     const req = new NextRequest('http://localhost:3000/api/saas/tenants', {
       method: 'GET',
       headers: {
@@ -716,5 +762,138 @@ describe('WP-TENANT-PROVISION-002 — Tenant & Admin Provisioning Contracts', ()
     // Should safely fallback to super_admin
     expect(auditPayload.actorRole).toBe('super_admin');
     expect(auditPayload.actorName).toBe('Super Admin');
+  });
+
+  // ── 11. Canonical Slug Validation (RFC 1123 & Phase A2 Hardening) ─────────
+  describe('16. Canonical Slug Validation (validateSlug)', () => {
+    it('accepts valid RFC 1123 label compliant slugs within [3, 50] chars', () => {
+      expect(provisioningService.validateSlug('darul-ulum')).toBe(true);
+      expect(provisioningService.validateSlug('pp-darunnajah')).toBe(true);
+      expect(provisioningService.validateSlug('pesantren123')).toBe(true);
+      expect(provisioningService.validateSlug('al-hikmah-2')).toBe(true);
+      expect(provisioningService.validateSlug('abc')).toBe(true); // length 3
+      expect(provisioningService.validateSlug('a'.repeat(50))).toBe(true); // length 50
+    });
+
+    it('rejects invalid slugs: leading/trailing hyphens, underscores, UUIDs, invalid lengths, special chars', () => {
+      // Leading or trailing hyphens
+      expect(provisioningService.validateSlug('-darululum')).toBe(false);
+      expect(provisioningService.validateSlug('darululum-')).toBe(false);
+      expect(provisioningService.validateSlug('-darul-ulum-')).toBe(false);
+
+      // Underscores & database ID patterns
+      expect(provisioningService.validateSlug('darul_ulum')).toBe(false);
+      expect(provisioningService.validateSlug('t_12345')).toBe(false);
+      expect(provisioningService.validateSlug('550e8400-e29b-41d4-a716-446655440000')).toBe(false);
+
+      // Slashes, paths, schemes, ports
+      expect(provisioningService.validateSlug('darul/ulum')).toBe(false);
+      expect(provisioningService.validateSlug('/darululum')).toBe(false);
+      expect(provisioningService.validateSlug('darul:3000')).toBe(false);
+
+      // Length boundaries (< 3 or > 50)
+      expect(provisioningService.validateSlug('ab')).toBe(false);
+      expect(provisioningService.validateSlug('a'.repeat(51))).toBe(false);
+
+      // Empty, whitespace, null, undefined
+      expect(provisioningService.validateSlug('')).toBe(false);
+      expect(provisioningService.validateSlug('   ')).toBe(false);
+      expect(provisioningService.validateSlug(null as any)).toBe(false);
+      expect(provisioningService.validateSlug(undefined as any)).toBe(false);
+    });
+  });
+
+  // ── 12. Atomic Counter Preservation on Step 1 Validation Failure ─────────
+  describe('17. Counter Preservation: allocateNextTenantCode is NOT called on invalid input', () => {
+    it('does not consume tenant sequence counter when slug has leading hyphen', async () => {
+      const allocateSpy = vi.spyOn(tenantCodeCounterService, 'allocateNextTenantCode');
+
+      await expect(
+        provisioningService.tenantProvisioningService.provisionTenant(
+          {
+            name: 'Pesantren Invalid Slug',
+            slug: '-darululum',
+            ownerName: 'Ustadz Ahmad',
+            ownerEmail: 'admin@darululum.id',
+          },
+          { userId: 'super_admin_001', role: 'super_admin' }
+        )
+      ).rejects.toThrow(/Subdomain\/Slug tidak valid/);
+
+      expect(allocateSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not consume tenant sequence counter when slug has trailing hyphen', async () => {
+      const allocateSpy = vi.spyOn(tenantCodeCounterService, 'allocateNextTenantCode');
+
+      await expect(
+        provisioningService.tenantProvisioningService.provisionTenant(
+          {
+            name: 'Pesantren Trailing Hyphen',
+            slug: 'darululum-',
+            ownerName: 'Ustadz Ahmad',
+            ownerEmail: 'admin@darululum.id',
+          },
+          { userId: 'super_admin_001', role: 'super_admin' }
+        )
+      ).rejects.toThrow(/Subdomain\/Slug tidak valid/);
+
+      expect(allocateSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not consume tenant sequence counter when slug contains underscores or forbidden chars', async () => {
+      const allocateSpy = vi.spyOn(tenantCodeCounterService, 'allocateNextTenantCode');
+
+      await expect(
+        provisioningService.tenantProvisioningService.provisionTenant(
+          {
+            name: 'Pesantren Underscore',
+            slug: 'darul_ulum',
+            ownerName: 'Ustadz Ahmad',
+            ownerEmail: 'admin@darululum.id',
+          },
+          { userId: 'super_admin_001', role: 'super_admin' }
+        )
+      ).rejects.toThrow(/Subdomain\/Slug tidak valid/);
+
+      expect(allocateSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not consume tenant sequence counter when root domain or APP_URL is unconfigured in Preview', async () => {
+      const allocateSpy = vi.spyOn(tenantCodeCounterService, 'allocateNextTenantCode');
+      const origVercelEnv = process.env.VERCEL_ENV;
+      const origTenantRoot = process.env.NEXT_PUBLIC_TENANT_ROOT_DOMAIN;
+
+      try {
+        process.env.VERCEL_ENV = 'preview';
+        delete process.env.NEXT_PUBLIC_TENANT_ROOT_DOMAIN;
+
+        await expect(
+          provisioningService.tenantProvisioningService.provisionTenant(
+            {
+              name: 'Pesantren Darul Ulum',
+              slug: 'darul-ulum',
+              ownerName: 'Ustadz Ahmad',
+              ownerEmail: 'admin@darululum.id',
+            },
+            { userId: 'super_admin_001', role: 'super_admin' }
+          )
+        ).rejects.toThrow(/Subdomain atau konfigurasi root domain tidak valid/);
+
+        // Crucial invariant: zero sequence counter allocation occurred
+        expect(allocateSpy).not.toHaveBeenCalled();
+      } finally {
+        if (origVercelEnv === undefined) {
+          delete process.env.VERCEL_ENV;
+        } else {
+          process.env.VERCEL_ENV = origVercelEnv;
+        }
+        if (origTenantRoot === undefined) {
+          delete process.env.NEXT_PUBLIC_TENANT_ROOT_DOMAIN;
+        } else {
+          process.env.NEXT_PUBLIC_TENANT_ROOT_DOMAIN = origTenantRoot;
+        }
+      }
+    });
   });
 });

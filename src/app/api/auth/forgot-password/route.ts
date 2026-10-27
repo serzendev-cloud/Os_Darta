@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resendService } from '@/lib/email/resend-service';
 import { extractTenantSlug } from '@/proxy';
-import { getTenantDomain } from '@/config/tenant';
+import { getTenantDomain, getAppUrl } from '@/config/tenant';
 
 export const runtime = 'nodejs';
 
@@ -131,7 +131,12 @@ export async function POST(request: NextRequest) {
     } else if (targetDomain) {
       baseUrl = `https://${targetDomain}`;
     } else {
-      baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.serzen-dev.my.id';
+      const appUrl = getAppUrl();
+      if (!appUrl) {
+        console.error('[ForgotPassword] Base application URL is not configured; failing closed.');
+        return NextResponse.json(NEUTRAL_RESPONSE, { status: 200 });
+      }
+      baseUrl = appUrl;
     }
 
     // 3. Generate Secure Recovery Link via Supabase Auth Admin API

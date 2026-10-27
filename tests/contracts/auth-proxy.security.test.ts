@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
@@ -13,7 +12,7 @@ vi.mock('@/lib/supabase/proxy', () => ({
   }),
 }));
 
-import { proxy, extractTenantSlug, RESERVED_HOSTNAMES } from '../../src/proxy';
+import { proxy, extractTenantSlug } from '../../src/proxy';
 
 describe('WP-101 Phase 1D — Supabase Auth Boundary & Zero-Trust Proxy Security Contracts', () => {
   beforeEach(() => {
@@ -155,6 +154,30 @@ describe('WP-101 Phase 1D — Supabase Auth Boundary & Zero-Trust Proxy Security
       const response = await proxy(request);
 
       expect(response.status).toBe(200);
+    });
+
+    it('should not grant a platform role from user_metadata.role', async () => {
+      mockGetUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'user-metadata-only',
+            user_metadata: { role: 'SUPER_ADMIN' },
+          },
+        },
+        error: null,
+      });
+
+      const request = new NextRequest('http://localhost/api/saas/tenants', {
+        headers: {
+          'x-user-role': 'DEVELOPER',
+          'x-is-super-admin': 'true',
+        },
+      });
+      const response = await proxy(request);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-is-super-admin')).toBeNull();
+      expect(response.headers.get('x-middleware-request-x-user-role')).toBe('user');
     });
 
     it('should flag SUPER_ADMIN platform role without forcing a fake tenant membership', async () => {

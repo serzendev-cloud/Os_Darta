@@ -52,18 +52,9 @@ export async function uploadToDrive({
     throw new Error('Gagal mendapatkan ID file dari Google Drive.');
   }
 
-  // Set file agar dapat dibaca publik via link (opsional sesuai kebutuhan privacy)
-  try {
-    await drive.permissions.create({
-      fileId: data.id,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    });
-  } catch (err) {
-    console.warn('Gagal mengatur permission file Google Drive:', err);
-  }
+  // Zero-Trust Hardening (PO-LIMITED-SECURITY-REMEDIATION-001 - Workstream C):
+  // Files remain restricted by default to authorized service account and designated folder.
+  // Public "anyone" ACL permission grants are strictly forbidden.
 
   return {
     fileId: data.id,

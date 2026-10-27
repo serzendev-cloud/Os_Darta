@@ -67,6 +67,34 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
   });
 
   describe('1. API Route Read Authorization Enforcement (GET /api/db/query)', () => {
+    it('returns 401 Unauthorized when user identity is completely missing (Fail-Closed)', async () => {
+      const req = new NextRequest('http://localhost/api/db/query?collection=santri');
+
+      const res = await GET(req);
+      expect(res.status).toBe(401);
+      const json = await res.json();
+      expect(json.error).toBe('Unauthorized');
+      expect(json.code).toBe('UNAUTHENTICATED');
+      expect(mockRequirePermission).not.toHaveBeenCalled();
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
+    });
+
+    it('returns 401 Unauthorized when user identity is empty or whitespace', async () => {
+      const req = new NextRequest('http://localhost/api/db/query?collection=santri', {
+        headers: {
+          'x-user-id': '   ',
+        },
+      });
+
+      const res = await GET(req);
+      expect(res.status).toBe(401);
+      const json = await res.json();
+      expect(json.error).toBe('Unauthorized');
+      expect(json.code).toBe('UNAUTHENTICATED');
+      expect(mockRequirePermission).not.toHaveBeenCalled();
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
+    });
+
     it('should return 403 Forbidden when user is missing required read permission', async () => {
       mockRequirePermission.mockResolvedValue({
         authorized: false,
@@ -85,6 +113,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
       const json = await res.json();
       expect(json.error).toBe('Forbidden');
       expect(json.message).toContain('view_santri');
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
     });
 
     it('should return 200 OK when user possesses required read permission', async () => {
@@ -109,6 +138,51 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
   });
 
   describe('2. API Route Mutation Authorization Enforcement (POST /api/db/query)', () => {
+    it('returns 401 Unauthorized when mutation is attempted without authenticated identity', async () => {
+      const req = new NextRequest('http://localhost/api/db/query', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          collectionName: 'santri',
+          action: 'create',
+          data: { name: 'Santri Hacker' },
+        }),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(401);
+      const json = await res.json();
+      expect(json.error).toBe('Unauthorized');
+      expect(json.code).toBe('UNAUTHENTICATED');
+      expect(mockRequirePermission).not.toHaveBeenCalled();
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
+    });
+
+    it('returns 401 Unauthorized when mutation is attempted with empty identity string', async () => {
+      const req = new NextRequest('http://localhost/api/db/query', {
+        method: 'POST',
+        headers: {
+          'x-user-id': '',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          collectionName: 'santri',
+          action: 'create',
+          data: { name: 'Santri Hacker' },
+        }),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(401);
+      const json = await res.json();
+      expect(json.error).toBe('Unauthorized');
+      expect(json.code).toBe('UNAUTHENTICATED');
+      expect(mockRequirePermission).not.toHaveBeenCalled();
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
+    });
+
     it('should return 403 Forbidden when user attempts mutation without write permission', async () => {
       mockRequirePermission.mockResolvedValue({
         authorized: false,
@@ -133,6 +207,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
       expect(res.status).toBe(403);
       const json = await res.json();
       expect(json.error).toBe('Forbidden');
+      expect(mockWithTenantTransaction).not.toHaveBeenCalled();
     });
 
     it('should return 200 OK for authorized mutation when user possesses write permission', async () => {
@@ -159,6 +234,37 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.success).toBe(true);
+      expect(json.tenantId).toBe('tenant-alfatih');
+    });
+
+    it('strictly overrides client-forged tenantId with server-resolved tenant context on mutation', async () => {
+      mockRequirePermission.mockResolvedValue({
+        authorized: true,
+        decision: 'AUTHORIZED',
+        effectivePermissions: new Set(['manage_santri']),
+      });
+
+      const req = new NextRequest('http://localhost/api/db/query', {
+        method: 'POST',
+        headers: {
+          'x-user-id': 'user-authorized',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          collectionName: 'santri',
+          action: 'create',
+          data: {
+            name: 'Santri Infiltrator',
+            tenantId: 'spoofed-evil-tenant-id', // Attacker attempts to inject cross-tenant ID
+          },
+        }),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      // The returned tenantId and stored context must strictly be tenant-alfatih, NOT spoofed
       expect(json.tenantId).toBe('tenant-alfatih');
     });
   });

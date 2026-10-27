@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { authorizeCurrentPlatformRoles } from '@/lib/authz/authorization-service';
 import {
   tenantProvisioningService,
   ProvisionTenantInput,
@@ -55,21 +56,17 @@ function validateOrigin(request: NextRequest): boolean {
  * Super Admin endpoint to list all registered tenants from PostgreSQL.
  */
 export async function GET(request: NextRequest) {
+  void request;
   try {
-    const userId = request.headers.get('x-user-id');
-    const isSuperAdminHeader = request.headers.get('x-is-super-admin') === 'true';
-    const userRole = (request.headers.get('x-user-role') || '').toUpperCase().replace(/\s+/g, '_');
-    const isSuperAdmin = isSuperAdminHeader || userRole === 'SUPER_ADMIN' || userRole === 'DEVELOPER';
-
-    // 1. Authorization Gate (Super Admin Only)
-    if (!userId || !isSuperAdmin) {
+    const authorization = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER']);
+    if (!authorization.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Forbidden',
-          message: 'Akses ditolak. Hanya Super Admin / Developer yang dapat melihat daftar tenant platform.',
+          error: authorization.status === 401 ? 'Unauthorized' : authorization.status === 503 ? 'AuthorizationUnavailable' : 'Forbidden',
+          message: 'Akses platform memerlukan sesi valid dan role platform yang sah.',
         },
-        { status: 403 }
+        { status: authorization.status }
       );
     }
 
@@ -102,22 +99,19 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    const isSuperAdminHeader = request.headers.get('x-is-super-admin') === 'true';
-    const userRole = (request.headers.get('x-user-role') || '').toUpperCase().replace(/\s+/g, '_');
-    const isSuperAdmin = isSuperAdminHeader || userRole === 'SUPER_ADMIN' || userRole === 'DEVELOPER';
-
-    // 1. Authorization Gate (Super Admin Only)
-    if (!userId || !isSuperAdmin) {
+    const authorization = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER']);
+    if (!authorization.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Forbidden',
-          message: 'Akses ditolak. Hanya Super Admin / Developer yang dapat memprovisi tenant baru.',
+          error: authorization.status === 401 ? 'Unauthorized' : authorization.status === 503 ? 'AuthorizationUnavailable' : 'Forbidden',
+          message: 'Akses platform memerlukan sesi valid dan role platform yang sah.',
         },
-        { status: 403 }
+        { status: authorization.status }
       );
     }
+
+    const { userId, role: userRole } = authorization;
 
     // 2. CSRF & Origin Defense Gate
     if (!validateOrigin(request)) {
@@ -173,7 +167,7 @@ export async function POST(request: NextRequest) {
     const result = await tenantProvisioningService.provisionTenant(body, {
       userId,
       name: 'Super Admin',
-      role: 'super_admin',
+      role: userRole.toLowerCase(),
     });
 
     return NextResponse.json(

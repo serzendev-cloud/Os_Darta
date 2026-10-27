@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { authorizeCurrentPlatformRoles } from '@/lib/authz/authorization-service';
 import { tenantHardDeleteService } from '@/modules/saas/services/tenant-hard-delete-service';
 
 function validateOrigin(request: NextRequest): boolean {
@@ -45,27 +46,26 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  void request;
   try {
-    const userId = request.headers.get('x-user-id');
-    const isSuperAdminHeader = request.headers.get('x-is-super-admin') === 'true';
-    const userRole = (request.headers.get('x-user-role') || '').toUpperCase().replace(/\s+/g, '_');
-    const isSuperAdmin = isSuperAdminHeader || userRole === 'SUPER_ADMIN' || userRole === 'DEVELOPER';
-
-    if (!userId || !isSuperAdmin) {
+    const authorization = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER']);
+    if (!authorization.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Forbidden',
-          message: 'Akses ditolak. Hanya Super Admin / Developer yang dapat melihat rencana hard-delete tenant.',
+          error: authorization.status === 401 ? 'Unauthorized' : authorization.status === 503 ? 'AuthorizationUnavailable' : 'Forbidden',
+          message: 'Akses platform memerlukan sesi valid dan role platform yang sah.',
         },
-        { status: 403 }
+        { status: authorization.status }
       );
     }
+
+    const { userId, role } = authorization;
 
     const { id } = await context.params;
     const plan = await tenantHardDeleteService.planHardDelete(id, {
       userId,
-      role: userRole || 'SUPER_ADMIN',
+      role,
       isSuperAdmin: true,
     });
 
@@ -73,7 +73,7 @@ export async function GET(
       success: true,
       data: plan,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API /api/saas/tenants/:id/hard-delete GET] Error:', error);
     const message = error instanceof Error ? error.message : 'Gagal merencanakan hard-delete tenant.';
     const isNotFound = message.includes('tidak ditemukan');
@@ -97,22 +97,19 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.headers.get('x-user-id');
-    const isSuperAdminHeader = request.headers.get('x-is-super-admin') === 'true';
-    const userRole = (request.headers.get('x-user-role') || '').toUpperCase().replace(/\s+/g, '_');
-    const isSuperAdmin = isSuperAdminHeader || userRole === 'SUPER_ADMIN' || userRole === 'DEVELOPER';
-
-    // 1. Authorization Gate (Super Admin Only)
-    if (!userId || !isSuperAdmin) {
+    const authorization = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER']);
+    if (!authorization.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Forbidden',
-          message: 'Akses ditolak. Hanya Super Admin / Developer yang dapat mengeksekusi hard-delete tenant.',
+          error: authorization.status === 401 ? 'Unauthorized' : authorization.status === 503 ? 'AuthorizationUnavailable' : 'Forbidden',
+          message: 'Akses platform memerlukan sesi valid dan role platform yang sah.',
         },
-        { status: 403 }
+        { status: authorization.status }
       );
     }
+
+    const { userId, role } = authorization;
 
     // 2. CSRF & Origin Defense Gate
     if (!validateOrigin(request)) {
@@ -166,7 +163,7 @@ export async function POST(
       {
         userId,
         name: 'Super Admin',
-        role: userRole || 'SUPER_ADMIN',
+        role,
         isSuperAdmin: true,
       }
     );
@@ -176,7 +173,7 @@ export async function POST(
       message: `Tenant "${result.tenantName}" (${result.tenantCode}) dan data terkait berhasil dihapus secara permanen.`,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API /api/saas/tenants/:id/hard-delete POST] Error:', error);
     const message = error instanceof Error ? error.message : 'Gagal mengeksekusi hard-delete tenant.';
     const isProtected = message.includes('dilindungi secara permanen') || message.includes('Operasi dibatalkan');

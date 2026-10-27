@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createProxyClient } from '@/lib/supabase/proxy';
-import { getTenantRootDomain } from '@/config/tenant';
+import { getTenantRootDomain, isValidTenantSlug } from '@/config/tenant';
 
 /**
  * Public routes that do not require authentication
@@ -57,54 +57,60 @@ export const RESERVED_HOSTNAMES = new Set([
 /**
  * Extract tenant slug safely from hostname or path without trusting raw client headers.
  * Classification logic:
- * 1. Path route /t/:slug -> extracts :slug if valid and not reserved
- * 2. Ignore local dev / loopback (returns 'default')
- * 3. Deterministic hostname resolution against authorized NEXT_PUBLIC_TENANT_ROOT_DOMAIN (e.g. serzen-dev.my.id)
+ * 1. Fail-closed Root Domain Validation: If getTenantRootDomain() is null (unconfigured or malformed),
+ *    strictly returns null (never falls back to 'default' or another tenant).
+ * 2. Path route /t/:slug -> extracts :slug if valid and not reserved
+ * 3. Ignore local dev / loopback (returns 'default')
+ * 4. Deterministic hostname resolution against authorized NEXT_PUBLIC_TENANT_ROOT_DOMAIN (e.g. serzen-dev.my.id)
  *    - Apex or www -> 'default'
  *    - <slug>.<rootDomain> -> extracts :slug if valid and not reserved
- * 4. Strict Fail-Closed default: Vercel preview domains and all foreign/unauthorized hostnames return 'default'
+ * 5. Strict Fail-Closed default: Vercel preview domains and all foreign/unauthorized hostnames return 'default'
  */
-export function extractTenantSlug(request: NextRequest): string {
+export function extractTenantSlug(request: NextRequest): string | null {
+  // 1. Fail-closed Root Domain Gate
+  const rootDomain = getTenantRootDomain();
+  if (!rootDomain) {
+    // Strictly fail closed: never return 'default' when tenant root domain is unconfigured or malformed
+    return null;
+  }
+
   const url = request.nextUrl;
   const rawHost = request.headers.get('host') || '';
   const hostname = rawHost.split(':')[0].toLowerCase().trim();
 
-  // 1. Check path route /t/:slug
+  // 2. Check path route /t/:slug
   if (url.pathname.startsWith('/t/')) {
     const pathParts = url.pathname.split('/');
     if (pathParts[2] && pathParts[2].trim() !== '') {
       const candidatePathSlug = pathParts[2].toLowerCase().trim();
-      if (!RESERVED_HOSTNAMES.has(candidatePathSlug)) {
+      if (!RESERVED_HOSTNAMES.has(candidatePathSlug) && isValidTenantSlug(candidatePathSlug)) {
         return candidatePathSlug;
       }
     }
   }
 
-  // 2. Ignore local dev / loopback
+  // 3. Ignore local dev / loopback
   if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
     return 'default';
   }
 
-  // 3. Deterministic resolution against configured Tenant Root Domain
-  const rootDomain = getTenantRootDomain();
-
-  // Apex platform root or www -> platform default
+  // 4. Apex platform root or www -> platform default
   if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
     return 'default';
   }
 
-  // Subdomain of configured root domain: e.g. <slug>.serzen-dev.my.id
+  // 5. Subdomain of configured root domain: e.g. <slug>.serzen-dev.my.id
   if (hostname.endsWith(`.${rootDomain}`)) {
     const prefix = hostname.slice(0, -(rootDomain.length + 1));
     const subParts = prefix.split('.');
     const candidateSlug = subParts[0].toLowerCase().trim();
-    if (candidateSlug && !RESERVED_HOSTNAMES.has(candidateSlug)) {
+    if (candidateSlug && !RESERVED_HOSTNAMES.has(candidateSlug) && isValidTenantSlug(candidateSlug)) {
       return candidateSlug;
     }
     return 'default';
   }
 
-  // 4. Fail-closed: Vercel preview domains and all foreign/unauthorized hostnames default to platform
+  // 6. Fail-closed: Vercel preview domains and all foreign/unauthorized hostnames default to platform
   return 'default';
 }
 
@@ -122,7 +128,28 @@ export async function proxy(request: NextRequest) {
   }
 
   // 1. Extract tenant slug from hostname/path (Zero-Trust: Client x-tenant-id header is IGNORED)
+  // Fail-Closed Boundary: If tenant root domain is unconfigured or malformed, reject with HTTP 503
   const tenantSlug = extractTenantSlug(request);
+  if (!tenantSlug) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'ConfigurationUnavailable',
+          message: 'Konfigurasi tenant root domain tidak tersedia atau tidak valid.',
+        },
+        { status: 503 }
+      );
+    }
+    return new NextResponse(
+      'Service Unavailable: Konfigurasi tenant root domain tidak tersedia atau tidak valid.',
+      {
+        status: 503,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      }
+    );
+  }
+
   const defaultTenantId = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'default-tenant';
   const resolvedTenantId = tenantSlug !== 'default' ? tenantSlug : defaultTenantId;
 
@@ -206,9 +233,12 @@ export async function proxy(request: NextRequest) {
 
   if (user) {
     requestHeaders.set('x-user-id', user.id);
-    const userRole = (user.app_metadata?.role || user.user_metadata?.role || 'user') as string;
+    // User metadata is client-writable and must never grant a platform role.
+    const userRole = (user.app_metadata?.role || 'user') as string;
     requestHeaders.set('x-user-role', userRole);
 
+    // Never preserve a client-provided privilege header for non-platform users.
+    requestHeaders.delete('x-is-super-admin');
     const normalizedRole = userRole.toUpperCase().replace(/\s+/g, '_');
     if (normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'DEVELOPER') {
       requestHeaders.set('x-is-super-admin', 'true');

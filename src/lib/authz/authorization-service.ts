@@ -1,5 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
 import {
   users,
   tenants,
@@ -24,6 +25,53 @@ export type AuthorizationDecision =
   | 'DENIED_PERMISSION_MISSING'
   | 'DENIED_RELATIONSHIP_INACTIVE'
   | 'DENIED_PLATFORM_SCOPE';
+
+export type PlatformRole = 'SUPER_ADMIN' | 'DEVELOPER';
+
+export type CurrentPlatformAuthorization =
+  | { authorized: true; userId: string; role: PlatformRole }
+  | { authorized: false; status: 401 | 403 | 503 };
+
+/**
+ * Revalidates the current request session and platform-role binding in the
+ * database. Request headers and user metadata are deliberately not inputs.
+ */
+export async function authorizeCurrentPlatformRoles(
+  allowedRoles: readonly PlatformRole[],
+  dbInstance = db
+): Promise<CurrentPlatformAuthorization> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+    const user = data?.user;
+
+    if (error || !user?.id) {
+      return { authorized: false, status: 401 };
+    }
+
+    const userRows = await dbInstance
+      .select({ id: users.id, status: users.status })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+
+    if (!userRows.length || userRows[0].status.toUpperCase() !== 'ACTIVE') {
+      return { authorized: false, status: 403 };
+    }
+
+    for (const role of allowedRoles) {
+      const result = await authorizePlatformRole(user.id, role, dbInstance);
+      if (result.authorized) {
+        return { authorized: true, userId: user.id, role };
+      }
+    }
+
+    return { authorized: false, status: 403 };
+  } catch {
+    // Database/session infrastructure errors must never grant access.
+    return { authorized: false, status: 503 };
+  }
+}
 
 export interface AuthorizationResult {
   authorized: boolean;

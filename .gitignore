@@ -43,3 +43,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# artefak kerja sementara, jangan di-commit
+/scratch/
+*.ps1
+/WP-TENANT-PROVISION-002-REVIEW.diff

@@ -42,7 +42,7 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Public Registration API Co
         name: validPayload.name,
         slug: validPayload.slug,
         code: 'SR2601',
-        domain: `${validPayload.slug}.madev.id`,
+        domain: `${validPayload.slug}.serzen-dev.my.id`,
         location: validPayload.location,
         plan: 'Pro SaaS',
         status: 'aktif',
@@ -54,7 +54,7 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Public Registration API Co
         email: validPayload.ownerEmail,
         phone: validPayload.ownerPhone,
         invitationStatus: 'SENT',
-        loginUrl: `https://${validPayload.slug}.madev.id/login`,
+        loginUrl: `https://${validPayload.slug}.serzen-dev.my.id/login`,
       },
     };
 
@@ -71,7 +71,7 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Public Registration API Co
     expect(json.message).toContain('Pesantren Darul Ulum');
     expect(json.data.tenantName).toBe('Pesantren Darul Ulum');
     expect(json.data.tenantSlug).toBe('darul-ulum');
-    expect(json.data.domain).toBe('darul-ulum.madev.id');
+    expect(json.data.domain).toBe('darul-ulum.serzen-dev.my.id');
     expect(json.data.ownerEmail).toBe('admin@darululum.id');
     expect(json.data.nextStep).toBe('ONBOARDING');
 
@@ -107,7 +107,7 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Public Registration API Co
         name: validPayload.name,
         slug: validPayload.slug,
         code: 'SR2601',
-        domain: 'darul-ulum.madev.id',
+        domain: 'darul-ulum.serzen-dev.my.id',
         location: validPayload.location,
         plan: 'Pro SaaS',
         status: 'aktif',
@@ -263,7 +263,7 @@ describe('WP-SAAS-REGISTRATION-IMPLEMENTATION-001 — Public Registration API Co
         name: validPayload.name,
         slug: validPayload.slug,
         code: 'SR2601',
-        domain: 'darul-ulum.madev.id',
+        domain: 'darul-ulum.serzen-dev.my.id',
         location: validPayload.location,
         plan: 'Pro SaaS',
         status: 'aktif',

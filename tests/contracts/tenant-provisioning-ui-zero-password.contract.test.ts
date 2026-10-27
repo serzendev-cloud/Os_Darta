@@ -4,10 +4,17 @@ import path from 'path';
 import { NextRequest } from 'next/server';
 import { POST as postSaasTenants } from '@/app/api/saas/tenants/route';
 import { tenantProvisioningService } from '@/modules/saas/services/tenant-provisioning-service';
+import * as authorizationService from '@/lib/authz/authorization-service';
 
 describe('WP-TENANT-PROVISIONING-UI-ZERO-PASSWORD-INGRESS-001 — Zero Password Ingress Contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default authorized Super Admin platform session for payload contract tests
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: true,
+      userId: 'usr-superadmin',
+      role: 'SUPER_ADMIN',
+    });
   });
 
   // ── TEST 1: UI File Static Verification ──────────────────────────────────
@@ -43,8 +50,6 @@ describe('WP-TENANT-PROVISIONING-UI-ZERO-PASSWORD-INGRESS-001 — Zero Password 
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'usr-superadmin',
-        'x-is-super-admin': 'true',
         host: 'localhost:3000',
         origin: 'http://localhost:3000',
       },
@@ -72,8 +77,6 @@ describe('WP-TENANT-PROVISIONING-UI-ZERO-PASSWORD-INGRESS-001 — Zero Password 
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'usr-superadmin',
-        'x-is-super-admin': 'true',
         host: 'localhost:3000',
         origin: 'http://localhost:3000',
       },
@@ -101,8 +104,6 @@ describe('WP-TENANT-PROVISIONING-UI-ZERO-PASSWORD-INGRESS-001 — Zero Password 
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'usr-superadmin',
-        'x-is-super-admin': 'true',
         host: 'localhost:3000',
         origin: 'http://localhost:3000',
       },
@@ -154,8 +155,6 @@ describe('WP-TENANT-PROVISIONING-UI-ZERO-PASSWORD-INGRESS-001 — Zero Password 
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'usr-superadmin',
-        'x-is-super-admin': 'true',
         host: 'localhost:3000',
         origin: 'http://localhost:3000',
       },
@@ -198,5 +197,97 @@ describe('WP-TENANT-PROVISIONING-UI-ZERO-PASSWORD-INGRESS-001 — Zero Password 
     expect(content).toContain('Aktivasi Akun Administrator');
     expect(content).toContain('Kata Sandi Baru');
     expect(content).toContain('/api/auth/complete-onboarding');
+  });
+
+  // ── TEST 7: Route Rejects Unauthenticated Ingress with HTTP 401 ──────────
+  it('7. Backend POST /api/saas/tenants rejects unauthenticated request with HTTP 401 when platform session is missing', async () => {
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: false,
+      status: 401,
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/saas/tenants', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        host: 'localhost:3000',
+        origin: 'http://localhost:3000',
+      },
+      body: JSON.stringify({
+        name: 'Ponpes Darul Hijrah',
+        slug: 'darulhijrah',
+        ownerEmail: 'admin@darulhijrah.sch.id',
+        ownerName: 'Kyai Ahmad',
+      }),
+    });
+
+    const response = await postSaasTenants(request);
+    const json = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('Unauthorized');
+  });
+
+  // ── TEST 8: Route Fails Closed with HTTP 503 when Authorization Infrastructure Fails ─
+  it('8. Backend POST /api/saas/tenants fails closed with HTTP 503 when authorization infrastructure is unavailable', async () => {
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: false,
+      status: 503,
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/saas/tenants', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        host: 'localhost:3000',
+        origin: 'http://localhost:3000',
+      },
+      body: JSON.stringify({
+        name: 'Ponpes Darul Hijrah',
+        slug: 'darulhijrah',
+        ownerEmail: 'admin@darulhijrah.sch.id',
+        ownerName: 'Kyai Ahmad',
+      }),
+    });
+
+    const response = await postSaasTenants(request);
+    const json = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('AuthorizationUnavailable');
+  });
+
+  // ── TEST 9: Client Headers are NOT Trusted as Proof of Authorization ─────
+  it('9. Client headers (x-user-id, x-is-super-admin) are not trusted and fail when official session is unauthorized', async () => {
+    vi.spyOn(authorizationService, 'authorizeCurrentPlatformRoles').mockResolvedValue({
+      authorized: false,
+      status: 403,
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/saas/tenants', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'spoofed-superadmin',
+        'x-is-super-admin': 'true',
+        host: 'localhost:3000',
+        origin: 'http://localhost:3000',
+      },
+      body: JSON.stringify({
+        name: 'Ponpes Darul Hijrah',
+        slug: 'darulhijrah',
+        ownerEmail: 'admin@darulhijrah.sch.id',
+        ownerName: 'Kyai Ahmad',
+      }),
+    });
+
+    const response = await postSaasTenants(request);
+    const json = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('Forbidden');
   });
 });
