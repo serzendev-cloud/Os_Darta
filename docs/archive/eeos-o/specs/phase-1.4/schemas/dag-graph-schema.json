@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eeos-o.org/schemas/phase-1.4/dag-graph-schema.json",
+  "title": "EEOS-O Phase 1.4 Work Package DAG Graph Schema",
+  "description": "Formal JSON Schema Draft 2020-12 specification defining the structural contract for Phase 1.4 Directed Acyclic Graph (DAG) nodes, edges, dependencies, and execution graph topology.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "graphId",
+    "wpId",
+    "correlationId",
+    "graphState",
+    "nodes",
+    "edges",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Semantic version of this DAG graph specification schema."
+    },
+    "graphId": {
+      "type": "string",
+      "pattern": "^DAG-[A-Z0-9_-]+$",
+      "description": "Unique deterministic identifier of the DAG execution graph instance."
+    },
+    "wpId": {
+      "type": "string",
+      "pattern": "^WP-[A-Z0-9_-]+$",
+      "description": "Identifier of the parent Work Package Contract (DO_WP) from Phase 1.1."
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "description": "Unique RFC 4122 UUIDv4 correlating this DAG instance with the overarching transaction."
+    },
+    "graphState": {
+      "type": "string",
+      "enum": [
+        "INITIALIZED",
+        "VALIDATED",
+        "SCHEDULABLE",
+        "EXECUTING",
+        "BLOCKED",
+        "COMPLETED",
+        "FAILED",
+        "ABORTED"
+      ],
+      "description": "Macro-orchestration lifecycle state of the execution graph."
+    },
+    "nodes": {
+      "type": "array",
+      "description": "Collection of schedulable execution nodes in the DAG.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/dagNode"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Collection of directional dependency edges connecting nodes in the DAG.",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/dagEdge"
+      }
+    },
+    "metadata": {
+      "$ref": "#/$defs/graphMetadata"
+    }
+  },
+  "$defs": {
+    "dagNode": {
+      "type": "object",
+      "required": [
+        "nodeId",
+        "taskId",
+        "nodeType",
+        "structuralState",
+        "stageIndex",
+        "inDegree",
+        "outDegree",
+        "predecessors",
+        "successors",
+        "executionMetadata"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "nodeId": {
+          "type": "string",
+          "pattern": "^NODE-[A-Z0-9_-]+$",
+          "description": "Unique deterministic node identifier within this graph, derived as NODE-${taskId}."
+        },
+        "taskId": {
+          "type": "string",
+          "pattern": "^TASK-[A-Z0-9_-]+$",
+          "description": "Unique identifier of the bound Phase 1.2 Task Contract (strictly 1:1 bijective with nodeId = NODE-${taskId})."
+        },
+        "nodeType": {
+          "type": "string",
+          "enum": [
+            "STANDARD",
+            "ROOT",
+            "FORK_GATEWAY",
+            "JOIN_GATEWAY",
+            "TERMINAL"
+          ],
+          "description": "Topological classification of bound task node via deterministic precedence: JOIN_GATEWAY (inDegree >= 2) > FORK_GATEWAY (outDegree >= 2) > ROOT (inDegree == 0) > TERMINAL (outDegree == 0) > STANDARD."
+        },
+        "structuralState": {
+          "type": "string",
+          "enum": [
+            "BLOCKED",
+            "ELIGIBLE",
+            "DISPATCHED",
+            "COMPLETED",
+            "FAILED",
+            "CANCELLED"
+          ],
+          "description": "Macro-orchestration structural eligibility state of the node."
+        },
+        "stageIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Topological layer or wave index calculated during graph validation."
+        },
+        "inDegree": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of inbound dependency edges."
+        },
+        "outDegree": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of outbound dependency edges."
+        },
+        "predecessors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^NODE-[A-Z0-9_-]+$"
+          },
+          "uniqueItems": true,
+          "description": "List of nodeIds that must satisfy dependencies before this node becomes eligible."
+        },
+        "successors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^NODE-[A-Z0-9_-]+$"
+          },
+          "uniqueItems": true,
+          "description": "List of nodeIds that depend on the completion of this node."
+        },
+        "executionMetadata": {
+          "type": "object",
+          "required": ["priority"],
+          "additionalProperties": false,
+          "properties": {
+            "assignedSpecialistRole": {
+              "type": "string",
+              "description": "Specialist agent role required for this task."
+            },
+            "allowedPaths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Filesystem path confinement whitelist inherited from Task Contract."
+            },
+            "priority": {
+              "type": "integer",
+              "default": 100,
+              "description": "Deterministic tie-breaking priority key (lower number = higher priority)."
+            }
+          }
+        }
+      }
+    },
+    "dagEdge": {
+      "type": "object",
+      "required": [
+        "edgeId",
+        "sourceNodeId",
+        "targetNodeId",
+        "dependencyType",
+        "edgeState"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "edgeId": {
+          "type": "string",
+          "pattern": "^EDGE-[A-Z0-9_-]+$",
+          "description": "Unique deterministic edge identifier within this graph (strictly unique across all graph edges under Invariant I-04)."
+        },
+        "sourceNodeId": {
+          "type": "string",
+          "pattern": "^NODE-[A-Z0-9_-]+$",
+          "description": "Predecessor node identifier (A in A -> B)."
+        },
+        "targetNodeId": {
+          "type": "string",
+          "pattern": "^NODE-[A-Z0-9_-]+$",
+          "description": "Successor node identifier (B in A -> B)."
+        },
+        "dependencyType": {
+          "type": "string",
+          "enum": [
+            "STRONG_COMPLETION",
+            "ARTIFACT_PROVENANCE",
+            "BARRIER_SYNC"
+          ],
+          "description": "Semantic nature of the dependency constraint."
+        },
+        "edgeState": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "SATISFIED",
+            "STALE",
+            "INVALIDATED"
+          ],
+          "description": "Current lifecycle status of the dependency edge."
+        },
+        "requiredArtifacts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional list of artifact tokens or paths required from source node."
+        }
+      }
+    },
+    "graphMetadata": {
+      "type": "object",
+      "required": [
+        "totalNodeCount",
+        "totalEdgeCount",
+        "rootNodeCount",
+        "leafNodeCount",
+        "isAcyclic",
+        "maxLayerDepth",
+        "deterministicSortOrder"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "totalNodeCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "totalEdgeCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rootNodeCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of nodes with inDegree == 0."
+        },
+        "leafNodeCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of nodes with outDegree == 0."
+        },
+        "isAcyclic": {
+          "type": "boolean",
+          "description": "True if topological sort verifies zero directed cycles."
+        },
+        "maxLayerDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum stageIndex across all execution layers."
+        },
+        "deterministicSortOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^NODE-[A-Z0-9_-]+$"
+          },
+          "description": "Deterministic ordered sequence of nodeIds produced by topological sort."
+        }
+      }
+    }
+  }
+}

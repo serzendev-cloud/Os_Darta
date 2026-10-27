@@ -1,3 +1,4 @@
+OBSOLETE — digantikan madrasah/jenjang/tingkat/rombel
 ---
 name: centralized-academic-structure
 description: Master Struktur Akademik is now the single source of truth for academic hierarchy — Instansi-based tabs with data-driven lookups
