@@ -332,3 +332,4 @@ export const billingCampaigns = pgTable('billing_campaigns', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+

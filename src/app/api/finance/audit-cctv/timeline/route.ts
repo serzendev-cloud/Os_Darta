@@ -2,7 +2,7 @@
 // Digital CCTV & Financial Audit Timeline API Route
 // Work Package: WP-M2-FINANCIAL-AUDIT-TRAIL-AND-DIGITAL-CCTV-001
 // Hardening: PO-LIMITED-SECURITY-REMEDIATION-001 (Workstream B)
-// Compliance: Fail-Closed Server Auth (401), Tenant Scoping & RBAC (403)
+// Compliance: Fail-Closed Server Auth (401), Tenant Scoping & RBAC (403), PO Decisions 4, 6, 8, 9, 10
 // ==============================================================================
 
 import { NextResponse } from 'next/server';
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 30, 1), 100);
 
-    // Fetch recent transactions
+    // 1. Fetch recent transactions
     const txList = await db
       .select({
         tx: canteenTransactions,
@@ -137,10 +137,10 @@ export async function GET(request: Request) {
       .orderBy(desc(canteenTransactions.createdAt))
       .limit(limit);
 
-    // Fetch merchant rights summary
+    // 2. Fetch merchant rights summary
     const merchantSummary = await merchantLedgerService.getSummary(tenantId);
 
-    // Fetch latest financial audit logs
+    // 3. Fetch latest financial audit logs
     const recentAuditLogs = await db
       .select()
       .from(financialAuditLogs)
@@ -148,7 +148,7 @@ export async function GET(request: Request) {
       .orderBy(desc(financialAuditLogs.createdAt))
       .limit(20);
 
-    // Map transactions into Digital CCTV event timeline
+    // 4. Map transactions into Digital CCTV event timeline
     const timelineEvents = txList.map(({ tx, santriPhoto, santriClass, santriNis }) => ({
       id: tx.id,
       timestamp: tx.createdAt,
@@ -170,6 +170,7 @@ export async function GET(request: Request) {
         correlationId: tx.idempotencyKey || tx.id,
         hasIdempotencyKey: !!tx.idempotencyKey,
       },
+      // Digital CCTV visual capture metadata (Decision 10: optional add-on)
       cctv: {
         isAvailable: false,
         cameraChannel: 'CAM-POS-01 (Kantin)',
