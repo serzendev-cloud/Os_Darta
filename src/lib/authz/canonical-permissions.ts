@@ -473,6 +473,16 @@ export const CANONICAL_PERMISSIONS: readonly CanonicalPermissionDefinition[] = [
     description: 'Akses mengelola sirkulasi peminjaman kitab dan buku.',
   },
 
+  // ── Keuangan / Kartu RFID ────────────────────────────────────────────────
+  {
+    id: 'perm_manage_rfid_pin',
+    code: Permission.MANAGE_RFID_PIN,
+    name: 'Kelola PIN Kartu RFID',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses mereset dan mengelola kredensial PIN kartu fisik RFID santri.',
+  },
+
   // ── PLATFORM-SCOPED PERMISSIONS (Excluded from Tenant Role) ──────────────
   {
     id: 'perm_manage_tenants',

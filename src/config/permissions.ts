@@ -94,6 +94,9 @@ export const Permission = {
   // Perpustakaan
   VIEW_PERPUSTAKAAN: 'view_perpustakaan',
   MANAGE_PERPUSTAKAAN: 'manage_perpustakaan',
+
+  // Keuangan / Kartu RFID
+  MANAGE_RFID_PIN: 'manage_rfid_pin',
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];

@@ -1,178 +1,271 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { rfidCards, santri } from '@/lib/db/schema';
+import type { NextRequest } from 'next/server';
+import { rfidCards, santri, auditLogs } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { deriveNewPinCredential, validatePinFormat } from '@/lib/security/pinCrypto';
+import { getTenantContext } from '@/lib/tenant/context';
+import { requirePermission } from '@/lib/authz/authorization-service';
+import { withTenantTransaction } from '@/lib/db/tenant-transaction';
+import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
+import { Permission } from '@/config/permissions';
+
+interface AuthResolution {
+  userId: string | null;
+  isSuperAdmin: boolean;
+}
+
+/**
+ * Resolves the authenticated user identity with fail-closed security.
+ * In production, identity MUST originate from a cryptographically verified Supabase
+ * server session (cookies). Raw client-supplied headers and body are strictly untrusted.
+ * In automated test suites (Vitest), verified mock test headers are accepted.
+ */
+async function resolveAuthUser(request: NextRequest): Promise<AuthResolution> {
+  // 1. Primary Authority: Cryptographic server-side Supabase session
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data?.user?.id) {
+      const user = data.user;
+      const appRole = (user.app_metadata?.role || '') as string;
+      const normalizedRole = appRole.toUpperCase().replace(/\s+/g, '_');
+      const isSuper = normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'DEVELOPER';
+      return { userId: user.id, isSuperAdmin: isSuper };
+    }
+  } catch {
+    // Session resolution unavailable in current context (e.g. test harness)
+  }
+
+  // 2. Controlled Test Harness Support (Strictly gated to test environments)
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+    const headerUserId = request.headers.get('x-user-id');
+    if (headerUserId && headerUserId.trim() !== '') {
+      const isSuper = request.headers.get('x-is-super-admin') === 'true';
+      return { userId: headerUserId.trim(), isSuperAdmin: isSuper };
+    }
+  }
+
+  return { userId: null, isSuperAdmin: false };
+}
 
 /**
  * POST /api/rfid/reset-pin
  * 
- * Strict RBAC Otorisasi Reset PIN (PO-LOCK-05 & PO-LOCK-06):
- * - Wali Kelas: Hanya dapat mereset PIN santri di kelas binaannya.
- * - Admin Keuangan: Berwenang mereset PIN seluruh santri di tenant yang sama.
- * - Wali Santri: Ditolak mutlak (HTTP 403).
- * - Super Admin: Ditolak (HTTP 403) tanpa mandat PO terpisah.
- * 
- * Atomisitas Unblock:
- * - Reset PIN otomatis mengosongkan pin_failed_attempts = 0 dan status = 'active'.
+ * Strict RBAC Otorisasi Reset PIN (Hardened per WP-SEC-RFID-PIN-001):
+ * - Identitas dan otorisasi diverifikasi dari sesi server dan database (bukan header/body).
+ * - Semua field identitas/role/tenant dari request body dan header x-user-role diabaikan.
+ * - Memerlukan izin 'manage_rfid_pin' yang hanya diberikan ke Admin & Bendahara/Admin Keuangan.
+ * - Wali Kelas dinonaktifkan (HTTP 403) sampai ada data kepengurusan (guru <-> rombel) di skema database.
+ * - Semua query database dieksekusi di dalam withTenantTransaction(tenant.id, ...).
+ * - Atomisitas unblock: reset PIN mengosongkan pinFailedAttempts = 0 dan status = 'active'.
+ * - Mencatat audit trail append-only dengan aksi RFID_PIN_RESET (tanpa membocorkan kredensial PIN).
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const headerRole = request.headers.get('x-user-role');
-    const headerUserId = request.headers.get('x-user-id');
+    // 1. Resolusi Tenant Resmi (Fail-Closed)
+    const tenant = await getTenantContext();
+    if (!tenant?.id || tenant.id.trim() === '') {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'TENANT_REQUIRED',
+          message: 'Konteks tenant valid diperlukan untuk memproses permintaan',
+        },
+        { status: 400 }
+      );
+    }
 
-    const body = await request.json();
-    const {
-      cardUid,
-      santriId,
-      newPin,
-      tenantId: bodyTenantId,
-      operatorRole: bodyRole, // 'wali_kelas' | 'admin_keuangan' | 'wali_santri' | 'super_admin'
-      operatorUserId: bodyUserId,
-      operatorKelasBinaan, // misal 'X-A' jika operatorRole === 'wali_kelas'
-    } = body;
+    // 2. Autentikasi Pengguna dari Sesi Server
+    const auth = await resolveAuthUser(request);
+    if (!auth.userId || auth.userId.trim() === '') {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'UNAUTHENTICATED',
+          message: 'Autentikasi diperlukan: Sesi pengguna tidak ditemukan atau kedaluwarsa',
+        },
+        { status: 401 }
+      );
+    }
 
-    const tenantId = (headerTenantId || bodyTenantId || 'default').trim();
-    const operatorRole = (headerRole || bodyRole || '').toLowerCase().trim();
-    const operatorUserId = headerUserId || bodyUserId || 'SYSTEM_OPERATOR';
+    // 3. Validasi Otorisasi Berbasis Database (requirePermission)
+    const authz = await requirePermission(auth.userId, tenant.id, Permission.MANAGE_RFID_PIN);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'FORBIDDEN',
+          message: 'Izin ditolak: Anda tidak memiliki wewenang untuk mereset PIN kartu RFID',
+        },
+        { status: 403 }
+      );
+    }
 
-    // 1. Validasi Input Dasar
+    // TODO: Jalur wali_kelas dinonaktifkan (HTTP 403) sampai ada data kepengurusan (guru <-> rombel) yang valid di skema database.
+    if (authz.primaryRoleCode?.toUpperCase() === 'WALI_KELAS') {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'FORBIDDEN_WALI_KELAS',
+          message: 'Wali Kelas tidak berwenang mereset PIN sampai data kepengurusan tersedia di database',
+        },
+        { status: 403 }
+      );
+    }
+
+    // 4. Parse & Sanitasi Request Body (Abaikan field operatorRole, operatorUserId, operatorKelasBinaan, tenantId)
+    const body = await request.json().catch(() => ({}));
+    const { cardUid, santriId, newPin } = body as {
+      cardUid?: string;
+      santriId?: string;
+      newPin?: string;
+    };
+
     if ((!cardUid && !santriId) || !newPin) {
       return NextResponse.json(
-        { success: false, message: 'Card UID atau Santri ID serta PIN baru 6-digit wajib diisi' },
+        {
+          success: false,
+          code: 'BAD_REQUEST',
+          message: 'Card UID atau Santri ID serta PIN baru 6-digit wajib diisi',
+        },
         { status: 400 }
       );
     }
 
     if (!validatePinFormat(newPin)) {
       return NextResponse.json(
-        { success: false, message: 'Format PIN tidak valid: PIN harus tepat 6 digit numerik' },
+        {
+          success: false,
+          code: 'INVALID_PIN_FORMAT',
+          message: 'Format PIN tidak valid: PIN harus tepat 6 digit numerik',
+        },
         { status: 400 }
       );
     }
 
-    // 2. Evaluasi Otorisasi Peran (PO-LOCK-05)
-    if (operatorRole === 'wali_santri') {
+    // 5. Eksekusi Reset PIN dalam withTenantTransaction
+    const txResult = await withTenantTransaction(
+      tenant.id,
+      async (tx) => {
+        // (a) Lookup Kartu RFID dalam cakupan tenant
+        const cardConditions = [eq(rfidCards.tenantId, tenant.id)];
+        if (cardUid) {
+          cardConditions.push(eq(rfidCards.cardUid, cardUid));
+        } else if (santriId) {
+          cardConditions.push(eq(rfidCards.santriId, santriId));
+        }
+
+        const cardRows = await tx
+          .select()
+          .from(rfidCards)
+          .where(and(...cardConditions));
+
+        const card = cardRows[0];
+        if (!card) {
+          return { notFoundCard: true };
+        }
+
+        // (b) Lookup Profil Santri dalam cakupan tenant
+        const santriRows = await tx
+          .select()
+          .from(santri)
+          .where(and(eq(santri.tenantId, tenant.id), eq(santri.id, card.santriId)));
+
+        const santriObj = santriRows[0];
+        if (!santriObj) {
+          return { notFoundSantri: true };
+        }
+
+        // (c) Derivasi Kredensial KDF Baru
+        const credential = deriveNewPinCredential(newPin);
+
+        // (d) Update Status Kartu & Reset PIN Atomik
+        await tx
+          .update(rfidCards)
+          .set({
+            hashedPin: credential.hashedPin,
+            salt: credential.salt,
+            kdfVersion: credential.kdfVersion,
+            pepperVersion: credential.pepperVersion,
+            iterations: credential.iterations,
+            pinFailedAttempts: 0,
+            status: 'active',
+            lockedUntil: null,
+            lastPinResetAt: new Date(),
+            lastPinResetBy: auth.userId,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(rfidCards.id, card.id), eq(rfidCards.tenantId, tenant.id)));
+
+        // (e) Audit Trail Logging (Zero sensitive credentials stored)
+        await tx.insert(auditLogs).values({
+          id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          tenantId: tenant.id,
+          action: 'RFID_PIN_RESET',
+          user: auth.userId,
+          userId: auth.userId,
+          userRole: authz.primaryRoleCode || 'ADMIN',
+          details: `Reset PIN kartu RFID ${card.cardUid} santri ${santriObj.name} (${santriObj.id})`,
+          targetEntity: 'rfid_card',
+          targetId: card.id,
+          timestamp: new Date(),
+        });
+
+        return {
+          card,
+          santriObj,
+          credential,
+        };
+      },
+      { isSuperAdmin: auth.isSuperAdmin, tenantSlug: tenant.slug }
+    );
+
+    if ('notFoundCard' in txResult) {
       return NextResponse.json(
-        { 
-          success: false, 
-          code: 'FORBIDDEN_WALI_SANTRI',
-          message: 'Wali Santri dilarang keras mereset PIN fisik RFID santri (Aturan PO-LOCK-05)' 
+        {
+          success: false,
+          code: 'CARD_NOT_FOUND',
+          message: 'Kartu RFID santri tidak ditemukan',
         },
-        { status: 403 }
-      );
-    }
-
-    if (operatorRole === 'super_admin') {
-      return NextResponse.json(
-        { 
-          success: false, 
-          code: 'FORBIDDEN_SUPER_ADMIN',
-          message: 'Super Admin tidak berwenang mereset PIN santri tanpa mandat khusus PO (Aturan PO-LOCK-05)' 
-        },
-        { status: 403 }
-      );
-    }
-
-    if (operatorRole !== 'wali_kelas' && operatorRole !== 'admin_keuangan') {
-      return NextResponse.json(
-        { 
-          success: false, 
-          code: 'UNAUTHORIZED_ROLE',
-          message: 'Hanya Wali Kelas binaan atau Admin Keuangan yang berwenang mereset PIN santri' 
-        },
-        { status: 403 }
-      );
-    }
-
-    // 3. Lookup Kartu RFID
-    let whereClause = eq(rfidCards.tenantId, tenantId);
-    if (cardUid) {
-      whereClause = and(whereClause, eq(rfidCards.cardUid, cardUid)) as any;
-    } else if (santriId) {
-      whereClause = and(whereClause, eq(rfidCards.santriId, santriId)) as any;
-    }
-
-    const cardResult = await db.select().from(rfidCards).where(whereClause);
-    const card = cardResult[0];
-
-    if (!card) {
-      return NextResponse.json(
-        { success: false, message: 'Kartu RFID santri tidak ditemukan' },
         { status: 404 }
       );
     }
 
-    // 4. Lookup Profil Santri untuk Verifikasi Kelas Binaan
-    const santriResult = await db
-      .select()
-      .from(santri)
-      .where(and(eq(santri.tenantId, tenantId), eq(santri.id, card.santriId)));
-    
-    const santriObj = santriResult[0];
-    if (!santriObj) {
+    if ('notFoundSantri' in txResult) {
       return NextResponse.json(
-        { success: false, message: 'Data santri terkait tidak ditemukan' },
+        {
+          success: false,
+          code: 'SANTRI_NOT_FOUND',
+          message: 'Data santri terkait tidak ditemukan',
+        },
         { status: 404 }
       );
     }
-
-    // Jika operator adalah Wali Kelas, verifikasi bahwa santri berada di kelas binaannya
-    if (operatorRole === 'wali_kelas') {
-      if (!operatorKelasBinaan || santriObj.kelas !== operatorKelasBinaan) {
-        return NextResponse.json(
-          {
-            success: false,
-            code: 'FORBIDDEN_NOT_YOUR_CLASS',
-            message: `Wali Kelas hanya berwenang mereset PIN santri di kelas binaannya sendiri (Santri di kelas ${santriObj.kelas || 'belum terdaftar'}, operator membina ${operatorKelasBinaan || 'tidak ada'})`,
-          },
-          { status: 403 }
-        );
-      }
-    }
-
-    // 5. Derivasi Kredensial KDF Baru
-    const credential = deriveNewPinCredential(newPin);
-
-    // 6. Eksekusi Reset PIN & Unblock Atomik (PO-LOCK-06)
-    // Update hashed_pin dan status menjadi active
-    await db
-      .update(rfidCards)
-      .set({
-        hashedPin: credential.hashedPin,
-        salt: credential.salt,
-        kdfVersion: credential.kdfVersion,
-        pepperVersion: credential.pepperVersion,
-        iterations: credential.iterations,
-        pinFailedAttempts: 0,
-        status: 'active',
-        lockedUntil: null,
-        lastPinResetAt: new Date(),
-        lastPinResetBy: operatorUserId || operatorRole,
-        updatedAt: new Date(),
-      })
-      .where(eq(rfidCards.id, card.id));
 
     return NextResponse.json({
       success: true,
       code: 'PIN_RESET_SUCCESS',
       message: 'PIN Kartu RFID Santri Berhasil Direset dan Status Kartu Otomatis Aktif',
       data: {
-        cardUid: card.cardUid,
-        santriId: card.santriId,
-        santriName: santriObj.name,
-        kelas: santriObj.kelas,
+        cardUid: txResult.card.cardUid,
+        santriId: txResult.card.santriId,
+        santriName: txResult.santriObj.name,
+        kelas: txResult.santriObj.kelas,
         status: 'active',
-        kdfVersion: credential.kdfVersion,
-        pepperVersion: credential.pepperVersion,
-        resetBy: operatorUserId || operatorRole,
+        kdfVersion: txResult.credential.kdfVersion,
+        pepperVersion: txResult.credential.pepperVersion,
+        resetBy: auth.userId,
         resetAt: new Date().toISOString(),
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    console.error('[RFID_RESET_PIN_ERROR]', error);
     return NextResponse.json(
-      { success: false, message: error?.message || 'Gagal mereset PIN kartu RFID' },
+      {
+        success: false,
+        code: 'INTERNAL_ERROR',
+        message: 'Gagal mereset PIN kartu RFID',
+      },
       { status: 500 }
     );
   }
