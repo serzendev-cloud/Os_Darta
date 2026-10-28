@@ -473,7 +473,7 @@ export const CANONICAL_PERMISSIONS: readonly CanonicalPermissionDefinition[] = [
     description: 'Akses mengelola sirkulasi peminjaman kitab dan buku.',
   },
 
-  // ── Keuangan / Kartu RFID ────────────────────────────────────────────────
+  // ── Keuangan (Finance) ───────────────────────────────────────────────────
   {
     id: 'perm_manage_rfid_pin',
     code: Permission.MANAGE_RFID_PIN,
@@ -481,6 +481,78 @@ export const CANONICAL_PERMISSIONS: readonly CanonicalPermissionDefinition[] = [
     module: 'keuangan',
     scope: 'TENANT',
     description: 'Akses mereset dan mengelola kredensial PIN kartu fisik RFID santri.',
+  },
+  {
+    id: 'perm_view_billing_campaigns',
+    code: Permission.VIEW_BILLING_CAMPAIGNS,
+    name: 'Lihat Kampanye Tagihan',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses melihat daftar kampanye tagihan biaya pendidikan dan tagihan tambahan.',
+  },
+  {
+    id: 'perm_manage_billing_campaigns',
+    code: Permission.MANAGE_BILLING_CAMPAIGNS,
+    name: 'Kelola Kampanye Tagihan',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses membuat dan menerbitkan kampanye tagihan tambahan santri.',
+  },
+  {
+    id: 'perm_view_spp_config',
+    code: Permission.VIEW_SPP_CONFIG,
+    name: 'Lihat Konfigurasi SPP',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses melihat pengaturan tarif dan jadwal tagihan SPP.',
+  },
+  {
+    id: 'perm_manage_spp_config',
+    code: Permission.MANAGE_SPP_CONFIG,
+    name: 'Kelola Konfigurasi SPP',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses mengubah dan menyimpan pengaturan tarif dan skema SPP.',
+  },
+  {
+    id: 'perm_record_spp_payment',
+    code: Permission.RECORD_SPP_PAYMENT,
+    name: 'Catat Pembayaran SPP',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses memverifikasi dan mencatat transaksi pembayaran SPP dan tagihan.',
+  },
+  {
+    id: 'perm_view_spp_installments',
+    code: Permission.VIEW_SPP_INSTALLMENTS,
+    name: 'Lihat Pengajuan Cicilan',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses melihat daftar permohonan rencana cicilan tagihan santri.',
+  },
+  {
+    id: 'perm_review_spp_installments',
+    code: Permission.REVIEW_SPP_INSTALLMENTS,
+    name: 'Tinjau Pengajuan Cicilan',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses menyetujui atau menolak permohonan cicilan tagihan santri.',
+  },
+  {
+    id: 'perm_view_finance_recap',
+    code: Permission.VIEW_FINANCE_RECAP,
+    name: 'Lihat Rekapitulasi Keuangan',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses melihat rekapitulasi pembayaran dan status tunggakan tagihan.',
+  },
+  {
+    id: 'perm_export_finance_recap',
+    code: Permission.EXPORT_FINANCE_RECAP,
+    name: 'Ekspor Rekapitulasi Keuangan',
+    module: 'keuangan',
+    scope: 'TENANT',
+    description: 'Akses mengekspor laporan rekapitulasi pembayaran ke berkas Excel dan PDF.',
   },
 
   // ── PLATFORM-SCOPED PERMISSIONS (Excluded from Tenant Role) ──────────────

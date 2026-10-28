@@ -22,6 +22,7 @@ import { POST as applyInstallmentHandler } from '@/app/api/wali/spp/installments
 import { sppService } from '@/lib/finance/spp-service';
 import { mockFinanceAuthSession } from '../helpers/test-auth-helper';
 import * as authzModule from '@/lib/authz/authorization-service';
+import * as tenantContextModule from '@/lib/tenant/context';
 
 describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
   beforeEach(() => {
@@ -588,7 +589,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('TEST-10D: Route Rekap menolak akses lintas tenant / IDOR (HTTP 403 Forbidden)', async () => {
@@ -596,6 +597,11 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
         tenantId: 'tenant_test',
         roleCode: 'ADMIN_KEUANGAN',
         permissions: ['finance:review'],
+      });
+      vi.spyOn(tenantContextModule, 'getTenantContext').mockResolvedValue({
+        id: 'tenant_beta',
+        name: 'Pesantren Beta',
+        slug: 'beta',
       });
 
       // Mencoba meminta data tenant_beta dengan sesi tenant_test
@@ -611,7 +617,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('TEST-10E: Route Rekap mengizinkan Admin Keuangan sah dan mengembalikan data (HTTP 200 OK)', async () => {
@@ -634,6 +640,12 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
           repaymentRatePercentage: 80,
         },
         items: [],
+      });
+
+      mockFinanceAuthSession({
+        tenantId: 'tenant_test',
+        roleCode: 'ADMIN_KEUANGAN',
+        permissions: ['finance:export', 'view_finance_recap'],
       });
 
       const req = new Request('http://localhost:3000/api/finance/billing/recap?tenantId=tenant_test', {
@@ -670,7 +682,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('TEST-16: Route Ekspor PDF menolak request tanpa otorisasi admin keuangan (HTTP 403)', async () => {
@@ -692,7 +704,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('SEC-PILOT-01: Route Ekspor Excel menolak request anonim tanpa sesi terautentikasi (HTTP 401)', async () => {
@@ -780,6 +792,11 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
         roleCode: 'ADMIN_KEUANGAN',
         permissions: ['finance:export'],
       });
+      vi.spyOn(tenantContextModule, 'getTenantContext').mockResolvedValue({
+        id: 'tenant_beta',
+        name: 'Pesantren Beta',
+        slug: 'beta',
+      });
 
       const req = new Request('http://localhost:3000/api/finance/billing/export/excel?tenantId=tenant_beta', {
         method: 'GET',
@@ -794,7 +811,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
       // Membuktikan bahwa otorisasi database menolak keanggotaan pengguna di tenant_beta
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('SEC-PILOT-06: Route Ekspor PDF menolak akses lintas-tenant: Admin Tenant A meminta data Tenant B (Anti-IDOR HTTP 403)', async () => {
@@ -803,6 +820,11 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
         tenantId: 'tenant_alpha',
         roleCode: 'ADMIN_KEUANGAN',
         permissions: ['finance:export'],
+      });
+      vi.spyOn(tenantContextModule, 'getTenantContext').mockResolvedValue({
+        id: 'tenant_beta',
+        name: 'Pesantren Beta',
+        slug: 'beta',
       });
 
       const req = new Request('http://localhost:3000/api/finance/billing/export/pdf?tenantId=tenant_beta', {
@@ -817,7 +839,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('TEST-12: Tindakan ekspor laporan dicatat ke dalam financial audit trail', async () => {
@@ -996,7 +1018,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('SEC-G1-CFG-04: GET SPP Config menolak akses lintas tenant / IDOR (HTTP 403 Forbidden)', async () => {
@@ -1004,6 +1026,11 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
         tenantId: 'tenant_test',
         roleCode: 'ADMIN_KEUANGAN',
         permissions: ['finance:review'],
+      });
+      vi.spyOn(tenantContextModule, 'getTenantContext').mockResolvedValue({
+        id: 'tenant_beta',
+        name: 'Pesantren Beta',
+        slug: 'beta',
       });
 
       const req = new Request('http://localhost:3000/api/finance/spp/config?tenantId=tenant_beta', {
@@ -1018,7 +1045,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('SEC-G1-CFG-05: GET SPP Config mengembalikan konfigurasi tarif SPP untuk Admin Keuangan sah (HTTP 200 OK)', async () => {
@@ -1106,7 +1133,7 @@ describe('APP-MAHAD-FINANCE-BILLING-001: Master Unit & Contract Tests', () => {
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
     });
 
     it('SEC-G1-CFG-08: POST SPP Config menolak input nominal SPP <= 0 (HTTP 400 Bad Request)', async () => {

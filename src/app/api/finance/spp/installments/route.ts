@@ -1,39 +1,30 @@
 // ==============================================================================
 // Finance SPP Installments List API Route (Admin Keuangan)
-// Work Package: WP-FINANCE-AUTH-HARDENING-002 (Wave 1)
-// Directives: PO-EXEC-FINANCE-AUTH-HARDENING-WAVE-1-001
-// Compliance: Fail-Closed Server Auth (401), Tenancy & Role Validation (403)
+// Work Package: WP-SEC-FINANCE-001 (Hardened Auth & Strict Tenancy)
 // ==============================================================================
 
 import { NextResponse } from 'next/server';
 import { sppService } from '@/lib/finance/spp-service';
 import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
-import { getEffectivePermissions } from '@/lib/authz/authorization-service';
+import { requirePermission } from '@/lib/authz/authorization-service';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
+import { Permission } from '@/config/permissions';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') || undefined;
-
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const tenantId = (searchParams.get('tenantId') || headerTenantId || 'default').trim();
-
-    // 1. Resolve Server Session (Fail-Closed)
-    let user = null;
-    let serverUserId: string | null = null;
-
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: any = null;
     try {
       const supabase = await createSupabaseServerClient();
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user?.id) {
         user = data.user;
-        serverUserId = user.id;
       }
     } catch {
       user = null;
     }
 
-    if (!user || !serverUserId) {
+    if (!user?.id) {
       return NextResponse.json(
         {
           success: false,
@@ -44,34 +35,41 @@ export async function GET(request: Request) {
       );
     }
 
-    // 2. Resolve Database-Backed Effective Permissions (Fail-Closed, Zero Header Fallback)
-    let isAuthorizedAdmin = false;
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
     try {
-      const permResult = await getEffectivePermissions(serverUserId, tenantId);
-      if (
-        permResult.authorized &&
-        (permResult.primaryRoleCode === 'ADMIN_KEUANGAN' ||
-          permResult.primaryRoleCode === 'BENDAHARA' ||
-          permResult.effectivePermissions.has('finance:review'))
-      ) {
-        isAuthorizedAdmin = true;
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
       }
+      tenant = tenantCtx;
     } catch {
-      isAuthorizedAdmin = false;
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
     }
 
-    if (!isAuthorizedAdmin) {
+    // 3. Validasi Otorisasi Berbasis Database
+    const authz = await requirePermission(user.id, tenant.id, Permission.VIEW_SPP_INSTALLMENTS);
+    if (!authz.authorized) {
       return NextResponse.json(
         {
           success: false,
-          code: 'UNAUTHORIZED_FINANCE_ROLE',
+          code: 'FORBIDDEN',
           message: 'Akses Ditolak: Hanya Admin Keuangan yang berwenang mengakses daftar pengajuan cicilan',
         },
         { status: 403 }
       );
     }
 
-    const plans = await sppService.getInstallmentPlansForAdmin(tenantId, status);
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status') || undefined;
+
+    const plans = await sppService.getInstallmentPlansForAdmin(tenant.id, status);
 
     return NextResponse.json(
       {
@@ -81,8 +79,10 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal mengambil daftar pengajuan cicilan';
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+    console.error('[API /api/finance/spp/installments GET] Internal error:', error);
+    return NextResponse.json(
+      { success: false, code: 'INTERNAL_SERVER_ERROR', message: 'Gagal mengambil daftar pengajuan cicilan' },
+      { status: 500 }
+    );
   }
 }
-

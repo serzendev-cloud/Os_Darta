@@ -1,64 +1,30 @@
 // ==============================================================================
 // Finance SPP Payment API Route (Direct Full or Installment Payment)
-// Work Package: WP-FINANCE-AUTH-HARDENING-002 (Wave 2)
-// Directives: PO-EXEC-FINANCE-AUTH-HARDENING-WAVE-2-001
-// Compliance: Fail-Closed Server Auth (401), Tenancy & Role Validation (403), Idempotency
+// Work Package: WP-SEC-FINANCE-001 (Hardened Auth & Strict Tenancy)
 // ==============================================================================
 
 import { NextResponse } from 'next/server';
 import { sppService } from '@/lib/finance/spp-service';
 import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
-import { getEffectivePermissions } from '@/lib/authz/authorization-service';
+import { requirePermission } from '@/lib/authz/authorization-service';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
+import { Permission } from '@/config/permissions';
 
 export async function POST(request: Request) {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const body = await request.json();
-    const {
-      billId,
-      scheduleId,
-      amount,
-      paymentMethod = 'TRANSFER_MANUAL',
-      idempotencyKey,
-      notes,
-    } = body;
-
-    const tenantId = (headerTenantId || body.tenantId || 'default').trim();
-
-    if (!billId || !amount) {
-      return NextResponse.json(
-        { success: false, message: 'ID tagihan dan nominal pembayaran wajib diisi' },
-        { status: 400 }
-      );
-    }
-
-    if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
-      return NextResponse.json(
-        { success: false, message: 'Nominal pembayaran harus berupa integer lebih dari 0' },
-        { status: 400 }
-      );
-    }
-
-    // ── Zero-Trust Role & Identity Verification ─────────────────────────────
-    let user = null;
-    let serverUserId: string | null = null;
-    let serverUserName: string = 'Admin Keuangan';
-
-    // 1. Resolve Server Session (Fail-Closed)
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: any = null;
     try {
       const supabase = await createSupabaseServerClient();
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user?.id) {
         user = data.user;
-        serverUserId = user.id;
-        serverUserName =
-          user.user_metadata?.full_name || user.email || 'Admin Keuangan';
       }
     } catch {
       user = null;
     }
 
-    if (!user || !serverUserId) {
+    if (!user?.id) {
       return NextResponse.json(
         {
           success: false,
@@ -69,41 +35,71 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Resolve Database-Backed Effective Permissions (Fail-Closed, Zero Header Fallback)
-    let isAuthorized = false;
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
     try {
-      const permResult = await getEffectivePermissions(serverUserId, tenantId);
-      if (
-        permResult.authorized &&
-        (permResult.primaryRoleCode === 'ADMIN_KEUANGAN' ||
-          permResult.primaryRoleCode === 'BENDAHARA' ||
-          permResult.effectivePermissions.has('finance:pay'))
-      ) {
-        isAuthorized = true;
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
       }
+      tenant = tenantCtx;
     } catch {
-      isAuthorized = false;
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
     }
 
-    if (!isAuthorized) {
+    // 3. Validasi Otorisasi Berbasis Database
+    const authz = await requirePermission(user.id, tenant.id, Permission.RECORD_SPP_PAYMENT);
+    if (!authz.authorized) {
       return NextResponse.json(
         {
           success: false,
-          code: 'UNAUTHORIZED_FINANCE_ROLE',
+          code: 'FORBIDDEN',
           message: 'Akses Ditolak: Hanya Admin Keuangan yang berwenang memverifikasi dan mencatat pembayaran SPP',
         },
         { status: 403 }
       );
     }
 
-    // 3. Record Payment via SppService
+    const body = await request.json().catch(() => ({}));
+    const {
+      billId,
+      scheduleId,
+      amount,
+      paymentMethod = 'TRANSFER_MANUAL',
+      idempotencyKey,
+      notes,
+    } = body as Record<string, any>;
+
+    if (!billId || amount === undefined || amount === null) {
+      return NextResponse.json(
+        { success: false, code: 'BAD_REQUEST', message: 'ID tagihan dan nominal pembayaran wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
+      return NextResponse.json(
+        { success: false, code: 'INVALID_AMOUNT', message: 'Nominal pembayaran harus berupa integer lebih dari 0' },
+        { status: 400 }
+      );
+    }
+
+    const serverUserName = user.user_metadata?.full_name || user.email || 'Admin Keuangan';
+
+    // 4. Catat Pembayaran via SppService
     const result = await sppService.recordSppPayment({
-      tenantId,
+      tenantId: tenant.id,
       billId,
       scheduleId,
       amount,
       paymentMethod,
-      verifiedBy: serverUserId,
+      verifiedBy: user.id,
       verifiedByName: serverUserName,
       idempotencyKey,
       notes,
@@ -111,15 +107,23 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal mencatat pembayaran SPP';
-    const isNotFound = msg.startsWith('BILL_NOT_FOUND') || msg.startsWith('SCHEDULE_NOT_FOUND');
+    console.error('[API /api/finance/spp/pay POST] Internal error:', error);
+    const rawMsg = error instanceof Error ? String(error) : '';
+    const isNotFound = rawMsg.includes('BILL_NOT_FOUND') || rawMsg.includes('SCHEDULE_NOT_FOUND');
     const isConflict =
-      msg.startsWith('BILL_ALREADY_PAID') ||
-      msg.startsWith('EXCEEDS_REMAINING_AMOUNT');
-    const isBadInput = msg.startsWith('INVALID_AMOUNT');
+      rawMsg.includes('BILL_ALREADY_PAID') ||
+      rawMsg.includes('EXCEEDS_REMAINING_AMOUNT');
+    const isBadInput = rawMsg.includes('INVALID_AMOUNT');
 
     const status = isNotFound ? 404 : isConflict ? 409 : isBadInput ? 400 : 500;
-    return NextResponse.json({ success: false, message: msg }, { status });
+    const message = isNotFound
+      ? 'Tagihan atau jadwal cicilan tidak ditemukan'
+      : isConflict
+      ? 'Tagihan sudah lunas atau pembayaran melebihi sisa tagihan'
+      : isBadInput
+      ? 'Nominal pembayaran tidak valid'
+      : 'Gagal mencatat pembayaran SPP';
+
+    return NextResponse.json({ success: false, code: rawMsg.split(':')[0] || 'ERROR', message }, { status });
   }
 }
-

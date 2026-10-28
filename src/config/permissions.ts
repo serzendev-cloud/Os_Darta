@@ -97,6 +97,15 @@ export const Permission = {
 
   // Keuangan / Kartu RFID
   MANAGE_RFID_PIN: 'manage_rfid_pin',
+  VIEW_BILLING_CAMPAIGNS: 'view_billing_campaigns',
+  MANAGE_BILLING_CAMPAIGNS: 'manage_billing_campaigns',
+  VIEW_SPP_CONFIG: 'view_spp_config',
+  MANAGE_SPP_CONFIG: 'manage_spp_config',
+  RECORD_SPP_PAYMENT: 'record_spp_payment',
+  VIEW_SPP_INSTALLMENTS: 'view_spp_installments',
+  REVIEW_SPP_INSTALLMENTS: 'review_spp_installments',
+  VIEW_FINANCE_RECAP: 'view_finance_recap',
+  EXPORT_FINANCE_RECAP: 'export_finance_recap',
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];

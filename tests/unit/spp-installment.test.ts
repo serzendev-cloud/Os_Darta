@@ -14,6 +14,7 @@ import { sppService } from '@/lib/finance/spp-service';
 import { mockFinanceAuthSession } from '../helpers/test-auth-helper';
 import * as authzModule from '@/lib/authz/authorization-service';
 import * as tenantContextModule from '@/lib/tenant/context';
+import * as tenantTxModule from '@/lib/db/tenant-transaction';
 import { db } from '@/lib/db';
 
 // Mock in-memory store for isolated unit testing
@@ -88,6 +89,7 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
       name: 'Pesantren Darul Ulum',
       slug: 'darululum',
     });
+    vi.spyOn(tenantTxModule, 'withTenantTransaction').mockImplementation(async (tenantId, cb) => cb(db as any));
   });
 
   // ── TEST-01: Wali Melihat Tagihan ──────────────────────────────────────────
@@ -231,7 +233,7 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
     const json = await res.json();
 
     expect(res.status).toBe(403);
-    expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+    expect(json.code).toBe('FORBIDDEN');
   });
 
   it('TEST-05C: Akses antrean cicilan diizinkan 200 jika pengguna adalah Admin Keuangan sah', async () => {
@@ -293,7 +295,7 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
 
     expect(res.status).toBe(403);
     expect(json.success).toBe(false);
-    expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+    expect(json.code).toBe('FORBIDDEN');
     expect(reviewSpy).not.toHaveBeenCalled();
   });
 
@@ -366,6 +368,14 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
 
   // ── TEST-09: Penolakan Tidak Mengaktifkan Jadwal dan Menyimpan Alasan ────────
   it('TEST-09: Pengajuan yang ditolak (REJECT) tidak mengaktifkan jadwal dan menyimpan alasan penolakan', async () => {
+    mockFinanceAuthSession({
+      userId: 'admin_001',
+      fullName: 'Admin Keuangan',
+      tenantId: 'tenant_darululum',
+      roleCode: 'ADMIN_KEUANGAN',
+      permissions: ['finance:review'],
+    });
+
     // Missing reviewNotes on REJECT must return 400
     const reqWithoutReason = new Request(
       'http://localhost:3000/api/finance/spp/installments/plan_123/review',
@@ -374,8 +384,6 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
         headers: {
           'Content-Type': 'application/json',
           'x-tenant-id': 'tenant_darululum',
-          'x-user-id': 'admin_001',
-          'x-user-role': 'admin_keuangan',
         },
         body: JSON.stringify({
           decision: 'REJECT',
@@ -582,7 +590,7 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
       expect(paySpy).not.toHaveBeenCalled();
     });
 
@@ -594,6 +602,12 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
         tenantId: 'tenant_darululum',
         roleCode: 'ADMIN_KEUANGAN',
         permissions: ['finance:pay'],
+      });
+      // Permintaan ditujukan ke tenant_beta yang berbeda dari keanggotaan pengguna
+      vi.spyOn(tenantContextModule, 'getTenantContext').mockResolvedValue({
+        id: 'tenant_beta',
+        name: 'Pesantren Beta',
+        slug: 'beta',
       });
 
       const req = new Request('http://localhost:3000/api/finance/spp/pay', {
@@ -613,7 +627,7 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
 
       expect(res.status).toBe(403);
       expect(json.success).toBe(false);
-      expect(json.code).toBe('UNAUTHORIZED_FINANCE_ROLE');
+      expect(json.code).toBe('FORBIDDEN');
       expect(paySpy).not.toHaveBeenCalled();
     });
 

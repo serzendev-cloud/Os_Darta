@@ -1,23 +1,19 @@
 // ==============================================================================
 // SPP Configuration API Route (Admin Keuangan)
-// Work Package: WP-FINANCE-AUTH-HARDENING-002 (Wave 1)
-// Directives: DEC-02, PO-EXEC-FINANCE-AUTH-HARDENING-WAVE-1-001
-// Compliance: Fail-Closed Server Auth (401), Tenancy & Role Validation (403)
+// Work Package: WP-SEC-FINANCE-001 (Hardened Auth & Strict Tenancy)
 // ==============================================================================
 
 import { NextResponse } from 'next/server';
 import { sppBillingService } from '@/lib/finance/spp-billing-service';
 import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
-import { getEffectivePermissions } from '@/lib/authz/authorization-service';
+import { requirePermission } from '@/lib/authz/authorization-service';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
+import { Permission } from '@/config/permissions';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const tenantId = (searchParams.get('tenantId') || headerTenantId || 'default').trim();
-
-    // 1. Resolve Server Session (Fail-Closed)
-    let user = null;
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: any = null;
     try {
       const supabase = await createSupabaseServerClient();
       const { data, error } = await supabase.auth.getUser();
@@ -39,75 +35,63 @@ export async function GET(request: Request) {
       );
     }
 
-    // 2. Resolve Database-Backed Effective Permissions (Fail-Closed)
-    let isAuthorized = false;
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
     try {
-      const permResult = await getEffectivePermissions(user.id, tenantId);
-      if (
-        permResult.authorized &&
-        (permResult.primaryRoleCode === 'ADMIN_KEUANGAN' ||
-          permResult.primaryRoleCode === 'BENDAHARA' ||
-          permResult.effectivePermissions.has('finance:review'))
-      ) {
-        isAuthorized = true;
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
       }
+      tenant = tenantCtx;
     } catch {
-      isAuthorized = false;
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
     }
 
-    if (!isAuthorized) {
+    // 3. Validasi Otorisasi Berbasis Database
+    const authz = await requirePermission(user.id, tenant.id, Permission.VIEW_SPP_CONFIG);
+    if (!authz.authorized) {
       return NextResponse.json(
         {
           success: false,
-          code: 'UNAUTHORIZED_FINANCE_ROLE',
+          code: 'FORBIDDEN',
           message: 'Akses Ditolak: Hanya Admin Keuangan yang berwenang melihat konfigurasi SPP',
         },
         { status: 403 }
       );
     }
 
-    const config = await sppBillingService.getSppConfiguration(tenantId);
+    const config = await sppBillingService.getSppConfiguration(tenant.id);
     return NextResponse.json({ success: true, data: config }, { status: 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal memuat konfigurasi SPP';
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+    console.error('[API /api/finance/spp/config GET] Internal error:', error);
+    return NextResponse.json(
+      { success: false, code: 'INTERNAL_SERVER_ERROR', message: 'Gagal memuat konfigurasi SPP' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const body = await request.json();
-    const {
-      name,
-      amount,
-      billingDay = 1,
-      dueDay = 10,
-      academicYear,
-      effectiveFrom,
-      effectiveTo,
-    } = body;
-
-    const tenantId = (headerTenantId || body.tenantId || 'default').trim();
-
-    // 1. Resolve Server Session (Fail-Closed)
-    let user = null;
-    let serverUserId: string | null = null;
-    let serverUserName: string = 'Admin Keuangan';
-
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: any = null;
     try {
       const supabase = await createSupabaseServerClient();
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user?.id) {
         user = data.user;
-        serverUserId = user.id;
-        serverUserName = user.user_metadata?.full_name || user.email || 'Admin Keuangan';
       }
     } catch {
       user = null;
     }
 
-    if (!user || !serverUserId) {
+    if (!user?.id) {
       return NextResponse.json(
         {
           success: false,
@@ -118,35 +102,59 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Resolve Database-Backed Effective Permissions (Fail-Closed, Zero Header Fallback)
-    let isAuthorized = false;
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
     try {
-      const permResult = await getEffectivePermissions(serverUserId, tenantId);
-      if (
-        permResult.authorized &&
-        (permResult.primaryRoleCode === 'ADMIN_KEUANGAN' ||
-          permResult.primaryRoleCode === 'BENDAHARA' ||
-          permResult.effectivePermissions.has('finance:review'))
-      ) {
-        isAuthorized = true;
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
       }
+      tenant = tenantCtx;
     } catch {
-      isAuthorized = false;
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
     }
 
-    if (!isAuthorized) {
+    // 3. Validasi Otorisasi Berbasis Database
+    const authz = await requirePermission(user.id, tenant.id, Permission.MANAGE_SPP_CONFIG);
+    if (!authz.authorized) {
       return NextResponse.json(
         {
           success: false,
-          code: 'UNAUTHORIZED_FINANCE_ROLE',
+          code: 'FORBIDDEN',
           message: 'Akses Ditolak: Hanya Admin Keuangan yang berwenang mengubah konfigurasi SPP',
         },
         { status: 403 }
       );
     }
 
+    const body = await request.json().catch(() => ({}));
+    const {
+      name,
+      amount,
+      billingDay = 1,
+      dueDay = 10,
+      academicYear,
+      effectiveFrom,
+      effectiveTo,
+    } = body as Record<string, any>;
+
+    if (amount !== undefined && (typeof amount !== 'number' || amount <= 0)) {
+      return NextResponse.json(
+        { success: false, code: 'INVALID_AMOUNT', message: 'Nominal tarif SPP harus lebih besar dari 0 (INVALID_AMOUNT)' },
+        { status: 400 }
+      );
+    }
+
+    const serverUserName = user.user_metadata?.full_name || user.email || 'Admin Keuangan';
+
     const result = await sppBillingService.saveSppConfiguration({
-      tenantId,
+      tenantId: tenant.id,
       name: name || 'Tarif SPP Standar',
       amount,
       billingDay,
@@ -154,15 +162,22 @@ export async function POST(request: Request) {
       academicYear,
       effectiveFrom: effectiveFrom || new Date(),
       effectiveTo,
-      actorId: serverUserId,
+      actorId: user.id,
       actorName: serverUserName,
     });
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal menyimpan konfigurasi SPP';
-    const isBadInput = msg.startsWith('INVALID_AMOUNT');
-    return NextResponse.json({ success: false, message: msg }, { status: isBadInput ? 400 : 500 });
+    console.error('[API /api/finance/spp/config POST] Internal error:', error);
+    const rawMsg = error instanceof Error ? String(error) : '';
+    const isBadInput = rawMsg.includes('INVALID_AMOUNT');
+    return NextResponse.json(
+      {
+        success: false,
+        code: isBadInput ? 'INVALID_AMOUNT' : 'INTERNAL_SERVER_ERROR',
+        message: isBadInput ? 'Nominal tarif SPP tidak valid' : 'Gagal menyimpan konfigurasi SPP',
+      },
+      { status: isBadInput ? 400 : 500 }
+    );
   }
 }
-

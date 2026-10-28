@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import * as serverClientModule from '@/lib/supabase/server';
 import * as authzModule from '@/lib/authz/authorization-service';
+import * as tenantContextModule from '@/lib/tenant/context';
 
 export interface MockAuthOptions {
   userId?: string | null;
@@ -11,6 +12,29 @@ export interface MockAuthOptions {
   permissions?: string[];
   authorized?: boolean;
 }
+
+const DEFAULT_CANONICAL_PERMISSIONS = [
+  'view_billing_campaigns',
+  'manage_billing_campaigns',
+  'view_spp_config',
+  'manage_spp_config',
+  'record_spp_payment',
+  'view_spp_installments',
+  'review_spp_installments',
+  'view_finance_recap',
+  'export_finance_recap',
+  'finance:export',
+  'finance:review',
+  'finance:pay',
+  'finance:manage',
+];
+
+const LEGACY_PERMISSION_MAP: Record<string, string[]> = {
+  'finance:manage': ['manage_billing_campaigns', 'manage_spp_config', 'finance:manage'],
+  'finance:review': ['view_spp_installments', 'review_spp_installments', 'view_spp_config', 'manage_spp_config', 'finance:review'],
+  'finance:pay': ['record_spp_payment', 'finance:pay'],
+  'finance:export': ['view_finance_recap', 'export_finance_recap', 'view_billing_campaigns', 'finance:export'],
+};
 
 /**
  * Test helper for mocking Supabase server session and database authorization
@@ -23,9 +47,18 @@ export function mockFinanceAuthSession(options: MockAuthOptions = {}) {
     fullName = 'Admin Keuangan',
     tenantId = 'tenant_test',
     roleCode = 'ADMIN_KEUANGAN',
-    permissions = ['finance:export', 'finance:review', 'finance:pay', 'finance:manage'],
+    permissions = DEFAULT_CANONICAL_PERMISSIONS,
     authorized = true,
   } = options;
+
+  // Mock getTenantContext to return the active tenant
+  vi.spyOn(tenantContextModule, 'getTenantContext').mockResolvedValue({
+    id: tenantId,
+    name: 'Pesantren Mock',
+    slug: tenantId,
+    domain: null,
+    settings: {},
+  });
 
   if (!userId) {
     // Skenario 1: Anonim / Sesi tidak ada (Unauthenticated)
@@ -39,6 +72,13 @@ export function mockFinanceAuthSession(options: MockAuthOptions = {}) {
     } as any);
 
     vi.spyOn(authzModule, 'getEffectivePermissions').mockResolvedValue({
+      authorized: false,
+      decision: 'DENIED_UNAUTHENTICATED',
+      effectivePermissions: new Set(),
+      reason: 'No active session found',
+    } as any);
+
+    vi.spyOn(authzModule, 'requirePermission').mockResolvedValue({
       authorized: false,
       decision: 'DENIED_UNAUTHENTICATED',
       effectivePermissions: new Set(),
@@ -63,6 +103,17 @@ export function mockFinanceAuthSession(options: MockAuthOptions = {}) {
     },
   } as any);
 
+  // Expand any legacy permission strings to canonical equivalents
+  const activePermissions = new Set<string>();
+  for (const perm of permissions) {
+    activePermissions.add(perm);
+    if (LEGACY_PERMISSION_MAP[perm]) {
+      for (const canonical of LEGACY_PERMISSION_MAP[perm]) {
+        activePermissions.add(canonical);
+      }
+    }
+  }
+
   // Skenario 3: Evaluasi Izin Berbasis Database & Tenant Target
   vi.spyOn(authzModule, 'getEffectivePermissions').mockImplementation(async (targetUserId, targetTenantId) => {
     // Hanya izinkan jika tenantId target sama persis dengan tenant yang diberi wewenang
@@ -73,7 +124,7 @@ export function mockFinanceAuthSession(options: MockAuthOptions = {}) {
         userId: targetUserId,
         tenantId: targetTenantId,
         primaryRoleCode: roleCode,
-        effectivePermissions: new Set(permissions),
+        effectivePermissions: activePermissions,
       };
     }
 
@@ -86,5 +137,21 @@ export function mockFinanceAuthSession(options: MockAuthOptions = {}) {
       effectivePermissions: new Set(),
       reason: `User ${targetUserId} has no active membership in tenant ${targetTenantId}`,
     };
+  });
+
+  vi.spyOn(authzModule, 'requirePermission').mockImplementation(async (targetUserId, targetTenantId, permissionCode) => {
+    const authz = await authzModule.getEffectivePermissions(targetUserId, targetTenantId);
+    if (!authz.authorized) {
+      return authz;
+    }
+    if (!authz.effectivePermissions?.has(permissionCode)) {
+      return {
+        ...authz,
+        authorized: false,
+        decision: 'DENIED_PERMISSION_MISSING',
+        reason: `User missing required permission: ${permissionCode}`,
+      };
+    }
+    return authz;
   });
 }

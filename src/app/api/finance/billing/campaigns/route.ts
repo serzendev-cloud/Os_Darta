@@ -1,34 +1,123 @@
 // ==============================================================================
 // Additional Billing Campaigns API Route (Admin Keuangan)
-// Work Package: APP-MAHAD-FINANCE-BILLING-001 (Modul C)
+// Work Package: WP-SEC-FINANCE-001 (Hardened Auth & Strict Tenancy)
 // ==============================================================================
 
 import { NextResponse } from 'next/server';
 import { sppBillingService } from '@/lib/finance/spp-billing-service';
 import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
-import { getEffectivePermissions } from '@/lib/authz/authorization-service';
+import { requirePermission } from '@/lib/authz/authorization-service';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
+import { Permission } from '@/config/permissions';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const tenantId = (headerTenantId || 'default').trim();
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: any = null;
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data?.user?.id) {
+        user = data.user;
+      }
+    } catch {
+      user = null;
+    }
 
-    const campaigns = await sppBillingService.getBillingCampaigns(tenantId);
+    if (!user?.id) {
+      return NextResponse.json(
+        { success: false, code: 'UNAUTHENTICATED', message: 'Autentikasi diperlukan untuk mengakses daftar tagihan' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
+    try {
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
+      }
+      tenant = tenantCtx;
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Otorisasi Izin Berbasis Database
+    const authz = await requirePermission(user.id, tenant.id, Permission.VIEW_BILLING_CAMPAIGNS);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { success: false, code: 'FORBIDDEN', message: 'Akses Ditolak: Anda tidak memiliki wewenang melihat kampanye tagihan' },
+        { status: 403 }
+      );
+    }
+
+    const campaigns = await sppBillingService.getBillingCampaigns(tenant.id);
     return NextResponse.json({ success: true, data: campaigns }, { status: 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal memuat daftar tagihan tambahan';
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+    console.error('[API /api/finance/billing/campaigns GET] Internal error:', error);
+    return NextResponse.json(
+      { success: false, code: 'INTERNAL_SERVER_ERROR', message: 'Gagal memuat daftar tagihan tambahan' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const headerUserId = request.headers.get('x-user-id');
-    const headerRole = request.headers.get('x-user-role');
-    const headerName = request.headers.get('x-user-name');
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: any = null;
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data?.user?.id) {
+        user = data.user;
+      }
+    } catch {
+      user = null;
+    }
 
-    const body = await request.json();
+    if (!user?.id) {
+      return NextResponse.json(
+        { success: false, code: 'UNAUTHENTICATED', message: 'Autentikasi diperlukan untuk menerbitkan tagihan' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
+    try {
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
+      }
+      tenant = tenantCtx;
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Otorisasi Izin Berbasis Database
+    const authz = await requirePermission(user.id, tenant.id, Permission.MANAGE_BILLING_CAMPAIGNS);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        { success: false, code: 'FORBIDDEN', message: 'Akses Ditolak: Hanya Admin Keuangan yang berwenang menerbitkan tagihan tambahan' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
     const {
       title,
       category,
@@ -40,65 +129,19 @@ export async function POST(request: Request) {
       targetClasses = [],
       targetSantriIds = [],
       allowInstallments = false,
-    } = body;
-
-    const tenantId = (headerTenantId || body.tenantId || 'default').trim();
+    } = body as Record<string, any>;
 
     if (!title || !category || !amountPerStudent || !dueDate) {
       return NextResponse.json(
-        { success: false, message: 'Judul, kategori, nominal, dan tanggal jatuh tempo wajib diisi' },
+        { success: false, code: 'BAD_REQUEST', message: 'Judul, kategori, nominal, dan tanggal jatuh tempo wajib diisi' },
         { status: 400 }
       );
     }
 
-    let serverUserId: string | null = null;
-    let serverUserName: string = 'Admin Keuangan';
-    let isAuthorized = false;
-
-    // 1. Resolve Server Session
-    try {
-      const supabase = await createSupabaseServerClient();
-      const { data, error } = await supabase.auth.getUser();
-      const user = data?.user;
-
-      if (!error && user?.id) {
-        serverUserId = user.id;
-        serverUserName = user.user_metadata?.full_name || user.email || 'Admin Keuangan';
-
-        const permResult = await getEffectivePermissions(user.id, tenantId);
-        if (
-          permResult.authorized &&
-          (permResult.primaryRoleCode === 'ADMIN_KEUANGAN' ||
-            permResult.primaryRoleCode === 'BENDAHARA' ||
-            permResult.effectivePermissions.has('finance:manage'))
-        ) {
-          isAuthorized = true;
-        }
-      }
-    } catch {
-      // Session unavailable
-    }
-
-    // 2. Gateway / Test Harness Fallback
-    if (!isAuthorized && headerRole === 'admin_keuangan') {
-      serverUserId = headerUserId || 'admin_test';
-      serverUserName = headerName || 'Admin Keuangan';
-      isAuthorized = true;
-    }
-
-    if (!isAuthorized || !serverUserId) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: 'UNAUTHORIZED_FINANCE_ROLE',
-          message: 'Akses Ditolak: Hanya Admin Keuangan yang berwenang menerbitkan tagihan tambahan',
-        },
-        { status: 403 }
-      );
-    }
+    const serverUserName = user.user_metadata?.full_name || user.email || 'Admin Keuangan';
 
     const result = await sppBillingService.createAdditionalBillCampaign({
-      tenantId,
+      tenantId: tenant.id,
       title,
       category,
       description,
@@ -109,17 +152,28 @@ export async function POST(request: Request) {
       targetClasses,
       targetSantriIds,
       allowInstallments,
-      publishedBy: serverUserId,
+      publishedBy: user.id,
       publishedByName: serverUserName,
     });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal menerbitkan tagihan tambahan';
+    console.error('[API /api/finance/billing/campaigns POST] Internal error:', error);
+    const rawMsg = error instanceof Error ? error.name + ': ' + String(error) : '';
     const isBadInput =
-      msg.startsWith('INVALID_TITLE') ||
-      msg.startsWith('INVALID_AMOUNT') ||
-      msg.startsWith('NO_TARGET_STUDENTS');
-    return NextResponse.json({ success: false, message: msg }, { status: isBadInput ? 400 : 500 });
+      rawMsg.startsWith('INVALID_TITLE') ||
+      rawMsg.startsWith('INVALID_AMOUNT') ||
+      rawMsg.startsWith('NO_TARGET_STUDENTS');
+
+    return NextResponse.json(
+      {
+        success: false,
+        code: isBadInput ? 'BAD_REQUEST' : 'INTERNAL_SERVER_ERROR',
+        message: isBadInput
+          ? 'Data tagihan tambahan tidak valid'
+          : 'Gagal menerbitkan tagihan tambahan',
+      },
+      { status: isBadInput ? 400 : 500 }
+    );
   }
 }
