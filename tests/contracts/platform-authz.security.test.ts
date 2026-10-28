@@ -255,8 +255,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
       const mockDb = createMockDb({});
 
       const result = await authorizeCurrentPlatformRoles(['SUPER_ADMIN'], mockDb);
-      expect(result.authorized).toBe(false);
-      expect(result.status).toBe(401);
+      expect(result).toEqual({ authorized: false, status: 401 });
     });
 
     it('2.4. authorizeCurrentPlatformRoles returns 403 when session user is SUSPENDED in users table', async () => {
@@ -267,8 +266,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
       });
 
       const result = await authorizeCurrentPlatformRoles(['SUPER_ADMIN'], mockDb);
-      expect(result.authorized).toBe(false);
-      expect(result.status).toBe(403);
+      expect(result).toEqual({ authorized: false, status: 403 });
     });
 
     it('2.5. authorizeCurrentPlatformRoles returns 403 when session user has NO platform roles in DB', async () => {
@@ -279,8 +277,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
       });
 
       const result = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER'], mockDb);
-      expect(result.authorized).toBe(false);
-      expect(result.status).toBe(403);
+      expect(result).toEqual({ authorized: false, status: 403 });
     });
 
     it('2.6. authorizeCurrentPlatformRoles returns authorized when session user has platform role in DB', async () => {
@@ -291,9 +288,11 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
       });
 
       const result = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER'], mockDb);
-      expect(result.authorized).toBe(true);
-      expect((result as any).userId).toBe('super_admin_01');
-      expect((result as any).role).toBe('SUPER_ADMIN');
+      expect(result).toEqual({
+        authorized: true,
+        userId: 'super_admin_01',
+        role: 'SUPER_ADMIN',
+      });
     });
   });
 
@@ -310,8 +309,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
       const authResult = await authorizeCurrentPlatformRoles(['SUPER_ADMIN'], faultyDb);
 
       // Must fail-closed with 503 and never throw raw SQL error to client
-      expect(authResult.authorized).toBe(false);
-      expect(authResult.status).toBe(503);
+      expect(authResult).toEqual({ authorized: false, status: 503 });
     });
   });
 });

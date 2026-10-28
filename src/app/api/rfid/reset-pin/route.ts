@@ -87,9 +87,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    const operatorUserId: string = auth.userId;
 
     // 3. Validasi Otorisasi Berbasis Database (requirePermission)
-    const authz = await requirePermission(auth.userId, tenant.id, Permission.MANAGE_RFID_PIN);
+    const authz = await requirePermission(operatorUserId, tenant.id, Permission.MANAGE_RFID_PIN);
     if (!authz.authorized) {
       return NextResponse.json(
         {
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
             status: 'active',
             lockedUntil: null,
             lastPinResetAt: new Date(),
-            lastPinResetBy: auth.userId,
+            lastPinResetBy: operatorUserId,
             updatedAt: new Date(),
           })
           .where(and(eq(rfidCards.id, card.id), eq(rfidCards.tenantId, tenant.id)));
@@ -202,8 +203,8 @@ export async function POST(request: NextRequest) {
           id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
           tenantId: tenant.id,
           action: 'RFID_PIN_RESET',
-          user: auth.userId,
-          userId: auth.userId,
+          user: operatorUserId,
+          userId: operatorUserId,
           userRole: authz.primaryRoleCode || 'ADMIN',
           details: `Reset PIN kartu RFID ${card.cardUid} santri ${santriObj.name} (${santriObj.id})`,
           targetEntity: 'rfid_card',

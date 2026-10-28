@@ -28,7 +28,7 @@ describe('WP-SEC-CANTEEN-001: Canteen & Reconciliation Security Hardening Contra
     vi.restoreAllMocks();
 
     // Default mock financial audit trail
-    vi.spyOn(financialAuditService, 'log').mockResolvedValue('audit_log_001' as unknown as void);
+    vi.spyOn(financialAuditService, 'log').mockResolvedValue('audit_log_001');
 
     // Default mock merchant ledger
     vi.spyOn(merchantLedgerService, 'getSummary').mockResolvedValue({
@@ -36,8 +36,9 @@ describe('WP-SEC-CANTEEN-001: Canteen & Reconciliation Security Hardening Contra
       totalRefunds: 0,
       netMerchantEntitlement: 50000,
       ledgerEntriesCount: 2,
+      latestEntries: [],
     });
-    vi.spyOn(merchantLedgerService, 'recordCreditSale').mockResolvedValue({} as unknown as void);
+    vi.spyOn(merchantLedgerService, 'recordCreditSale').mockResolvedValue('entry_001');
 
     // Default mock PIN verification
     vi.spyOn(pinCryptoModule, 'isValidHex32').mockReturnValue(true);
@@ -229,15 +230,17 @@ describe('WP-SEC-CANTEEN-001: Canteen & Reconciliation Security Hardening Contra
             canteenStatus: 'active',
           };
 
+          type ChainableMock = unknown[] & {
+            for: () => ChainableMock;
+            limit: () => Promise<unknown[]>;
+            orderBy: () => { limit: () => Promise<unknown[]> };
+          };
+
           const makeQueryResult = (data: unknown[]) => {
-            const arr = [...data] as unknown as {
-              for: () => unknown[];
-              limit: () => Promise<unknown[]>;
-              orderBy: () => { limit: () => Promise<unknown[]> };
-            };
-            arr.for = () => arr as unknown[];
-            arr.limit = async () => arr as unknown[];
-            arr.orderBy = () => ({ limit: async () => arr as unknown[] });
+            const arr = [...data] as ChainableMock;
+            arr.for = () => arr;
+            arr.limit = async () => arr;
+            arr.orderBy = () => ({ limit: async () => arr });
             return arr;
           };
 
@@ -282,10 +285,8 @@ describe('WP-SEC-CANTEEN-001: Canteen & Reconciliation Security Hardening Contra
       permission: 'view_finance_reconciliation',
       mockServiceSuccess: () => {
         vi.spyOn(reconciliationEngine, 'getDashboardData').mockResolvedValueOnce({
-          latestRun: null,
-          recentRuns: [],
-          openAnomalies: [],
-          anomaliesSummary: { totalOpen: 0, highSeverity: 0, mediumSeverity: 0, lowSeverity: 0 },
+          runs: [],
+          anomalies: [],
         });
       },
       mockServiceError: () => {
@@ -311,8 +312,7 @@ describe('WP-SEC-CANTEEN-001: Canteen & Reconciliation Security Hardening Contra
           totalTransactionsChecked: 10,
           totalAmountChecked: 150000,
           discrepanciesCount: 0,
-          anomaliesFound: [],
-          durationMs: 50,
+          anomalies: [],
         });
       },
       mockServiceError: () => {
@@ -627,8 +627,9 @@ describe('WP-SEC-CANTEEN-001: Canteen & Reconciliation Security Hardening Contra
 
       vi.spyOn(authzModule, 'authorizePlatformRole').mockResolvedValueOnce({
         authorized: true,
+        decision: 'AUTHORIZED',
         userId: 'superadmin_platform_01',
-        role: 'SUPER_ADMIN',
+        effectivePermissions: new Set(['platform.super_admin']),
       });
 
       const req = new Request('http://localhost:3000/api/canteen/refund/review', {

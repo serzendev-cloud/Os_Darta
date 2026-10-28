@@ -258,7 +258,11 @@ describe('WP-SEC-FINANCE-001: Finance Routes Security Hardening Contracts', () =
           summary: { totalVerifiedPaid: 0 },
           items: [],
         } as any);
-        vi.spyOn(recapExportService, 'getTenantBranding').mockResolvedValueOnce({ name: 'Pesantren Mock' });
+        vi.spyOn(recapExportService, 'getTenantBranding').mockResolvedValueOnce({
+          name: 'Pesantren Mock',
+          tagline: 'Mencetak Generasi Unggul',
+          logoUrl: null,
+        });
         vi.spyOn(recapExportService, 'generateXlsxWorkbook').mockResolvedValueOnce(Buffer.from('xlsx-bytes') as any);
       },
       mockServiceError: () => {
@@ -278,7 +282,11 @@ describe('WP-SEC-FINANCE-001: Finance Routes Security Hardening Contracts', () =
           summary: { totalVerifiedPaid: 0 },
           items: [],
         } as any);
-        vi.spyOn(recapExportService, 'getTenantBranding').mockResolvedValueOnce({ name: 'Pesantren Mock' });
+        vi.spyOn(recapExportService, 'getTenantBranding').mockResolvedValueOnce({
+          name: 'Pesantren Mock',
+          tagline: 'Mencetak Generasi Unggul',
+          logoUrl: null,
+        });
         vi.spyOn(recapExportService, 'generatePdfDocument').mockResolvedValueOnce(Buffer.from('%PDF-bytes') as any);
       },
       mockServiceError: () => {

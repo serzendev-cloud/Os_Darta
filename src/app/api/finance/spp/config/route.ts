@@ -10,7 +10,7 @@ import { requirePermission } from '@/lib/authz/authorization-service';
 import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
 import { Permission } from '@/config/permissions';
 
-export async function GET() {
+export async function GET(_request?: Request) {
   try {
     // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
     let user: any = null;

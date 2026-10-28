@@ -4,7 +4,7 @@
 // Traceability: CIP-WP-007 | Rule SMB-221
 // ========================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { z } from 'zod';
 
 // Mock Drizzle module with mock data for endpoints under test
