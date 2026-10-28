@@ -17,6 +17,29 @@ import { GET as getTermsApi, POST as postTermsApi } from '@/app/api/academic/wor
 import * as tenantContextModule from '@/lib/tenant/context';
 import { academicYears } from '@/lib/db/schema';
 
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(async () => ({
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: { user: { id: 'sa_academic_admin', email: 'superadmin@madev.id' } },
+        error: null,
+      })),
+    },
+  })),
+}));
+
+vi.mock('@/lib/authz/authorization-service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/authz/authorization-service')>();
+  return {
+    ...actual,
+    authorizeOperationalApi: vi.fn().mockResolvedValue({
+      authorized: true,
+      decision: 'AUTHORIZED',
+      effectivePermissions: new Set(['*']),
+    }),
+  };
+});
+
 // ── In-Memory PostgreSQL Simulator ───────────────────────────────────────────
 
 function toCamel(s: string): string {
@@ -645,7 +668,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
     // Client maliciously attempts to send tenantId = 'tenant-victim-99'
     const spoofedRequest = new Request('http://localhost:3000/api/academic/workspace/years', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-is-super-admin': 'true' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: '2026/2027 Spoofed',
         startDate: '2026-07-01',
@@ -679,7 +702,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
     ]);
     const getYearsRes = await getYearsApi(
       new Request('http://localhost:3000/api/academic/workspace/years', {
-        headers: { 'x-is-super-admin': 'true' },
+        headers: {},
       })
     );
     expect(getYearsRes.status).toBe(200);
@@ -701,7 +724,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
 
     const spoofedTermReq = new Request('http://localhost:3000/api/academic/workspace/terms', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-is-super-admin': 'true' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         academicYearId: 'ay_list_1',
         name: 'Semester Ganjil',
@@ -717,7 +740,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
     const getTermsSpy = vi.spyOn(academicTermService, 'getAcademicTerms').mockResolvedValue([]);
     const getTermsRes = await getTermsApi(
       new Request('http://localhost:3000/api/academic/workspace/terms', {
-        headers: { 'x-is-super-admin': 'true' },
+        headers: {},
       })
     );
     expect(getTermsRes.status).toBe(200);
@@ -736,7 +759,7 @@ describe('WP-ACADEMIC-FOUNDATION-IMPLEMENTATION-001 — Academic Foundation Cont
     // Invalid body with start_date > end_date
     const invalidRequest = new Request('http://localhost:3000/api/academic/workspace/years', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-is-super-admin': 'true' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: '2026/2027 Inverted',
         startDate: '2027-07-01',

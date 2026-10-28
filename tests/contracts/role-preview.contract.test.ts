@@ -73,6 +73,26 @@ vi.mock('@supabase/ssr', () => ({
   })),
 }));
 
+const mockPlatformUserRoles: Record<string, string[]> = {
+  sa_usr_01: ['SUPER_ADMIN'],
+  dev_usr_01: ['DEVELOPER'],
+};
+
+vi.mock('@/lib/authz/authorization-service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/authz/authorization-service')>();
+  return {
+    ...actual,
+    authorizePlatformRole: vi.fn().mockImplementation(async (userId: string, role: string) => {
+      const userRoles = mockPlatformUserRoles[userId] || [];
+      if (userRoles.includes(role)) {
+        return { authorized: true, userId, role };
+      }
+      return { authorized: false, error: 'User does not possess required platform role' };
+    }),
+  };
+});
+
+
 import {
   createOriginTicket,
   validateOriginTicket,

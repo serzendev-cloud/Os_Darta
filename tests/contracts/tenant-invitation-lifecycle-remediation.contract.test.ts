@@ -56,6 +56,7 @@ function createMockDb(config: {
   memberships?: Array<{ tenantId: string; primaryRoleId: string; status: string }>;
   primaryRole?: { id: string; roleCode: string; status: string } | null;
   rolePermissions?: Array<{ code: string; scope: string }>;
+  platformRoles?: Array<{ roleId: string; roleName: string }>;
 }) {
   return {
     select: vi.fn().mockImplementation((_fields: any) => ({
@@ -116,6 +117,10 @@ function createMockDb(config: {
               // Role permissions query
               if (table && table.tenantRoleId) {
                 return config.rolePermissions || [];
+              }
+              // Platform roles query
+              if (table && table.platformRoleId) {
+                return config.platformRoles || [];
               }
               return [];
             }),
@@ -443,13 +448,33 @@ describe('WP-TENANT-INVITATION-LIFECYCLE-REMEDIATION-IMPLEMENTATION-001', () => 
     });
 
     it('22. Super Admin platform role bypasses tenant membership constraints via authorizeOperationalApi', async () => {
-      const superAdminRequest = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
+      // (a) Kasus Pembanding: header x-is-super-admin: 'true' tanpa peran platform di DB -> authorized false
+      const spoofedRequest = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-is-super-admin': 'true',
+          'x-user-id': 'usr-spoofed',
+        },
+      });
+      const unauthMockDb = createMockDb({
+        userStatus: 'ACTIVE',
+        platformRoles: [],
+      });
+      const authzSpoofed = await authorizeOperationalApi(spoofedRequest, 'tenant-1', unauthMockDb);
+      expect(authzSpoofed.authorized).toBe(false);
+      expect(authzSpoofed.status).toBe(403);
+
+      // (b) Jalur Sukses: Peran platform valid di DB -> authorized true
+      const superAdminMockDb = createMockDb({
+        userStatus: 'ACTIVE',
+        platformRoles: [{ roleId: 'SUPER_ADMIN', roleName: 'SUPER_ADMIN' }],
+      });
+      const superAdminRequest = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
+        headers: {
+          'x-user-id': 'usr-superadmin',
         },
       });
 
-      const authz = await authorizeOperationalApi(superAdminRequest, 'tenant-1');
+      const authz = await authorizeOperationalApi(superAdminRequest, 'tenant-1', superAdminMockDb);
       expect(authz.authorized).toBe(true);
     });
 

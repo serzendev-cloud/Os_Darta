@@ -436,23 +436,39 @@ export async function authorizePlatformRole(
 
 /**
  * Authorizes an incoming Request for operational tenant API access.
- * Enforces fail-closed multi-tenant boundary:
- * 1. Super Admin / Developer via proxy header -> AUTHORIZED.
- * 2. Regular user -> Evaluates getEffectivePermissions(userId, tenantId).
+ * Enforces fail-closed multi-tenant boundary (WP-SEC-PLATFORM-001):
+ * 1. Super Admin / Developer verified via Server Session & DB platform_roles -> AUTHORIZED.
+ * 2. Regular user -> Evaluates getEffectivePermissions(userId, tenantId, dbInstance).
  *    Denies if user lifecycle or tenant membership is not ACTIVE.
+ * 
+ * Rejects client-supplied x-is-super-admin header unconditionally.
  */
 export async function authorizeOperationalApi(
   request: Request,
   tenantId: string,
   dbInstance = db
 ): Promise<{ authorized: boolean; status?: number; error?: string; message?: string }> {
-  const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
-  if (isSuperAdmin) {
-    return { authorized: true };
+  // 1. Resolve Authenticated User ID (Server session or test harness)
+  let currentUserId: string | null = null;
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data?.user?.id) {
+      currentUserId = data.user.id;
+    }
+  } catch {
+    currentUserId = null;
   }
 
-  const userId = request.headers.get('x-user-id');
-  if (!userId || userId.trim() === '') {
+  // Controlled test harness support ONLY in test environments
+  if (!currentUserId && (process.env.NODE_ENV === 'test' || process.env.VITEST)) {
+    const headerUserId = request.headers.get('x-user-id');
+    if (headerUserId && headerUserId.trim() !== '') {
+      currentUserId = headerUserId.trim();
+    }
+  }
+
+  if (!currentUserId) {
     return {
       authorized: false,
       status: 401,
@@ -461,7 +477,19 @@ export async function authorizeOperationalApi(
     };
   }
 
-  const result = await getEffectivePermissions(userId, tenantId, dbInstance);
+  // 2. Check Platform Roles in Database (SUPER_ADMIN / DEVELOPER)
+  const superAdminCheck = await authorizePlatformRole(currentUserId, 'SUPER_ADMIN', dbInstance);
+  if (superAdminCheck.authorized) {
+    return { authorized: true };
+  }
+
+  const developerCheck = await authorizePlatformRole(currentUserId, 'DEVELOPER', dbInstance);
+  if (developerCheck.authorized) {
+    return { authorized: true };
+  }
+
+  // 3. Evaluate Tenant Membership & Permissions in DB
+  const result = await getEffectivePermissions(currentUserId, tenantId, dbInstance);
   if (!result.authorized) {
     const isUncompleted =
       result.decision === 'DENIED_USER_LIFECYCLE_INACTIVE' ||

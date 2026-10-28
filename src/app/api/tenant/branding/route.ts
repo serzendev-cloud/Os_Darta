@@ -8,7 +8,7 @@ import type { NextRequest } from 'next/server';
 import * as schema from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getTenantContext } from '@/lib/tenant/context';
-import { requirePermission } from '@/lib/authz/authorization-service';
+import { requirePermission, authorizePlatformRole } from '@/lib/authz/authorization-service';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
 
 /**
@@ -31,7 +31,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
+    let isSuperAdmin = false;
+    if (userId) {
+      const superCheck = await authorizePlatformRole(userId, 'SUPER_ADMIN');
+      const devCheck = await authorizePlatformRole(userId, 'DEVELOPER');
+      isSuperAdmin = superCheck.authorized || devCheck.authorized;
+    }
 
     // Execute query inside canonical tenant transaction context
     const settingsRecords = await withTenantTransaction(
@@ -80,7 +85,12 @@ export async function POST(request: NextRequest) {
   try {
     const tenant = await getTenantContext();
     const userId = request.headers.get('x-user-id') || '';
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
+    let isSuperAdmin = false;
+    if (userId) {
+      const superCheck = await authorizePlatformRole(userId, 'SUPER_ADMIN');
+      const devCheck = await authorizePlatformRole(userId, 'DEVELOPER');
+      isSuperAdmin = superCheck.authorized || devCheck.authorized;
+    }
 
     // Enforce RBAC Permission Check if user session header exists
     if (userId) {

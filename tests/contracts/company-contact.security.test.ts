@@ -5,9 +5,35 @@ import { GET, POST } from '../../src/app/api/saas/company-contact/route';
 import { platformSettingsService } from '../../src/lib/db/services/platformSettings';
 import { auditLogService } from '../../src/lib/db/services/auditLog';
 
+let mockCurrentPlatformUser: { id: string; roles: string[] } | null = {
+  id: 'super_admin_001',
+  roles: ['SUPER_ADMIN'],
+};
+
+vi.mock('@/lib/authz/authorization-service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/authz/authorization-service')>();
+  return {
+    ...actual,
+    authorizeCurrentPlatformRoles: vi.fn().mockImplementation(async (allowedRoles: readonly string[]) => {
+      if (!mockCurrentPlatformUser) {
+        return { authorized: false, status: 401 };
+      }
+      const hasRole = mockCurrentPlatformUser.roles.some((r) => allowedRoles.includes(r));
+      if (hasRole) {
+        return { authorized: true, userId: mockCurrentPlatformUser.id, role: mockCurrentPlatformUser.roles[0] };
+      }
+      return { authorized: false, status: 403 };
+    }),
+  };
+});
+
 describe('WP-SAAS-COMPANY-CONTACT-EXECUTION-001 — Security & Boundary Contracts', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
+    mockCurrentPlatformUser = {
+      id: 'super_admin_001',
+      roles: ['SUPER_ADMIN'],
+    };
     // Reset platform settings to empty default
     await platformSettingsService.update({
       companyEmail: null,
@@ -19,12 +45,15 @@ describe('WP-SAAS-COMPANY-CONTACT-EXECUTION-001 — Security & Boundary Contract
 
   // 1. Valid Super Admin update
   it('1. Allows valid Super Admin to update platform company contact settings', async () => {
+    mockCurrentPlatformUser = {
+      id: 'super_admin_001',
+      roles: ['SUPER_ADMIN'],
+    };
+
     const req = new NextRequest('http://localhost:3000/api/saas/company-contact', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'super_admin_001',
-        'x-is-super-admin': 'true',
         'host': 'localhost:3000',
         'origin': 'http://localhost:3000',
       },
@@ -45,7 +74,9 @@ describe('WP-SAAS-COMPANY-CONTACT-EXECUTION-001 — Security & Boundary Contract
   });
 
   // 2. Unauthenticated user denied
-  it('2. Denies unauthenticated user (missing x-user-id)', async () => {
+  it('2. Denies unauthenticated user (no server session)', async () => {
+    mockCurrentPlatformUser = null;
+
     const req = new NextRequest('http://localhost:3000/api/saas/company-contact', {
       method: 'POST',
       headers: {
@@ -59,19 +90,22 @@ describe('WP-SAAS-COMPANY-CONTACT-EXECUTION-001 — Security & Boundary Contract
     });
 
     const res = await POST(req);
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
     const json = await res.json();
     expect(json.success).toBe(false);
   });
 
   // 3. Tenant Admin denied
-  it('3. Denies Tenant Admin (x-is-super-admin is missing/false)', async () => {
+  it('3. Denies Tenant Admin without platform role in DB', async () => {
+    mockCurrentPlatformUser = {
+      id: 'tenant_admin_99',
+      roles: [],
+    };
+
     const req = new NextRequest('http://localhost:3000/api/saas/company-contact', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'tenant_admin_99',
-        'x-tenant-id': 'pesantren_alfatih',
         'host': 'localhost:3000',
         'origin': 'http://localhost:3000',
       },
@@ -86,12 +120,15 @@ describe('WP-SAAS-COMPANY-CONTACT-EXECUTION-001 — Security & Boundary Contract
 
   // 4. Tenant User denied
   it('4. Denies Tenant User', async () => {
+    mockCurrentPlatformUser = {
+      id: 'tenant_user_123',
+      roles: [],
+    };
+
     const req = new NextRequest('http://localhost:3000/api/saas/company-contact', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'tenant_user_123',
-        'x-user-role': 'USER',
         'host': 'localhost:3000',
         'origin': 'http://localhost:3000',
       },
@@ -103,6 +140,34 @@ describe('WP-SAAS-COMPANY-CONTACT-EXECUTION-001 — Security & Boundary Contract
     const res = await POST(req);
     expect(res.status).toBe(403);
   });
+
+  // 4b. Spoofed header denied
+  it('4b. Denies client presenting spoofed x-is-super-admin header without DB platform role', async () => {
+    mockCurrentPlatformUser = {
+      id: 'attacker_user_666',
+      roles: [],
+    };
+
+    const req = new NextRequest('http://localhost:3000/api/saas/company-contact', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': 'attacker_user_666',
+        'x-is-super-admin': 'true',
+        'host': 'localhost:3000',
+        'origin': 'http://localhost:3000',
+      },
+      body: JSON.stringify({
+        companyEmail: 'attacker@evil.com',
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+  });
+
 
   // 5. Missing CSRF / Origin Header rejected
   it('5. Rejects mutation with untrusted origin or CSRF mismatch', async () => {
@@ -277,14 +342,13 @@ describe('WP-SAAS-COMPANY-CONTACT-EXECUTION-001 — Security & Boundary Contract
 
   // 13. Audit log is created upon successful mutation
   it('13. Creates an audit log entry on successful platform settings update', async () => {
+    mockCurrentPlatformUser = { id: 'super_admin_007', roles: ['SUPER_ADMIN'] };
     const spyAudit = vi.spyOn(auditLogService, 'log');
 
     const req = new NextRequest('http://localhost:3000/api/saas/company-contact', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-user-id': 'super_admin_007',
-        'x-is-super-admin': 'true',
         'host': 'localhost:3000',
         'origin': 'http://localhost:3000',
       },

@@ -11,6 +11,7 @@ import * as schema from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { platformSettingsService } from '@/lib/db/services/platformSettings';
 import { auditLogService } from '@/lib/db/services/auditLog';
+import { authorizeCurrentPlatformRoles } from '@/lib/authz/authorization-service';
 import { isDemoMode } from '@/lib/mock-store';
 
 /**
@@ -125,20 +126,25 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
-
-    // 1. Authentication & Authorization Gate (Super Admin Only)
-    if (!userId || !isSuperAdmin) {
+    // 1. Authentication & Authorization Gate (Super Admin & Developer Only via Server Session & DB)
+    const authorization = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER']);
+    if (!authorization.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Forbidden',
+          error:
+            authorization.status === 401
+              ? 'Unauthorized'
+              : authorization.status === 503
+              ? 'AuthorizationUnavailable'
+              : 'Forbidden',
           message: 'Akses ditolak. Hanya Super Admin / Developer yang dapat mengubah informasi kontak perusahaan.',
         },
-        { status: 403 }
+        { status: authorization.status }
       );
     }
+
+    const { userId } = authorization;
 
     // 2. CSRF & Origin Defense Gate
     if (!validateOrigin(request)) {

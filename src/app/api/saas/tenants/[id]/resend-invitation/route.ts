@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { tenantProvisioningService } from '@/modules/saas/services/tenant-provisioning-service';
+import { authorizeCurrentPlatformRoles } from '@/lib/authz/authorization-service';
 
 function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
@@ -41,20 +42,25 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.headers.get('x-user-id');
-    const isSuperAdmin = request.headers.get('x-is-super-admin') === 'true';
-
-    // 1. Authorization Gate (Super Admin Only)
-    if (!userId || !isSuperAdmin) {
+    // 1. Authorization Gate (Super Admin & Developer Only via Server Session & DB)
+    const authorization = await authorizeCurrentPlatformRoles(['SUPER_ADMIN', 'DEVELOPER']);
+    if (!authorization.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Forbidden',
-          message: 'Akses ditolak. Hanya Super Admin yang dapat mengirim ulang undangan tenant.',
+          error:
+            authorization.status === 401
+              ? 'Unauthorized'
+              : authorization.status === 503
+              ? 'AuthorizationUnavailable'
+              : 'Forbidden',
+          message: 'Akses platform memerlukan sesi valid dan role platform yang sah.',
         },
-        { status: 403 }
+        { status: authorization.status }
       );
     }
+
+    const { userId } = authorization;
 
     // 2. CSRF Defense Gate
     if (!validateOrigin(request)) {
@@ -86,14 +92,14 @@ export async function POST(
 
     return NextResponse.json(result, { status: result.success ? 200 : 502 });
   } catch (error: unknown) {
+    console.error('[API /api/saas/tenants/[id]/resend-invitation POST] Error:', error);
     const statusCode = (error as { statusCode?: number })?.statusCode || 500;
-    const rawMessage = error instanceof Error ? error.message : 'Gagal mengirim ulang email undangan.';
 
     return NextResponse.json(
       {
         success: false,
         error: 'RESEND_INVITATION_ERROR',
-        message: rawMessage,
+        message: 'Gagal memproses pengiriman ulang email undangan.',
       },
       { status: statusCode }
     );

@@ -12,6 +12,7 @@ import {
   touchOriginTicket,
   COOKIE_PREVIEW_ORIGIN_TICKET,
 } from '@/lib/authz/preview-origin-ticket';
+import { authorizePlatformRole } from '@/lib/authz/authorization-service';
 
 export const runtime = 'nodejs';
 
@@ -84,19 +85,16 @@ export async function POST(request: NextRequest) {
 
   // Determine if caller is authorized:
   // Allowed IF:
-  // A) Caller is an authenticated Super Admin or Developer (initiating preview mode)
+  // A) Caller is an authenticated Super Admin or Developer verified via DB platform roles
   // B) Caller is in an active preview session with a valid, unexpired, unconsumed origin ticket (switching persona)
-  const callerRole = (
-    callerUser?.app_metadata?.role ||
-    callerUser?.user_metadata?.role ||
-    ''
-  ).toLowerCase();
-
-  const isOriginSuperAdmin =
-    callerUser &&
-    (callerRole === 'super_admin' ||
-      callerRole === 'developer' ||
-      callerUser.email === 'superadmin@madev.id');
+  let isOriginSuperAdmin = false;
+  if (callerUser?.id) {
+    const superAdminCheck = await authorizePlatformRole(callerUser.id, 'SUPER_ADMIN');
+    const developerCheck = await authorizePlatformRole(callerUser.id, 'DEVELOPER');
+    if (superAdminCheck.authorized || developerCheck.authorized) {
+      isOriginSuperAdmin = true;
+    }
+  }
 
   const isSwitchingWithTicket =
     callerUser &&
@@ -153,7 +151,7 @@ export async function POST(request: NextRequest) {
     const ticketRecord = await createOriginTicket(
       callerUser!.id,
       callerUser!.email!,
-      callerRole || 'super_admin',
+      'super_admin',
       requestedRole
     );
     activeTicketId = ticketRecord.ticketId;
@@ -172,10 +170,11 @@ export async function POST(request: NextRequest) {
   });
 
   if (error || !data.session) {
+    console.error('[API /api/auth/role-preview POST] GoTrue Auth error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: `Gagal mengautentikasi identitas preview: ${error?.message || 'Sesi tidak terbentuk'}`,
+        error: 'Gagal mengautentikasi identitas preview.',
         code: 'PREVIEW_AUTH_FAILED',
       },
       { status: 401 }
