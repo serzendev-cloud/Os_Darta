@@ -11,6 +11,7 @@ import { Permission } from '@/config/permissions';
 
 interface AuthResolution {
   userId: string | null;
+  userEmail: string | null;
   isSuperAdmin: boolean;
 }
 
@@ -30,7 +31,11 @@ async function resolveAuthUser(request: NextRequest): Promise<AuthResolution> {
       const appRole = (user.app_metadata?.role || '') as string;
       const normalizedRole = appRole.toUpperCase().replace(/\s+/g, '_');
       const isSuper = normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'DEVELOPER';
-      return { userId: user.id, isSuperAdmin: isSuper };
+      return {
+        userId: user.id,
+        userEmail: user.email ?? null,
+        isSuperAdmin: isSuper,
+      };
     }
   } catch {
     // Session resolution unavailable in current context (e.g. test harness)
@@ -41,11 +46,16 @@ async function resolveAuthUser(request: NextRequest): Promise<AuthResolution> {
     const headerUserId = request.headers.get('x-user-id');
     if (headerUserId && headerUserId.trim() !== '') {
       const isSuper = request.headers.get('x-is-super-admin') === 'true';
-      return { userId: headerUserId.trim(), isSuperAdmin: isSuper };
+      const email = request.headers.get('x-user-email');
+      return {
+        userId: headerUserId.trim(),
+        userEmail: email && email.trim() !== '' ? email.trim() : null,
+        isSuperAdmin: isSuper,
+      };
     }
   }
 
-  return { userId: null, isSuperAdmin: false };
+  return { userId: null, userEmail: null, isSuperAdmin: false };
 }
 
 /**
@@ -87,7 +97,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    const operatorUserId: string = auth.userId;
+    const operatorUserId: string = auth.userId.trim();
+    const operatorUserLabel: string = (auth.userEmail && auth.userEmail.trim()) || operatorUserId;
 
     // 3. Validasi Otorisasi Berbasis Database (requirePermission)
     const authz = await requirePermission(operatorUserId, tenant.id, Permission.MANAGE_RFID_PIN);
@@ -203,7 +214,7 @@ export async function POST(request: NextRequest) {
           id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
           tenantId: tenant.id,
           action: 'RFID_PIN_RESET',
-          user: operatorUserId,
+          user: operatorUserLabel,
           userId: operatorUserId,
           userRole: authz.primaryRoleCode || 'ADMIN',
           details: `Reset PIN kartu RFID ${card.cardUid} santri ${santriObj.name} (${santriObj.id})`,

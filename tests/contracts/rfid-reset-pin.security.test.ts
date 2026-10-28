@@ -272,7 +272,43 @@ describe('WP-SEC-RFID-PIN-001 — Security Hardening Contract Tests', () => {
     expect(auditRecord.targetEntity).toBe('rfid_card');
     expect(auditRecord.targetId).toBe('card-001');
     expect(auditRecord.tenantId).toBe('tenant-al-fatih');
+    expect(typeof auditRecord.user).toBe('string');
+    expect(auditRecord.user).toBe('operator-bendahara');
+    expect(auditRecord.userId).toBe('operator-bendahara');
     expect(auditRecord.details).not.toContain('654321');
+  });
+
+  it('5b. Audit trail robustness: Kolom audit user selalu string terisi walau email sesi bernilai null', async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 'user-no-email-123',
+          email: null,
+          app_metadata: { role: 'ADMIN' },
+        },
+      },
+      error: null,
+    });
+
+    const req = new NextRequest('http://localhost:3000/api/rfid/reset-pin', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        cardUid: 'RFID_ALFATIH_001',
+        newPin: '654321',
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    const latestAudit = mockState.auditInserts[mockState.auditInserts.length - 1].valuesData;
+    expect(typeof latestAudit.user).toBe('string');
+    expect(latestAudit.user).toBe('user-no-email-123');
+    expect(latestAudit.userId).toBe('user-no-email-123');
+    expect(latestAudit.details).not.toContain('654321');
   });
 
   it('6. Wali kelas: Mengembalikan HTTP 403 saat diakses oleh wali_kelas', async () => {
