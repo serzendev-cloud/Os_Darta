@@ -50,6 +50,10 @@ vi.mock('@/lib/db', () => {
 // Import route handlers
 import { GET as getYears, POST as postYears } from '@/app/api/academic/workspace/years/route';
 import { POST as postPay } from '@/app/api/canteen/pay/route';
+import * as tenantContextModule from '@/lib/tenant/context';
+import * as authzModule from '@/lib/authz/authorization-service';
+import * as serverClientModule from '@/lib/supabase/server';
+import * as tenantTxModule from '@/lib/db/tenant-transaction';
 
 // ── Contract Schema Definitions ──────────────────────────────────────────────
 
@@ -154,6 +158,30 @@ describe('API Contract validation', () => {
   });
 
   describe('Canteen Payment POS API Contracts', () => {
+    beforeEach(() => {
+      vi.spyOn(tenantContextModule, 'getTenantContext').mockResolvedValue({
+        id: 'tenant-123',
+        slug: 'pesantren-test',
+      } as any);
+      vi.spyOn(authzModule, 'requirePermission').mockResolvedValue({
+        authorized: true,
+        decision: 'AUTHORIZED',
+        effectivePermissions: new Set(['process_canteen_payment']),
+      } as any);
+      vi.spyOn(serverClientModule, 'createClient').mockResolvedValue({
+        auth: {
+          getUser: vi.fn().mockResolvedValue({
+            data: { user: { id: 'cashier-1', email: 'kasir@kantin.id' } },
+            error: null,
+          }),
+        },
+      } as any);
+      vi.spyOn(tenantTxModule, 'withTenantTransaction').mockImplementation(async (_tenantId, cb) => {
+        const { db } = await import('@/lib/db');
+        return cb(db as any);
+      });
+    });
+
     it('should validate successful payment response schema contract', async () => {
       const request = new Request('http://localhost/api/canteen/pay', {
         method: 'POST',

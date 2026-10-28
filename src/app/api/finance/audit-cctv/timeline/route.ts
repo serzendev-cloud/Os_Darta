@@ -1,45 +1,37 @@
 // ==============================================================================
 // Digital CCTV & Financial Audit Timeline API Route
-// Work Package: WP-M2-FINANCIAL-AUDIT-TRAIL-AND-DIGITAL-CCTV-001
-// Hardening: PO-LIMITED-SECURITY-REMEDIATION-001 (Workstream B)
-// Compliance: Fail-Closed Server Auth (401), Tenant Scoping & RBAC (403), PO Decisions 4, 6, 8, 9, 10
+// Work Package: WP-SEC-CANTEEN-001 (Hardened Auth & Strict Tenancy)
+// Compliance: Fail-Closed Server Auth (401), Tenant Scoping (400), Canonical RBAC (403)
 // ==============================================================================
 
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { canteenTransactions, santri, financialAuditLogs } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { merchantLedgerService } from '@/lib/finance/merchantLedger';
 import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
-import { getTenantContext } from '@/lib/tenant/context';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
 import {
   authorizePlatformRole,
-  getEffectivePermissions,
+  requirePermission,
 } from '@/lib/authz/authorization-service';
+import { withTenantTransaction } from '@/lib/db/tenant-transaction';
+import { Permission } from '@/config/permissions';
 
 export async function GET(request: Request) {
   try {
     // ── 1. Fail-Closed Server-Side Authentication ────────────────────────────
-    let serverUserId: string | null = null;
+    let user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null = null;
     try {
       const supabase = await createSupabaseServerClient();
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user?.id) {
-        serverUserId = data.user.id;
+        user = data.user;
       }
     } catch {
-      serverUserId = null;
+      user = null;
     }
 
-    // Controlled test harness support
-    if (!serverUserId && (process.env.NODE_ENV === 'test' || process.env.VITEST)) {
-      const headerUserId = request.headers.get('x-user-id');
-      if (headerUserId && headerUserId.trim() !== '') {
-        serverUserId = headerUserId.trim();
-      }
-    }
-
-    if (!serverUserId) {
+    if (!user?.id) {
       return NextResponse.json(
         {
           success: false,
@@ -51,16 +43,10 @@ export async function GET(request: Request) {
     }
 
     // ── 2. Verified Tenant Context Resolution ────────────────────────────────
-    let tenantId: string;
+    let tenant: { id: string };
     try {
-      const tenantContext = await getTenantContext();
-      tenantId = tenantContext.id;
-    } catch {
-      // In test harness or direct API context
-      const headerTenantId = request.headers.get('x-tenant-id');
-      if (headerTenantId && headerTenantId.trim() !== '') {
-        tenantId = headerTenantId.trim();
-      } else {
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
         return NextResponse.json(
           {
             success: false,
@@ -70,38 +56,34 @@ export async function GET(request: Request) {
           { status: 400 }
         );
       }
+      tenant = tenantCtx;
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'TENANT_NOT_FOUND',
+          message: 'Tenant context tidak valid atau tidak ditemukan',
+        },
+        { status: 400 }
+      );
     }
 
-    // ── 3. Database-Backed Role & Permission Gate (Zero-Trust) ───────────────
+    // ── 3. Database-Backed Role & Canonical Permission Gate ──────────────────
     let isAuthorized = false;
     let authReason = 'Akses Ditolak: Anda tidak memiliki wewenang untuk melihat rekaman audit finansial dan CCTV';
 
     try {
-      // Check platform-level privileges first
-      const platformSuper = await authorizePlatformRole(serverUserId, 'SUPER_ADMIN');
-      const platformDev = await authorizePlatformRole(serverUserId, 'DEVELOPER');
+      const platformSuper = await authorizePlatformRole(user.id, 'SUPER_ADMIN');
+      const platformDev = await authorizePlatformRole(user.id, 'DEVELOPER');
 
       if (platformSuper.authorized || platformDev.authorized) {
         isAuthorized = true;
       } else {
-        const permResult = await getEffectivePermissions(serverUserId, tenantId);
-        if (permResult.authorized) {
-          const roleCode = permResult.primaryRoleCode?.toUpperCase();
-          // Explicitly allowed roles and permissions for financial audit / CCTV timeline
-          if (
-            roleCode === 'ADMIN_KEUANGAN' ||
-            roleCode === 'BENDAHARA' ||
-            roleCode === 'ADMIN' ||
-            permResult.effectivePermissions.has('view_monitoring') ||
-            permResult.effectivePermissions.has('view_governance') ||
-            permResult.effectivePermissions.has('finance:review')
-          ) {
-            isAuthorized = true;
-          } else {
-            authReason = `Peran "${permResult.primaryRoleCode}" tidak memiliki wewenang untuk mengakses rekaman CCTV dan data transaksi santri.`;
-          }
+        const authz = await requirePermission(user.id, tenant.id, Permission.VIEW_FINANCE_AUDIT_CCTV);
+        if (authz.authorized) {
+          isAuthorized = true;
         } else {
-          authReason = permResult.reason || authReason;
+          authReason = 'Akses Ditolak: Peran Anda tidak memiliki wewenang untuk mengakses rekaman CCTV dan audit finansial';
         }
       }
     } catch {
@@ -123,32 +105,32 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 30, 1), 100);
 
-    // 1. Fetch recent transactions
-    const txList = await db
-      .select({
-        tx: canteenTransactions,
-        santriPhoto: santri.photoUrl,
-        santriClass: santri.kelas,
-        santriNis: santri.nis,
-      })
-      .from(canteenTransactions)
-      .leftJoin(santri, and(eq(santri.id, canteenTransactions.santriId), eq(santri.tenantId, tenantId)))
-      .where(eq(canteenTransactions.tenantId, tenantId))
-      .orderBy(desc(canteenTransactions.createdAt))
-      .limit(limit);
+    const { txList, recentAuditLogs } = await withTenantTransaction(tenant.id, async (tx) => {
+      const transactions = await tx
+        .select({
+          tx: canteenTransactions,
+          santriPhoto: santri.photoUrl,
+          santriClass: santri.kelas,
+          santriNis: santri.nis,
+        })
+        .from(canteenTransactions)
+        .leftJoin(santri, and(eq(santri.id, canteenTransactions.santriId), eq(santri.tenantId, tenant.id)))
+        .where(eq(canteenTransactions.tenantId, tenant.id))
+        .orderBy(desc(canteenTransactions.createdAt))
+        .limit(limit);
 
-    // 2. Fetch merchant rights summary
-    const merchantSummary = await merchantLedgerService.getSummary(tenantId);
+      const auditLogs = await tx
+        .select()
+        .from(financialAuditLogs)
+        .where(eq(financialAuditLogs.tenantId, tenant.id))
+        .orderBy(desc(financialAuditLogs.createdAt))
+        .limit(20);
 
-    // 3. Fetch latest financial audit logs
-    const recentAuditLogs = await db
-      .select()
-      .from(financialAuditLogs)
-      .where(eq(financialAuditLogs.tenantId, tenantId))
-      .orderBy(desc(financialAuditLogs.createdAt))
-      .limit(20);
+      return { txList: transactions, recentAuditLogs: auditLogs };
+    });
 
-    // 4. Map transactions into Digital CCTV event timeline
+    const merchantSummary = await merchantLedgerService.getSummary(tenant.id);
+
     const timelineEvents = txList.map(({ tx, santriPhoto, santriClass, santriNis }) => ({
       id: tx.id,
       timestamp: tx.createdAt,
@@ -168,9 +150,8 @@ export async function GET(request: Request) {
       },
       audit: {
         correlationId: tx.idempotencyKey || tx.id,
-        hasIdempotencyKey: !!tx.idempotencyKey,
+        hasIdempotencyKey: !tx.idempotencyKey,
       },
-      // Digital CCTV visual capture metadata (Decision 10: optional add-on)
       cctv: {
         isAvailable: false,
         cameraChannel: 'CAM-POS-01 (Kantin)',
@@ -188,7 +169,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal memuat timeline audit';
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+    console.error('[API /api/finance/audit-cctv/timeline GET] Internal error:', error);
+    return NextResponse.json(
+      { success: false, code: 'INTERNAL_SERVER_ERROR', message: 'Gagal memuat timeline audit' },
+      { status: 500 }
+    );
   }
 }

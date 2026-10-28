@@ -23,17 +23,40 @@ const DEFAULT_CANONICAL_PERMISSIONS = [
   'review_spp_installments',
   'view_finance_recap',
   'export_finance_recap',
+  'process_canteen_payment',
+  'request_canteen_refund',
+  'view_canteen_refund',
+  'review_canteen_refund',
+  'view_finance_reconciliation',
+  'manage_finance_reconciliation',
+  'view_finance_audit_cctv',
   'finance:export',
   'finance:review',
   'finance:pay',
   'finance:manage',
+  'finance:refund:review',
+  'finance:refund:request',
+  'finance:reconcile',
 ];
 
 const LEGACY_PERMISSION_MAP: Record<string, string[]> = {
   'finance:manage': ['manage_billing_campaigns', 'manage_spp_config', 'finance:manage'],
-  'finance:review': ['view_spp_installments', 'review_spp_installments', 'view_spp_config', 'manage_spp_config', 'finance:review'],
-  'finance:pay': ['record_spp_payment', 'finance:pay'],
+  'finance:review': [
+    'view_spp_installments',
+    'review_spp_installments',
+    'view_spp_config',
+    'manage_spp_config',
+    'view_finance_audit_cctv',
+    'review_canteen_refund',
+    'view_canteen_refund',
+    'view_finance_reconciliation',
+    'finance:review',
+  ],
+  'finance:pay': ['record_spp_payment', 'process_canteen_payment', 'finance:pay'],
   'finance:export': ['view_finance_recap', 'export_finance_recap', 'view_billing_campaigns', 'finance:export'],
+  'finance:refund:review': ['review_canteen_refund', 'finance:refund:review'],
+  'finance:refund:request': ['request_canteen_refund', 'view_canteen_refund', 'finance:refund:request'],
+  'finance:reconcile': ['view_finance_reconciliation', 'manage_finance_reconciliation', 'finance:reconcile'],
 };
 
 /**

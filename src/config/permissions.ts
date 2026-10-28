@@ -106,6 +106,17 @@ export const Permission = {
   REVIEW_SPP_INSTALLMENTS: 'review_spp_installments',
   VIEW_FINANCE_RECAP: 'view_finance_recap',
   EXPORT_FINANCE_RECAP: 'export_finance_recap',
+
+  // Kantin & POS
+  PROCESS_CANTEEN_PAYMENT: 'process_canteen_payment',
+  REQUEST_CANTEEN_REFUND: 'request_canteen_refund',
+  VIEW_CANTEEN_REFUND: 'view_canteen_refund',
+  REVIEW_CANTEEN_REFUND: 'review_canteen_refund',
+
+  // Rekonsiliasi & Audit CCTV
+  VIEW_FINANCE_RECONCILIATION: 'view_finance_reconciliation',
+  MANAGE_FINANCE_RECONCILIATION: 'manage_finance_reconciliation',
+  VIEW_FINANCE_AUDIT_CCTV: 'view_finance_audit_cctv',
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];
@@ -203,6 +214,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_KALENDER_KEGIATAN,
     Permission.VIEW_PERPUSTAKAAN,
     Permission.MANAGE_PERPUSTAKAAN,
+    Permission.PROCESS_CANTEEN_PAYMENT,
+    Permission.REQUEST_CANTEEN_REFUND,
+    Permission.VIEW_CANTEEN_REFUND,
   ]),
 
   guru: new Set([

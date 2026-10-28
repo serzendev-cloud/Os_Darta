@@ -3,12 +3,20 @@
 // Compliance: PO Decisions 1, 2, 7, 8 (Server-Side Auth & Payload Validation)
 // ==============================================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST as payHandler } from '@/app/api/canteen/pay/route';
 import { POST as refundRequestHandler } from '@/app/api/canteen/refund/route';
 import { POST as refundReviewHandler } from '@/app/api/canteen/refund/review/route';
+import { mockFinanceAuthSession } from '../helpers/test-auth-helper';
+import * as authzModule from '@/lib/authz/authorization-service';
 
 describe('Financial Routes & Security Contract Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(authzModule, 'authorizePlatformRole').mockResolvedValue({ authorized: false } as any);
+    mockFinanceAuthSession({ tenantId: 'tenant_test' });
+  });
+
   // ── 1. Canteen Pay Route Contracts ──────────────────────────────────────────
   describe('POST /api/canteen/pay', () => {
     it('returns 400 when cardUid, pin, or amount is missing', async () => {
@@ -66,15 +74,20 @@ describe('Financial Routes & Security Contract Tests', () => {
 
   // ── 3. Canteen Refund Review Route Contracts (Blocker 2) ───────────────────
   describe('POST /api/canteen/refund/review', () => {
-    it('REGRESSION: rejects client-forged body role and returns 403 when no verified server session exists', async () => {
-      // Client attempts to spoof role by putting "admin_keuangan" in body
+    it('REGRESSION: rejects client-forged body role and returns 403 when authenticated user has no refund permission', async () => {
+      mockFinanceAuthSession({
+        userId: 'santri_user_1',
+        roleCode: 'santri',
+        permissions: ['view_own_data'],
+      });
+
       const req = new Request('http://localhost:3000/api/canteen/refund/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           refundId: 'ref_123',
           decision: 'APPROVE',
-          reviewedByRole: 'admin_keuangan', // Client-forged role
+          reviewedByRole: 'admin_keuangan', // Client-forged role in body
         }),
       });
 
@@ -87,12 +100,16 @@ describe('Financial Routes & Security Contract Tests', () => {
     });
 
     it('REGRESSION: rejects Super Admin caller with 403 Forbidden in Phase 1 (Strictly Admin Keuangan ONLY)', async () => {
+      mockFinanceAuthSession({
+        userId: 'superadmin_1',
+        roleCode: 'SUPER_ADMIN',
+      });
+      vi.spyOn(authzModule, 'authorizePlatformRole').mockResolvedValue({ authorized: true } as any);
+
       const req = new Request('http://localhost:3000/api/canteen/refund/review', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'superadmin_server',
-          'x-user-role': 'super_admin',
         },
         body: JSON.stringify({
           refundId: 'ref_123',
@@ -113,8 +130,6 @@ describe('Financial Routes & Security Contract Tests', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'admin_keuangan_server',
-          'x-user-role': 'admin_keuangan',
         },
         body: JSON.stringify({
           decision: 'APPROVE', // missing refundId
@@ -133,8 +148,6 @@ describe('Financial Routes & Security Contract Tests', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'admin_keuangan_server',
-          'x-user-role': 'admin_keuangan',
         },
         body: JSON.stringify({
           refundId: 'ref_123',

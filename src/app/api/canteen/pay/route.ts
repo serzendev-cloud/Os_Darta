@@ -2,12 +2,12 @@
 // RFID Canteen POS Payment API Endpoint (Multi-Canteen & Catalog Supported)
 // Hardened with Persistent DB-Backed Idempotency, Row Locking,
 // Atomic Multi-Table Transaction, Server-side Pricing, & Persistent PIN Lock
-// Work Package: WP-M2-FINANCE-WALLET-RFID-HARDENING-002
+// Work Package: WP-SEC-CANTEEN-001 (Hardened Auth & Strict Tenancy)
+// Compliance: Fail-Closed Server Auth (401), Tenant Scoping (400), Canonical RBAC (403)
 // ========================================
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { db } from '@/lib/db';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
 import {
   rfidCards,
@@ -23,51 +23,104 @@ import { eq, and, gte, inArray } from 'drizzle-orm';
 import { verifyPinCredential, isValidHex32, isValidHex64 } from '@/lib/security/pinCrypto';
 import { merchantLedgerService } from '@/lib/finance/merchantLedger';
 import { financialAuditService } from '@/lib/finance/auditTrail';
+import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
+import { requirePermission } from '@/lib/authz/authorization-service';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
+import { Permission } from '@/config/permissions';
 
 export async function POST(request: Request) {
   try {
-    // ── 0. Context & Input Parsing ──────────────────────────────────────────────────
+    // ── 0. Fail-Closed Server-Side Authentication & Tenant Resolution ────────────────
+    let user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null = null;
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data?.user?.id) {
+        user = data.user;
+      }
+    } catch {
+      user = null;
+    }
+
+    if (!user?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'UNAUTHENTICATED',
+          message: 'Autentikasi diperlukan: Sesi pengguna tidak ditemukan atau kedaluwarsa',
+        },
+        { status: 401 }
+      );
+    }
+
+    let tenant: { id: string };
+    try {
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
+      }
+      tenant = tenantCtx;
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
+    }
+
+    // Canonical Permission Check
+    const authz = await requirePermission(user.id, tenant.id, Permission.PROCESS_CANTEEN_PAYMENT);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'FORBIDDEN',
+          message: 'Akses Ditolak: Anda tidak memiliki wewenang untuk memproses transaksi pembayaran kantin',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Kasir diidentifikasi dari sesi server
+    const posCashierId = user.id;
+    const posCashierName =
+      (user.user_metadata?.full_name as string) || user.email || `Kasir ${user.id}`;
+
+    // ── 1. Input Parsing & Validation ──────────────────────────────────────────────
     const headerIdempotencyKey =
       request.headers.get('Idempotency-Key') || request.headers.get('idempotency-key');
-    const headerTenantId = request.headers.get('x-tenant-id');
 
-    const body = await request.json();
-    const {
-      cardUid,
-      pin,
-      amount,
-      canteenId,
-      vendorName: customVendorName = 'Kantin Utama',
-      itemsDescription,
-      posCashierId = 'POS-1',
-      tenantId: bodyTenantId,
-      items, // Structured items: Array<{ itemId: string; qty: number; discount?: number }>
-      idempotencyKey: bodyIdempotencyKey,
-    } = body;
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const cardUid = typeof body.cardUid === 'string' ? body.cardUid : undefined;
+    const pin = typeof body.pin === 'string' ? body.pin : undefined;
+    const amount = typeof body.amount === 'number' ? body.amount : undefined;
+    const canteenId = typeof body.canteenId === 'string' ? body.canteenId : undefined;
+    const customVendorName = typeof body.vendorName === 'string' ? body.vendorName : 'Kantin Utama';
+    const itemsDescription = typeof body.itemsDescription === 'string' ? body.itemsDescription : undefined;
+    const items = Array.isArray(body.items) ? (body.items as Array<Record<string, unknown>>) : undefined;
+    const bodyIdempotencyKey = typeof body.idempotencyKey === 'string' ? body.idempotencyKey : undefined;
 
-    // Zero-Trust Tenant Resolution: Server proxy header takes precedence
-    const tenantId = (headerTenantId || bodyTenantId || 'default').trim();
     const resolvedIdempotencyKey = headerIdempotencyKey || bodyIdempotencyKey;
 
-    // ── 1. Validasi Input Dasar ────────────────────────────────────────────────────
     if (!cardUid || !pin || amount === undefined || amount === null) {
       return NextResponse.json(
-        { success: false, message: 'Card UID, PIN, dan Nominal Belanja wajib diisi' },
+        { success: false, code: 'BAD_REQUEST', message: 'Card UID, PIN, dan Nominal Belanja wajib diisi' },
         { status: 400 }
       );
     }
 
     if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
       return NextResponse.json(
-        { success: false, message: 'Nominal transaksi harus berupa integer rupiah lebih dari 0' },
+        { success: false, code: 'INVALID_AMOUNT', message: 'Nominal transaksi harus berupa integer rupiah lebih dari 0' },
         { status: 400 }
       );
     }
 
-    // ── 2. Database-Backed Idempotency & Anti-Replay Guard (WP-B) ───────────────────
+    // ── 2. Database-Backed Idempotency & Anti-Replay Guard ─────────────────────────
     let canonicalRequestHash = '';
     if (resolvedIdempotencyKey) {
-      // Deterministic canonical payload excluding raw PIN
       const canonicalItems = Array.isArray(items)
         ? [...items]
             .map((item) => ({
@@ -79,7 +132,7 @@ export async function POST(request: Request) {
         : [];
 
       const canonicalObject = {
-        tenantId,
+        tenantId: tenant.id,
         canteenId: canteenId || null,
         cardUid,
         amount,
@@ -91,20 +144,20 @@ export async function POST(request: Request) {
         .update(JSON.stringify(canonicalObject))
         .digest('hex');
 
-      // Check persistent canteen_transactions table for existing key within tenant
-      const existingTxList = await db
-        .select()
-        .from(canteenTransactions)
-        .where(
-          and(
-            eq(canteenTransactions.tenantId, tenantId),
-            eq(canteenTransactions.idempotencyKey, resolvedIdempotencyKey)
-          )
-        );
+      const existingRecord = await withTenantTransaction(tenant.id, async (tx) => {
+        const existingTxList = await tx
+          .select()
+          .from(canteenTransactions)
+          .where(
+            and(
+              eq(canteenTransactions.tenantId, tenant.id),
+              eq(canteenTransactions.idempotencyKey, resolvedIdempotencyKey)
+            )
+          );
+        return existingTxList[0];
+      });
 
-      const existingRecord = existingTxList[0];
       if (existingRecord) {
-        // Same key, different payload -> HTTP 409 Conflict
         if (existingRecord.requestHash !== canonicalRequestHash) {
           return NextResponse.json(
             {
@@ -117,7 +170,6 @@ export async function POST(request: Request) {
           );
         }
 
-        // Same key, identical payload -> Replay stored response safely without re-debiting
         const replayPayload =
           existingRecord.responsePayload || {
             success: true,
@@ -137,14 +189,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── 3. Server-Side POS Catalog Validation (WP-E) ───────────────────────────────
+    // ── 3. Server-Side POS Catalog Validation ──────────────────────────────────────
     let resolvedItemsDescription = itemsDescription || 'Pembelian Kantin';
     const itemMap = new Map<string, typeof canteenItems.$inferSelect>();
 
     if (Array.isArray(items) && items.length > 0) {
       const itemIds: string[] = [];
       for (const orderItem of items) {
-        if (!orderItem.itemId) {
+        const itemId = typeof orderItem.itemId === 'string' ? orderItem.itemId : undefined;
+        if (!itemId) {
           return NextResponse.json(
             { success: false, code: 'INVALID_ITEM_PAYLOAD', message: 'Setiap item wajib memiliki itemId' },
             { status: 400 }
@@ -172,19 +225,20 @@ export async function POST(request: Request) {
             );
           }
         }
-        itemIds.push(orderItem.itemId);
+        itemIds.push(itemId);
       }
 
-      const catalogItems = await db
-        .select()
-        .from(canteenItems)
-        .where(and(eq(canteenItems.tenantId, tenantId), inArray(canteenItems.id, itemIds)));
+      const catalogItems = await withTenantTransaction(tenant.id, async (tx) => {
+        return tx
+          .select()
+          .from(canteenItems)
+          .where(and(eq(canteenItems.tenantId, tenant.id), inArray(canteenItems.id, itemIds)));
+      });
 
       for (const ci of catalogItems) {
         itemMap.set(ci.id, ci);
       }
 
-      // Verify all items exist in catalog and belong to tenant
       for (const reqItemId of itemIds) {
         const master = itemMap.get(reqItemId);
         if (!master) {
@@ -198,7 +252,6 @@ export async function POST(request: Request) {
           );
         }
 
-        // Verify item belongs to supplied canteen
         if (canteenId && master.canteenId !== canteenId) {
           return NextResponse.json(
             {
@@ -210,7 +263,6 @@ export async function POST(request: Request) {
           );
         }
 
-        // Verify item status is active
         if (master.status !== 'active') {
           return NextResponse.json(
             {
@@ -223,14 +275,14 @@ export async function POST(request: Request) {
         }
       }
 
-      // Server-side SSOT price calculation (ignore client price)
       let calculatedTotal = 0;
       const itemNames: string[] = [];
 
       for (const orderItem of items) {
-        const master = itemMap.get(orderItem.itemId)!;
-        const qty = orderItem.qty || 1;
-        const discount = orderItem.discount || 0;
+        const itemId = String(orderItem.itemId);
+        const master = itemMap.get(itemId)!;
+        const qty = Number(orderItem.qty) || 1;
+        const discount = Number(orderItem.discount) || 0;
         const lineTotal = master.price * qty - discount;
         if (lineTotal < 0) {
           return NextResponse.json(
@@ -262,33 +314,35 @@ export async function POST(request: Request) {
       }
     }
 
-    // Lookup Canteen name if canteenId supplied
     let resolvedVendorName = customVendorName;
     if (canteenId) {
-      const canteenResult = await db
-        .select()
-        .from(canteens)
-        .where(and(eq(canteens.tenantId, tenantId), eq(canteens.id, canteenId)));
+      const canteenResult = await withTenantTransaction(tenant.id, async (tx) => {
+        return tx
+          .select()
+          .from(canteens)
+          .where(and(eq(canteens.tenantId, tenant.id), eq(canteens.id, canteenId)));
+      });
       if (canteenResult[0]) {
         resolvedVendorName = canteenResult[0].name;
       }
     }
 
-    // ── 4. Card Lookup & Persistent PIN Failure Lock (WP-C & WP-D) ────────────────
-    const cardResult = await db
-      .select()
-      .from(rfidCards)
-      .where(and(eq(rfidCards.tenantId, tenantId), eq(rfidCards.cardUid, cardUid)));
+    // ── 4. Card Lookup & Persistent PIN Failure Lock ───────────────────────────────
+    const card = await withTenantTransaction(tenant.id, async (tx) => {
+      const cardResult = await tx
+        .select()
+        .from(rfidCards)
+        .where(and(eq(rfidCards.tenantId, tenant.id), eq(rfidCards.cardUid, cardUid)));
+      return cardResult[0];
+    });
 
-    const card = cardResult[0];
     if (!card) {
       return NextResponse.json(
-        { success: false, message: 'Kartu RFID tidak terdaftar dalam sistem' },
+        { success: false, code: 'CARD_NOT_FOUND', message: 'Kartu RFID tidak terdaftar dalam sistem' },
         { status: 404 }
       );
     }
 
-    // Persistent PIN Failure Lock Check: 3 failures blocks card
     if (card.status === 'blocked' || (card.pinFailedAttempts || 0) >= 3) {
       return NextResponse.json(
         {
@@ -301,7 +355,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // PO DEC-03 Option A: Reject legacy plaintext or unmigrated cards
     const isLegacyPlaintext = card.hashedPin.startsWith('pin_') || !isValidHex64(card.hashedPin);
     if (isLegacyPlaintext) {
       return NextResponse.json(
@@ -315,7 +368,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Reject cards with missing or invalid salt fail-closed (no deterministic fallback)
     if (!card.salt || !isValidHex32(card.salt)) {
       return NextResponse.json(
         {
@@ -328,7 +380,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify PIN with constant-time decoupled cryptography
     let pinValid = false;
     try {
       const verifyResult = verifyPinCredential(pin, {
@@ -355,25 +406,25 @@ export async function POST(request: Request) {
     }
 
     if (!pinValid) {
-      // Increment persistent failure count in database
       const updatedFailed = (card.pinFailedAttempts || 0) + 1;
       const isNowBlocked = updatedFailed >= 3;
 
-      await db
-        .update(rfidCards)
-        .set({
-          pinFailedAttempts: updatedFailed,
-          status: isNowBlocked ? 'blocked' : card.status,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(rfidCards.tenantId, tenantId), eq(rfidCards.id, card.id)));
+      await withTenantTransaction(tenant.id, async (tx) => {
+        await tx
+          .update(rfidCards)
+          .set({
+            pinFailedAttempts: updatedFailed,
+            status: isNowBlocked ? 'blocked' : card.status,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(rfidCards.tenantId, tenant.id), eq(rfidCards.id, card.id)));
+      });
 
-      // Append security audit event (Strictly NO PIN leakage)
       await financialAuditService.log({
-        tenantId,
+        tenantId: tenant.id,
         correlationId: resolvedIdempotencyKey || `sec_${Date.now()}`,
         actorId: posCashierId,
-        actorName: `Kasir ${posCashierId}`,
+        actorName: posCashierName,
         actorRole: 'kasir',
         action: isNowBlocked ? 'ANOMALY_FLAGGED' : 'CANTEEN_PAYMENT',
         targetEntity: 'canteen_transaction',
@@ -409,23 +460,22 @@ export async function POST(request: Request) {
       );
     }
 
-    // Reset failed counter persistently in DB on successful PIN verification
     if ((card.pinFailedAttempts || 0) > 0) {
-      await db
-        .update(rfidCards)
-        .set({ pinFailedAttempts: 0, updatedAt: new Date() })
-        .where(and(eq(rfidCards.tenantId, tenantId), eq(rfidCards.id, card.id)));
+      await withTenantTransaction(tenant.id, async (tx) => {
+        await tx
+          .update(rfidCards)
+          .set({ pinFailedAttempts: 0, updatedAt: new Date() })
+          .where(and(eq(rfidCards.tenantId, tenant.id), eq(rfidCards.id, card.id)));
+      });
     }
 
-    // ── 5. Atomic Financial Transaction with Row-Locking (WP-A, WP-F) ───────────────
-    // All balance deduction, transaction logging, item snapshot, and pocket mutations
-    // run inside an isolated, atomic database transaction with RLS session scoping.
-    const result = await withTenantTransaction(tenantId, async (tx) => {
+    // ── 5. Atomic Financial Transaction with Row-Locking ───────────────────────────
+    const result = await withTenantTransaction(tenant.id, async (tx) => {
       // 5a. Santri lookup inside transaction boundary
       const santriResult = await tx
         .select()
         .from(santri)
-        .where(and(eq(santri.tenantId, tenantId), eq(santri.id, card.santriId)));
+        .where(and(eq(santri.tenantId, tenant.id), eq(santri.id, card.santriId)));
 
       const santriObj = santriResult[0];
       if (!santriObj) {
@@ -436,7 +486,7 @@ export async function POST(request: Request) {
       const walletResult = await tx
         .select()
         .from(wallets)
-        .where(and(eq(wallets.tenantId, tenantId), eq(wallets.santriId, card.santriId)))
+        .where(and(eq(wallets.tenantId, tenant.id), eq(wallets.santriId, card.santriId)))
         .for('update');
 
       const wallet = walletResult[0];
@@ -464,7 +514,7 @@ export async function POST(request: Request) {
         .from(canteenTransactions)
         .where(
           and(
-            eq(canteenTransactions.tenantId, tenantId),
+            eq(canteenTransactions.tenantId, tenant.id),
             eq(canteenTransactions.santriId, card.santriId),
             gte(canteenTransactions.createdAt, startOfToday)
           )
@@ -478,7 +528,7 @@ export async function POST(request: Request) {
         throw new Error(`DAILY_LIMIT_EXCEEDED:${dailyLimit}:${remainingLimit}`);
       }
 
-      // 5e. Zero-Overdraft Balance Check (DEC-08 Fail-Closed)
+      // 5e. Zero-Overdraft Balance Check
       if (wallet.balanceUangSaku < amount) {
         throw new Error(`INSUFFICIENT_BALANCE:${wallet.balanceUangSaku}`);
       }
@@ -493,7 +543,7 @@ export async function POST(request: Request) {
           balanceUangSaku: newBalance,
           updatedAt: new Date(),
         })
-        .where(and(eq(wallets.tenantId, tenantId), eq(wallets.id, wallet.id), gte(wallets.balanceUangSaku, amount)));
+        .where(and(eq(wallets.tenantId, tenant.id), eq(wallets.id, wallet.id), gte(wallets.balanceUangSaku, amount)));
 
       const newSpentToday = totalSpentToday + amount;
       const remainingLimit = Math.max(0, dailyLimit - newSpentToday);
@@ -520,7 +570,7 @@ export async function POST(request: Request) {
       // 5g. Insert Canteen Transaction (with persistent idempotency metadata)
       await tx.insert(canteenTransactions).values({
         id: txId,
-        tenantId,
+        tenantId: tenant.id,
         canteenId: canteenId || null,
         santriId: card.santriId,
         santriName: santriObj.name,
@@ -538,18 +588,19 @@ export async function POST(request: Request) {
       // 5h. Insert Canteen Transaction Items (POS Structured Snapshot)
       if (Array.isArray(items) && items.length > 0) {
         for (const item of items) {
-          const master = itemMap.get(item.itemId);
-          const unitPrice = master ? master.price : (item.price || 0);
-          const qty = item.qty || 1;
-          const discount = item.discount || 0;
+          const itemId = typeof item.itemId === 'string' ? item.itemId : undefined;
+          const master = itemId ? itemMap.get(itemId) : undefined;
+          const unitPrice = master ? master.price : (Number(item.price) || 0);
+          const qty = Number(item.qty) || 1;
+          const discount = Number(item.discount) || 0;
           const subtotal = unitPrice * qty - discount;
 
           await tx.insert(canteenTransactionItems).values({
             id: `item_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
-            tenantId,
+            tenantId: tenant.id,
             transactionId: txId,
-            itemId: item.itemId || null,
-            itemName: master?.name || item.name || 'Barang Kantin',
+            itemId: itemId || null,
+            itemName: master?.name || (typeof item.name === 'string' ? item.name : 'Barang Kantin'),
             unitPrice,
             quantity: qty,
             discount,
@@ -561,7 +612,7 @@ export async function POST(request: Request) {
       // 5i. Insert Wallet Pockets Mutation Log (Append-Only Audit)
       await tx.insert(walletPockets).values({
         id: `mut_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
-        tenantId,
+        tenantId: tenant.id,
         walletId: wallet.id,
         pocketType: 'uang_saku',
         mutationType: 'canteen_deduct',
@@ -575,8 +626,8 @@ export async function POST(request: Request) {
       // 5j. Credit Merchant Hak Pendapatan (Append-Only Central Escrow)
       await merchantLedgerService.recordCreditSale(
         {
-          tenantId,
-          canteenId: canteenId || 'default',
+          tenantId: tenant.id,
+          canteenId: canteenId || tenant.id,
           amount,
           transactionId: txId,
           description: `Penjualan ${resolvedItemsDescription} di ${resolvedVendorName}`,
@@ -587,10 +638,10 @@ export async function POST(request: Request) {
       // 5k. Append-Only Financial Audit Trail (Zero-Credential Leakage)
       await financialAuditService.log(
         {
-          tenantId,
+          tenantId: tenant.id,
           correlationId: resolvedIdempotencyKey || txId,
           actorId: posCashierId,
-          actorName: `Kasir ${posCashierId}`,
+          actorName: posCashierName,
           actorRole: 'kasir',
           action: 'CANTEEN_PAYMENT',
           targetEntity: 'canteen_transaction',
@@ -602,7 +653,7 @@ export async function POST(request: Request) {
           metadata: {
             santriId: card.santriId,
             cardUid,
-            canteenId: canteenId || 'default',
+            canteenId: canteenId || tenant.id,
             vendorName: resolvedVendorName,
           },
         },
@@ -614,9 +665,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error: unknown) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('[API /api/canteen/pay POST] Internal error:', error);
+    const errorMsg = error instanceof Error ? String(error) : '';
 
-    // Business exception mapping
     if (errorMsg.startsWith('DAILY_LIMIT_EXCEEDED:')) {
       const [, dailyLimitStr, remainingLimitStr] = errorMsg.split(':');
       const dailyLimit = Number(dailyLimitStr) || 20000;
@@ -646,15 +697,14 @@ export async function POST(request: Request) {
 
     if (errorMsg.startsWith('CANTEEN_SUSPENDED_') || errorMsg.startsWith('WALLET_BLOCKED')) {
       const message = errorMsg.includes(': ') ? errorMsg.split(': ')[1] : errorMsg;
-      return NextResponse.json({ success: false, message }, { status: 403 });
+      return NextResponse.json({ success: false, code: errorMsg.split(':')[0] || 'FORBIDDEN', message }, { status: 403 });
     }
 
     if (errorMsg.startsWith('SANTRI_NOT_FOUND') || errorMsg.startsWith('WALLET_NOT_FOUND')) {
       const message = errorMsg.includes(': ') ? errorMsg.split(': ')[1] : errorMsg;
-      return NextResponse.json({ success: false, message }, { status: 404 });
+      return NextResponse.json({ success: false, code: errorMsg.split(':')[0] || 'NOT_FOUND', message }, { status: 404 });
     }
 
-    // Handle Postgres Unique Constraint Violation (concurrent idempotency replay race)
     const errObj = error as { code?: string };
     if (errObj?.code === '23505') {
       return NextResponse.json(
@@ -667,7 +717,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Default sanitized internal server error (never leak credentials or stack traces)
     return NextResponse.json(
       { success: false, code: 'INTERNAL_SERVER_ERROR', message: 'Gagal memproses pembayaran kantin' },
       { status: 500 }

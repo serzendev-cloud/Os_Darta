@@ -1,18 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockGetEffectivePermissions = vi.fn();
+const mockRequirePermission = vi.fn();
 const mockAuthorizePlatformRole = vi.fn();
 const mockGetTenantContext = vi.fn();
 const mockDbSelect = vi.fn();
 const mockMerchantGetSummary = vi.fn();
+let mockAuthUser: any = null;
 
 vi.mock('@/lib/authz/authorization-service', () => ({
-  getEffectivePermissions: (...args: any[]) => mockGetEffectivePermissions(...args),
+  requirePermission: (...args: any[]) => mockRequirePermission(...args),
   authorizePlatformRole: (...args: any[]) => mockAuthorizePlatformRole(...args),
 }));
 
 vi.mock('@/lib/tenant/context', () => ({
+  DEFAULT_TENANT: { id: 'default' },
   getTenantContext: () => mockGetTenantContext(),
 }));
 
@@ -22,6 +24,12 @@ vi.mock('@/lib/finance/merchantLedger', () => ({
   },
 }));
 
+vi.mock('@/lib/db/tenant-transaction', () => ({
+  withTenantTransaction: async (_tenantId: string, cb: any) => cb({
+    select: () => mockDbSelect(),
+  }),
+}));
+
 vi.mock('@/lib/db', () => ({
   db: {
     select: () => mockDbSelect(),
@@ -29,11 +37,16 @@ vi.mock('@/lib/db', () => ({
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn().mockResolvedValue({
+  createClient: vi.fn().mockImplementation(async () => ({
     auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: new Error('No session') }),
+      getUser: vi.fn().mockImplementation(async () => {
+        if (!mockAuthUser) {
+          return { data: { user: null }, error: new Error('No session') };
+        }
+        return { data: { user: mockAuthUser }, error: null };
+      }),
     },
-  }),
+  })),
 }));
 
 import { GET } from '@/app/api/finance/audit-cctv/timeline/route';
@@ -41,11 +54,14 @@ import { GET } from '@/app/api/finance/audit-cctv/timeline/route';
 describe('Workstream B — Digital CCTV Timeline Authentication & Authorization Gate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthUser = null;
     mockAuthorizePlatformRole.mockResolvedValue({ authorized: false });
+    mockRequirePermission.mockResolvedValue({ authorized: false });
     mockGetTenantContext.mockResolvedValue({ id: 'tenant-pesantren-a', slug: 'pesantren-a' });
   });
 
   it('rejects unauthenticated requests with 401 and DOES NOT query database', async () => {
+    mockAuthUser = null;
     const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline');
 
     const res = await GET(req);
@@ -61,18 +77,14 @@ describe('Workstream B — Digital CCTV Timeline Authentication & Authorization 
   });
 
   it('rejects Santri or Wali callers with 403 Forbidden and blocks sensitive student/financial data', async () => {
-    mockGetEffectivePermissions.mockResolvedValueOnce({
-      authorized: true,
-      primaryRoleCode: 'santri',
-      effectivePermissions: new Set(['view_own_data', 'view_dashboard']),
+    mockAuthUser = { id: 'santri_user_1', email: 'santri@pesantren.id' };
+    mockRequirePermission.mockResolvedValueOnce({
+      authorized: false,
+      decision: 'DENIED_PERMISSION_MISSING',
+      reason: 'Peran tidak memiliki wewenang untuk mengakses rekaman CCTV dan data transaksi santri',
     });
 
-    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline', {
-      headers: {
-        'x-user-id': 'santri_user_1',
-        'x-tenant-id': 'tenant-pesantren-a',
-      },
-    });
+    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline');
 
     const res = await GET(req);
     expect(res.status).toBe(403);
@@ -80,7 +92,7 @@ describe('Workstream B — Digital CCTV Timeline Authentication & Authorization 
     const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.code).toBe('FORBIDDEN');
-    expect(json.message).toContain('santri');
+    expect(json.message).toContain('rekaman CCTV');
 
     // Sensitive data query MUST NOT be executed
     expect(mockDbSelect).not.toHaveBeenCalled();
@@ -88,18 +100,14 @@ describe('Workstream B — Digital CCTV Timeline Authentication & Authorization 
   });
 
   it('rejects unauthorized staff or guru without financial/governance permissions with 403 Forbidden', async () => {
-    mockGetEffectivePermissions.mockResolvedValueOnce({
-      authorized: true,
-      primaryRoleCode: 'guru',
-      effectivePermissions: new Set(['view_santri', 'view_kelas']),
+    mockAuthUser = { id: 'guru_user_1', email: 'guru@pesantren.id' };
+    mockRequirePermission.mockResolvedValueOnce({
+      authorized: false,
+      decision: 'DENIED_PERMISSION_MISSING',
+      reason: 'Peran tidak memiliki wewenang untuk mengakses rekaman CCTV dan data transaksi santri',
     });
 
-    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline', {
-      headers: {
-        'x-user-id': 'guru_user_1',
-        'x-tenant-id': 'tenant-pesantren-a',
-      },
-    });
+    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline');
 
     const res = await GET(req);
     expect(res.status).toBe(403);
@@ -107,16 +115,16 @@ describe('Workstream B — Digital CCTV Timeline Authentication & Authorization 
     const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.code).toBe('FORBIDDEN');
-    expect(json.message).toContain('guru');
+    expect(json.message).toContain('rekaman CCTV');
 
     expect(mockDbSelect).not.toHaveBeenCalled();
   });
 
   it('authorizes ADMIN_KEUANGAN and returns scoped events for authorized tenant only', async () => {
-    mockGetEffectivePermissions.mockResolvedValueOnce({
+    mockAuthUser = { id: 'admin_keuangan_user', email: 'finance@pesantren.id' };
+    mockRequirePermission.mockResolvedValueOnce({
       authorized: true,
-      primaryRoleCode: 'ADMIN_KEUANGAN',
-      effectivePermissions: new Set(['view_dashboard', 'finance:review']),
+      decision: 'AUTHORIZED',
     });
 
     // Mock DB queries for transactions and audit logs
@@ -174,12 +182,7 @@ describe('Workstream B — Digital CCTV Timeline Authentication & Authorization 
       ledgerEntriesCount: 1,
     });
 
-    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline?limit=10', {
-      headers: {
-        'x-user-id': 'admin_keuangan_user',
-        'x-tenant-id': 'tenant-pesantren-a',
-      },
-    });
+    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline?limit=10');
 
     const res = await GET(req);
     expect(res.status).toBe(200);
@@ -195,6 +198,7 @@ describe('Workstream B — Digital CCTV Timeline Authentication & Authorization 
   });
 
   it('authorizes Platform SUPER_ADMIN caller with full audit timeline access', async () => {
+    mockAuthUser = { id: 'superadmin_1', email: 'superadmin@pesantren.id' };
     mockAuthorizePlatformRole.mockResolvedValueOnce({ authorized: true });
 
     const mockTxQuery = {
@@ -225,12 +229,7 @@ describe('Workstream B — Digital CCTV Timeline Authentication & Authorization 
       ledgerEntriesCount: 0,
     });
 
-    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline', {
-      headers: {
-        'x-user-id': 'superadmin_1',
-        'x-tenant-id': 'tenant-pesantren-a',
-      },
-    });
+    const req = new Request('http://localhost:3000/api/finance/audit-cctv/timeline');
 
     const res = await GET(req);
     expect(res.status).toBe(200);

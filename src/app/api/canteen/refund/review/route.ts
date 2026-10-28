@@ -1,7 +1,7 @@
 // ==============================================================================
 // Canteen Refund Review API Route (Admin Keuangan Server-Side Role Enforcement)
-// Work Package: WP-M2-FINANCIAL-AUDIT-TRAIL-AND-DIGITAL-CCTV-001
-// Compliance: PO Decisions 7, 8 (Strict Server-Side Auth Binding)
+// Work Package: WP-SEC-CANTEEN-001 (Hardened Auth & Strict Tenancy)
+// Compliance: Fail-Closed Server Auth (401), Anti-SuperAdmin Bypass (Dir 15), Anti-SelfApproval (403)
 // ==============================================================================
 
 import { NextResponse } from 'next/server';
@@ -9,134 +9,181 @@ import { refundService } from '@/lib/finance/refund';
 import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
 import {
   authorizePlatformRole,
-  getEffectivePermissions,
+  requirePermission,
 } from '@/lib/authz/authorization-service';
+import { withTenantTransaction } from '@/lib/db/tenant-transaction';
+import { canteenRefunds } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
+import { Permission } from '@/config/permissions';
 
 export async function POST(request: Request) {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    const body = await request.json();
-    const {
-      tenantId: bodyTenantId,
-      refundId,
-      decision, // 'APPROVE' | 'REJECT'
-      reviewNotes,
-    } = body;
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null = null;
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data?.user?.id) {
+        user = data.user;
+      }
+    } catch {
+      user = null;
+    }
 
-    const tenantId = (headerTenantId || bodyTenantId || 'default').trim();
+    if (!user?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'UNAUTHENTICATED',
+          message: 'Autentikasi diperlukan: Sesi pengguna tidak ditemukan atau kedaluwarsa',
+        },
+        { status: 401 }
+      );
+    }
+
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
+    try {
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
+        return NextResponse.json(
+          { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+          { status: 400 }
+        );
+      }
+      tenant = tenantCtx;
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'TENANT_NOT_FOUND', message: 'Konteks tenant valid diperlukan' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Directive 15: Super Admin Platform Ditolak dari Review Operasional Refund
+    try {
+      const platformCheck = await authorizePlatformRole(user.id, 'SUPER_ADMIN');
+      if (platformCheck.authorized) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'UNAUTHORIZED_REFUND_ROLE',
+            message:
+              'Akses Ditolak: Hanya Admin Keuangan yang berhak memproses refund pada Tahap 1. Super Admin platform tidak memiliki wewenang operasional kasir.',
+          },
+          { status: 403 }
+        );
+      }
+    } catch {
+      // Platform check failure defaults to strict evaluation below
+    }
+
+    // 4. Validasi Otorisasi Berbasis Database (Canonical Permission)
+    const authz = await requirePermission(user.id, tenant.id, Permission.REVIEW_CANTEEN_REFUND);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'UNAUTHORIZED_REFUND_ROLE',
+          message:
+            'Akses Ditolak: Hanya identitas terverifikasi dengan izin tinjau refund yang berwenang memproses persetujuan/penolakan refund',
+        },
+        { status: 403 }
+      );
+    }
+
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const refundId = typeof body.refundId === 'string' ? body.refundId : undefined;
+    const decision = typeof body.decision === 'string' ? body.decision : undefined;
+    const reviewNotes = typeof body.reviewNotes === 'string' ? body.reviewNotes : undefined;
 
     if (!refundId || !decision) {
       return NextResponse.json(
-        { success: false, message: 'ID refund dan keputusan (APPROVE/REJECT) wajib diisi' },
+        { success: false, code: 'BAD_REQUEST', message: 'ID refund dan keputusan (APPROVE/REJECT) wajib diisi' },
         { status: 400 }
       );
     }
 
     if (decision !== 'APPROVE' && decision !== 'REJECT') {
       return NextResponse.json(
-        { success: false, message: 'Keputusan harus berupa APPROVE atau REJECT' },
+        { success: false, code: 'BAD_REQUEST', message: 'Keputusan harus berupa APPROVE atau REJECT' },
         { status: 400 }
       );
     }
 
-    // ── Zero-Trust Server-Side Role Binding (Blocker 2 Resolution) ───────────
-    // We NEVER trust reviewedByRole or reviewedBy from the client payload (body).
-    // Identity and role are resolved exclusively from verified server session or DB.
-    // ── Zero-Trust Server-Side Role Binding (Phase 1 Strict Admin Keuangan Gate) ──
-    // We NEVER trust reviewedByRole or reviewedBy from the client payload (body).
-    // Per Directive: Strictly Admin Keuangan ONLY on Phase 1 (Super Admin is rejected).
-    let serverUserId: string | null = null;
-    let serverUserName: string = 'Admin Keuangan';
-    let serverUserRole: 'admin_keuangan' | null = null;
+    // 5. Anti-Self-Approval Gate & Cross-Tenant Check via withTenantTransaction
+    const refundRows = await withTenantTransaction(tenant.id, async (tx) => {
+      return tx
+        .select()
+        .from(canteenRefunds)
+        .where(
+          and(
+            eq(canteenRefunds.tenantId, tenant.id),
+            eq(canteenRefunds.id, refundId)
+          )
+        )
+        .limit(1);
+    });
 
-    // 1. Attempt Supabase Server Client Session Resolution
-    try {
-      const supabase = await createSupabaseServerClient();
-      const { data, error } = await supabase.auth.getUser();
-      const user = data?.user;
-
-      if (!error && user?.id) {
-        serverUserId = user.id;
-        serverUserName =
-          user.user_metadata?.full_name || user.email || 'Admin Keuangan';
-
-        // Check if Platform Super Admin without tenant Admin Keuangan assignment
-        const platformCheck = await authorizePlatformRole(user.id, 'SUPER_ADMIN');
-        if (platformCheck.authorized) {
-          // Super Admin is explicitly rejected from operational cashier refunds in Phase 1
-          return NextResponse.json(
-            {
-              success: false,
-              code: 'UNAUTHORIZED_REFUND_ROLE',
-              message:
-                'Akses Ditolak: Hanya Admin Keuangan yang berhak memproses refund pada Tahap 1. Super Admin platform tidak memiliki wewenang operasional kasir.',
-            },
-            { status: 403 }
-          );
-        }
-
-        // Check Tenant Primary Role & Permissions in DB
-        const permResult = await getEffectivePermissions(user.id, tenantId);
-        if (
-          permResult.authorized &&
-          (permResult.primaryRoleCode === 'ADMIN_KEUANGAN' ||
-            permResult.effectivePermissions.has('finance:refund:review'))
-        ) {
-          serverUserRole = 'admin_keuangan';
-        }
-      }
-    } catch {
-      // Session resolution failed or unavailable in current execution context
-    }
-
-    // 2. Controlled Gateway / Test Environment Header Fallback (for API Gateway / Test Harness)
-    if (!serverUserRole) {
-      const proxyUserId = request.headers.get('x-user-id');
-      const proxyRole = request.headers.get('x-user-role');
-      const proxyName = request.headers.get('x-user-name');
-
-      if (proxyUserId && proxyRole) {
-        if (proxyRole === 'admin_keuangan') {
-          serverUserId = proxyUserId;
-          serverUserRole = 'admin_keuangan';
-          serverUserName = proxyName || 'Admin Keuangan';
-        }
-      }
-    }
-
-    // Strict Enforcement Gate: If server cannot verify Admin Keuangan -> 403 Forbidden
-    if (!serverUserRole || !serverUserId) {
+    const existingRefund = refundRows[0];
+    if (!existingRefund) {
       return NextResponse.json(
         {
           success: false,
-          code: 'UNAUTHORIZED_REFUND_ROLE',
-          message:
-            'Akses Ditolak: Hanya identitas terverifikasi dengan role Admin Keuangan yang berwenang memproses persetujuan/penolakan refund pada Tahap 1',
+          code: 'REFUND_NOT_FOUND',
+          message: 'Data pengajuan refund tidak ditemukan pada tenant ini',
+        },
+        { status: 404 }
+      );
+    }
+
+    // Pengaju refund dilarang menyetujui pengajuannya sendiri
+    if (existingRefund.requestedBy === user.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'FORBIDDEN_SELF_APPROVAL',
+          message: 'Akses Ditolak: Pengaju refund dilarang menyetujui atau menolak permohonan refund miliknya sendiri',
         },
         { status: 403 }
       );
     }
 
+    const serverUserName =
+      (user.user_metadata?.full_name as string) || user.email || 'Admin Keuangan';
+
     const result = await refundService.reviewRefund({
-      tenantId,
+      tenantId: tenant.id,
       refundId,
       decision,
-      reviewedBy: serverUserId,
+      reviewedBy: user.id,
       reviewedByName: serverUserName,
-      reviewedByRole: serverUserRole,
+      reviewedByRole: 'admin_keuangan',
       reviewNotes,
     });
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Gagal memproses review refund';
-    const isForbidden = msg.startsWith('UNAUTHORIZED_ROLE');
-    const isNotFound = msg.startsWith('REFUND_NOT_FOUND') || msg.startsWith('TRANSACTION_NOT_FOUND');
+    console.error('[API /api/canteen/refund/review POST] Internal error:', error);
+    const rawMsg = error instanceof Error ? String(error) : '';
+    const isForbidden = rawMsg.startsWith('UNAUTHORIZED_ROLE');
+    const isNotFound = rawMsg.startsWith('REFUND_NOT_FOUND') || rawMsg.startsWith('TRANSACTION_NOT_FOUND');
     const isConflict =
-      msg.startsWith('INVALID_REFUND_STATUS') ||
-      msg.startsWith('CUMULATIVE_LIMIT_EXCEEDED');
+      rawMsg.startsWith('INVALID_REFUND_STATUS') ||
+      rawMsg.startsWith('CUMULATIVE_LIMIT_EXCEEDED');
 
     const status = isForbidden ? 403 : isNotFound ? 404 : isConflict ? 409 : 500;
-    return NextResponse.json({ success: false, message: msg }, { status });
+    const message = isForbidden
+      ? 'Akses Ditolak: Hanya Admin Keuangan yang berwenang memproses persetujuan refund'
+      : isNotFound
+      ? 'Data pengajuan refund atau transaksi tidak ditemukan'
+      : isConflict
+      ? 'Status pengajuan refund tidak valid atau limit pengembalian terlampaui'
+      : 'Gagal memproses review refund';
+
+    return NextResponse.json(
+      { success: false, code: rawMsg.split(':')[0] || 'ERROR', message },
+      { status }
+    );
   }
 }
