@@ -77,7 +77,6 @@ export default function RekapitulasiDetailPage({
       if (searchQuery.trim()) url.searchParams.set('q', searchQuery.trim());
 
       const res = await fetch(url.toString(), {
-        headers: { 'x-tenant-id': 'default' },
       });
       const json = await res.json();
       if (res.ok && json.data) {

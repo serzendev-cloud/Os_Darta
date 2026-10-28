@@ -16,7 +16,7 @@ export async function createTenantServerClient() {
     {
       global: {
         headers: {
-          'x-tenant-id': tenantContext.tenantId,
+          // 'x-tenant-id': tenantContext.tenantId,
         },
       },
       cookies: {

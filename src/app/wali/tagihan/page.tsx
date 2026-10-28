@@ -84,7 +84,6 @@ export default function WaliTagihanPage() {
       const res = await fetch('/api/wali/spp/bills', {
         headers: {
           'x-wali-id': 'wali_user_001',
-          'x-tenant-id': 'default',
         },
       });
       const json = await res.json();
@@ -175,7 +174,6 @@ export default function WaliTagihanPage() {
             'Content-Type': 'application/json',
             'x-wali-id': 'wali_user_001',
             'x-user-name': 'Ahmad Fauzi (Wali Santri)',
-            'x-tenant-id': 'default',
           },
           body: JSON.stringify({
             billId: selectedBill.id,
@@ -229,9 +227,7 @@ export default function WaliTagihanPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': 'admin_keuangan_001',
             'x-user-name': 'Ustadz Bendahara Keuangan',
-            'x-tenant-id': 'default',
           },
           body: JSON.stringify({
             billId: selectedBill.id,

@@ -16,10 +16,6 @@ function validateOrigin(request: NextRequest): boolean {
 
   const targetHeader = origin || referer;
   if (!targetHeader) {
-    const userAgent = request.headers.get('user-agent') || '';
-    if (process.env.NODE_ENV === 'test' || userAgent.includes('node-fetch') || userAgent.includes('supertest')) {
-      return true;
-    }
     return false;
   }
 

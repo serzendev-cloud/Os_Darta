@@ -66,7 +66,6 @@ export default function TagihanTambahanPage() {
       setLoading(true);
       const res = await fetch('/api/finance/billing/campaigns', {
         headers: {
-          'x-tenant-id': 'default',
         },
       });
       const json = await res.json();
@@ -136,9 +135,7 @@ export default function TagihanTambahanPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': 'admin_keuangan_001',
             'x-user-name': 'Ustadz Bendahara Keuangan',
-            'x-tenant-id': 'default',
           },
           body: JSON.stringify({
             title,

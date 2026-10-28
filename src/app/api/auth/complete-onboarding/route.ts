@@ -129,10 +129,9 @@ export async function POST(request: NextRequest) {
       tenantId: targetTenantId,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Gagal menyelesaikan proses onboarding.';
-    console.error('[CompleteOnboarding] Internal error:', message);
+    console.error('[CompleteOnboarding] Internal error:', err);
     return NextResponse.json(
-      { success: false, error: 'InternalServerError', message },
+      { success: false, code: 'INTERNAL_ERROR', error: 'InternalServerError', message: 'Gagal menyelesaikan proses onboarding.' },
       { status: 500 }
     );
   }

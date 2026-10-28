@@ -26,12 +26,6 @@ function validateOrigin(request: NextRequest): boolean {
 
   const targetHeader = origin || referer;
   if (!targetHeader) {
-    // In browser environment, POST/PUT requests send Origin or Referer.
-    // If neither is present for a state-changing mutation, reject unless in node test environment without browser origin header
-    const userAgent = request.headers.get('user-agent') || '';
-    if (process.env.NODE_ENV === 'test' || userAgent.includes('node-fetch') || userAgent.includes('supertest')) {
-      return true;
-    }
     return false;
   }
 

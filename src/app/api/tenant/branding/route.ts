@@ -1,6 +1,7 @@
 // ========================================
 // Tenant Branding API Route
 // Traceability: WP-SAAS-BRAND-002 Core Tenant Branding Configuration
+// Hardened: WP-SEC-FINAL-001 (Fail-Closed Auth & Zero Header Bypass)
 // ========================================
 
 import { NextResponse } from 'next/server';
@@ -10,35 +11,60 @@ import { eq, and } from 'drizzle-orm';
 import { getTenantContext } from '@/lib/tenant/context';
 import { requirePermission, authorizePlatformRole } from '@/lib/authz/authorization-service';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
+import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
+import { Permission } from '@/config/permissions';
 
 /**
  * GET /api/tenant/branding
  * Retrieves server-verified tenant branding configuration from PostgreSQL tenant_settings table.
+ * Fail-Closed: Sesi server wajib, otorisasi diperiksa via TENANT_BRANDING_READ atau peran platform DB.
  */
 export async function GET(request: NextRequest) {
+  void request;
   try {
-    const tenant = await getTenantContext();
-    const userId = request.headers.get('x-user-id') || '';
+    // 1. Fail-closed session check
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, code: 'UNAUTHENTICATED', message: 'Sesi autentikasi diperlukan untuk mengakses pengaturan branding' },
+        { status: 401 }
+      );
+    }
 
-    // Enforce RBAC Permission Check if user session header exists
-    if (userId) {
-      const authz = await requirePermission(userId, tenant.id, 'view_pengaturan');
+    // 2. Tenant Context resolution
+    let tenant;
+    try {
+      tenant = await getTenantContext();
+      if (!tenant || !tenant.id) {
+        return NextResponse.json(
+          { success: false, code: 'INVALID_TENANT_CONTEXT', message: 'Konteks tenant tidak valid' },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'INVALID_TENANT_CONTEXT', message: 'Konteks tenant tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Authorization: DB Platform Role or TENANT_BRANDING_READ permission
+    const superCheck = await authorizePlatformRole(user.id, 'SUPER_ADMIN');
+    const devCheck = await authorizePlatformRole(user.id, 'DEVELOPER');
+    const isSuperAdmin = superCheck.authorized || devCheck.authorized;
+
+    if (!isSuperAdmin) {
+      const authz = await requirePermission(user.id, tenant.id, Permission.TENANT_BRANDING_READ);
       if (!authz.authorized) {
         return NextResponse.json(
-          { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk membaca pengaturan branding' },
+          { success: false, code: 'FORBIDDEN', message: authz.reason || 'Izin ditolak untuk membaca pengaturan branding' },
           { status: 403 }
         );
       }
     }
 
-    let isSuperAdmin = false;
-    if (userId) {
-      const superCheck = await authorizePlatformRole(userId, 'SUPER_ADMIN');
-      const devCheck = await authorizePlatformRole(userId, 'DEVELOPER');
-      isSuperAdmin = superCheck.authorized || devCheck.authorized;
-    }
-
-    // Execute query inside canonical tenant transaction context
+    // 4. Execute query inside canonical tenant transaction context
     const settingsRecords = await withTenantTransaction(
       tenant.id,
       async (tx) => {
@@ -71,7 +97,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[API /api/tenant/branding GET] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to retrieve tenant branding', details: String(error) },
+      { success: false, code: 'INTERNAL_ERROR', message: 'Gagal memproses permintaan branding' },
       { status: 500 }
     );
   }
@@ -80,24 +106,47 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/tenant/branding
  * Updates or creates tenant branding configuration in PostgreSQL tenant_settings table.
+ * Fail-Closed: Sesi server wajib, otorisasi diperiksa via TENANT_BRANDING_MANAGE atau peran platform DB.
  */
 export async function POST(request: NextRequest) {
   try {
-    const tenant = await getTenantContext();
-    const userId = request.headers.get('x-user-id') || '';
-    let isSuperAdmin = false;
-    if (userId) {
-      const superCheck = await authorizePlatformRole(userId, 'SUPER_ADMIN');
-      const devCheck = await authorizePlatformRole(userId, 'DEVELOPER');
-      isSuperAdmin = superCheck.authorized || devCheck.authorized;
+    // 1. Fail-closed session check
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, code: 'UNAUTHENTICATED', message: 'Sesi autentikasi diperlukan untuk mengubah pengaturan branding' },
+        { status: 401 }
+      );
     }
 
-    // Enforce RBAC Permission Check if user session header exists
-    if (userId) {
-      const authz = await requirePermission(userId, tenant.id, 'manage_pengaturan');
+    // 2. Tenant Context resolution
+    let tenant;
+    try {
+      tenant = await getTenantContext();
+      if (!tenant || !tenant.id) {
+        return NextResponse.json(
+          { success: false, code: 'INVALID_TENANT_CONTEXT', message: 'Konteks tenant tidak valid' },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'INVALID_TENANT_CONTEXT', message: 'Konteks tenant tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Authorization: DB Platform Role or TENANT_BRANDING_MANAGE permission
+    const superCheck = await authorizePlatformRole(user.id, 'SUPER_ADMIN');
+    const devCheck = await authorizePlatformRole(user.id, 'DEVELOPER');
+    const isSuperAdmin = superCheck.authorized || devCheck.authorized;
+
+    if (!isSuperAdmin) {
+      const authz = await requirePermission(user.id, tenant.id, Permission.TENANT_BRANDING_MANAGE);
       if (!authz.authorized) {
         return NextResponse.json(
-          { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk mengedit pengaturan branding' },
+          { success: false, code: 'FORBIDDEN', message: authz.reason || 'Izin ditolak untuk mengedit pengaturan branding' },
           { status: 403 }
         );
       }
@@ -117,28 +166,28 @@ export async function POST(request: NextRequest) {
     // Server-side Input Validation
     if (primaryColor && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(primaryColor)) {
       return NextResponse.json(
-        { error: 'Format warna utama tidak valid. Gunakan format HEX (contoh: #0F766E).' },
+        { success: false, code: 'VALIDATION_ERROR', error: 'Format warna utama tidak valid. Gunakan format HEX (contoh: #0F766E).' },
         { status: 400 }
       );
     }
 
     if (loginTitle && loginTitle.length > 150) {
       return NextResponse.json(
-        { error: 'Judul login tidak boleh melebihi 150 karakter.' },
+        { success: false, code: 'VALIDATION_ERROR', error: 'Judul login tidak boleh melebihi 150 karakter.' },
         { status: 400 }
       );
     }
 
     if (loginSubtitle && loginSubtitle.length > 150) {
       return NextResponse.json(
-        { error: 'Sub-judul login tidak boleh melebihi 150 karakter.' },
+        { success: false, code: 'VALIDATION_ERROR', error: 'Sub-judul login tidak boleh melebihi 150 karakter.' },
         { status: 400 }
       );
     }
 
     if (loginDescription && loginDescription.length > 1000) {
       return NextResponse.json(
-        { error: 'Deskripsi login tidak boleh melebihi 1000 karakter.' },
+        { success: false, code: 'VALIDATION_ERROR', error: 'Deskripsi login tidak boleh melebihi 1000 karakter.' },
         { status: 400 }
       );
     }
@@ -193,7 +242,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API /api/tenant/branding POST] Error:', error);
     return NextResponse.json(
-      { error: 'Gagal menyimpan pengaturan branding', details: String(error) },
+      { success: false, code: 'INTERNAL_ERROR', message: 'Gagal menyimpan pengaturan branding' },
       { status: 500 }
     );
   }

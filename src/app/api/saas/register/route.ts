@@ -34,10 +34,6 @@ function validateOrigin(request: NextRequest): boolean {
 
   const targetHeader = origin || referer;
   if (!targetHeader) {
-    const userAgent = request.headers.get('user-agent') || '';
-    if (process.env.NODE_ENV === 'test' || userAgent.includes('node-fetch') || userAgent.includes('supertest')) {
-      return true;
-    }
     return false;
   }
 
@@ -231,6 +227,9 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const statusCode = (error as { statusCode?: number })?.statusCode || 500;
     const rawMessage = error instanceof Error ? error.message : '';
+    const isSafeMessage =
+      rawMessage &&
+      !/(postgres|sql|select|insert|update|delete|table|relation|column|syntax|error:|at\s|\bpg\b)/i.test(rawMessage);
 
     // Handle business conflict (409)
     if (statusCode === 409) {
@@ -238,7 +237,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Conflict',
-          message: rawMessage || 'Data pendaftaran berkonflik dengan instansi yang sudah ada.',
+          message: (isSafeMessage ? rawMessage : null) || 'Data pendaftaran berkonflik dengan instansi yang sudah ada.',
         },
         { status: 409 }
       );
@@ -250,7 +249,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'BadRequest',
-          message: rawMessage || 'Data pendaftaran tidak valid.',
+          message: (isSafeMessage ? rawMessage : null) || 'Data pendaftaran tidak valid.',
         },
         { status: 400 }
       );

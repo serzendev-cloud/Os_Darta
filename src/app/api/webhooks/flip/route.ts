@@ -1,35 +1,102 @@
 // ========================================
 // Flip for Business Webhook Listener Route
+// Hardened: WP-SEC-FINAL-001 (Timing-Safe Token Verification & Fail-Closed)
 // ========================================
 
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { db } from '@/lib/db';
-import { invoices, wallets, walletPockets } from '@/lib/db/schema';
+import { invoices, wallets, walletPockets, tenantSettings } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { flipClient } from '@/lib/payment/flip';
+
+/**
+ * Constant-time comparison between received token and expected secret token
+ * to prevent timing attacks.
+ */
+function safeCompareTokens(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf-8');
+  const bufB = Buffer.from(b, 'utf-8');
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 export async function POST(request: Request) {
   try {
-    const rawBody = await request.text();
-    const payload = JSON.parse(rawBody);
+    let rawBody: string;
+    let payload: any;
+    try {
+      rawBody = await request.text();
+      payload = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'BAD_REQUEST', message: 'Format payload webhook tidak valid' },
+        { status: 400 }
+      );
+    }
 
-    // Payload structure from Flip Payment Received Callback
-    // { data: { id, bill_link_id, status: "SUCCESS", amount: 1500000, ... } }
-    const paymentData = payload.data || payload;
+    const paymentData = payload?.data || payload || {};
     const billId = paymentData.bill_link_id || paymentData.link_id || paymentData.id;
-    const status = paymentData.status;
 
+    // 1. Extract received token from request headers or body
+    const receivedToken =
+      request.headers.get('x-flip-token') ||
+      request.headers.get('token') ||
+      request.headers.get('x-validation-token') ||
+      (typeof payload?.token === 'string' ? payload.token : null) ||
+      (typeof paymentData?.token === 'string' ? paymentData.token : null);
+
+    if (!receivedToken || receivedToken.trim() === '') {
+      return NextResponse.json(
+        { success: false, code: 'UNAUTHORIZED', message: 'Token validasi webhook Flip tidak ditemukan' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Resolve expected verification secret (Platform ENV or Tenant Settings)
+    let expectedToken = process.env.FLIP_VALIDATION_TOKEN?.trim() || null;
+
+    let invoice: any = null;
+    if (billId) {
+      const invoiceResult = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.flipBillId, String(billId)));
+      invoice = invoiceResult[0] || null;
+    }
+
+    if (!expectedToken && invoice?.tenantId) {
+      const settingsResult = await db
+        .select({ token: tenantSettings.flipValidationToken })
+        .from(tenantSettings)
+        .where(eq(tenantSettings.tenantId, invoice.tenantId));
+      expectedToken = settingsResult[0]?.token?.trim() || null;
+    }
+
+    // 3. Fail-Closed: Jika rahasia verifikasi tidak terkonfigurasi, tolak semua permintaan
+    if (!expectedToken) {
+      console.error('[Flip Webhook] Rahasia verifikasi Flip tidak terkonfigurasi (Fail-Closed)');
+      return NextResponse.json(
+        { success: false, code: 'SERVICE_UNAVAILABLE', message: 'Layanan webhook belum dikonfigurasi' },
+        { status: 503 }
+      );
+    }
+
+    // 4. Timing-safe constant-time verification
+    if (!safeCompareTokens(receivedToken.trim(), expectedToken)) {
+      return NextResponse.json(
+        { success: false, code: 'UNAUTHORIZED', message: 'Token validasi webhook Flip tidak cocok' },
+        { status: 401 }
+      );
+    }
+
+    // 5. Verification passed — Process business mutation
+    const status = paymentData.status;
     if (status !== 'SUCCESS') {
       return NextResponse.json({ status: 'ignored', message: 'Payment status not SUCCESS' });
     }
 
-    // Find invoice by flipBillId or invoiceNumber
-    const invoiceResult = await db
-      .select()
-      .from(invoices)
-      .where(eq(invoices.flipBillId, String(billId)));
-
-    const invoice = invoiceResult[0];
     if (!invoice) {
       return NextResponse.json({ status: 'error', message: 'Invoice not found' }, { status: 404 });
     }
@@ -123,7 +190,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ status: 'success', message: 'Payment processed and wallet updated successfully' });
-  } catch (error: any) {
-    return NextResponse.json({ status: 'error', message: error?.message || 'Server error' }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('[Flip Webhook] Error processing payment callback:', error);
+    return NextResponse.json(
+      { success: false, code: 'INTERNAL_ERROR', message: 'Gagal memproses webhook pembayaran' },
+      { status: 500 }
+    );
   }
 }

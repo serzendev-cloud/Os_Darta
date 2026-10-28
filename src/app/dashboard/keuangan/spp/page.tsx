@@ -78,9 +78,7 @@ export default function AdminKeuanganSppPage() {
       setLoading(true);
       const res = await fetch('/api/finance/spp/installments', {
         headers: {
-          'x-user-id': 'admin_keuangan_001',
           'x-user-name': 'Ustadz Bendahara Keuangan',
-          'x-tenant-id': 'default',
         },
       });
       const json = await res.json();
@@ -175,9 +173,7 @@ export default function AdminKeuanganSppPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': 'admin_keuangan_001',
             'x-user-name': 'Ustadz Bendahara Keuangan',
-            'x-tenant-id': 'default',
           },
           body: JSON.stringify({
             decision,

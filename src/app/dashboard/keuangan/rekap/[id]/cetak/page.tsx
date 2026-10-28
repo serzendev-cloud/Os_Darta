@@ -60,7 +60,6 @@ export default function CetakRekapitulasiPage({
       try {
         setLoading(true);
         const res = await fetch(`/api/finance/billing/recap?campaignId=${campaignId}`, {
-          headers: { 'x-tenant-id': 'default' },
         });
         const json = await res.json();
         if (res.ok && json.data) {

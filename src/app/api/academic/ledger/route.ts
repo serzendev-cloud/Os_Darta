@@ -57,9 +57,10 @@ export async function GET(request: Request) {
 
     const transcripts = await academicTranscriptService.get('all');
     return NextResponse.json({ success: true, data: transcripts }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('[API /api/academic/ledger GET] Error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Gagal mengambil data ledger' },
+      { success: false, code: 'INTERNAL_ERROR', message: 'Gagal mengambil data ledger' },
       { status: 500 }
     );
   }
@@ -125,8 +126,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    console.error('[API /api/academic/ledger POST] Error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Gagal memproses kalkulasi ledger' },
+      { success: false, code: 'INTERNAL_ERROR', message: 'Gagal memproses kalkulasi ledger' },
       { status: 500 }
     );
   }

@@ -10,7 +10,7 @@ export function createTenantBrowserClient(tenantId?: string) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key',
     {
       global: {
-        headers: tenantId ? { 'x-tenant-id': tenantId } : {},
+        headers: {}, // x-tenant-id handled via proxy and server cookies
       },
     }
   );

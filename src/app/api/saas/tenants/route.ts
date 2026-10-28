@@ -23,10 +23,6 @@ function validateOrigin(request: NextRequest): boolean {
 
   const targetHeader = origin || referer;
   if (!targetHeader) {
-    const userAgent = request.headers.get('user-agent') || '';
-    if (process.env.NODE_ENV === 'test' || userAgent.includes('node-fetch') || userAgent.includes('supertest')) {
-      return true;
-    }
     return false;
   }
 
@@ -182,6 +178,9 @@ export async function POST(request: NextRequest) {
     const statusCode = (error as { statusCode?: number })?.statusCode || 500;
     const status = (error as { status?: string })?.status || 'PROVISIONING_FAILED';
     const rawMessage = error instanceof Error ? error.message : '';
+    const isSafeMessage =
+      rawMessage &&
+      !/(postgres|sql|select|insert|update|delete|table|relation|column|syntax|error:|at\s|\bpg\b)/i.test(rawMessage);
 
     // Business Conflict (409) — safe user-facing validation message
     if (statusCode === 409) {
@@ -189,7 +188,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Conflict',
-          message: rawMessage || 'Data pendaftaran tenant berkonflik dengan data yang sudah ada.',
+          message: (isSafeMessage ? rawMessage : null) || 'Data pendaftaran tenant berkonflik dengan data yang sudah ada.',
         },
         { status: 409 }
       );
@@ -201,7 +200,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'BadRequest',
-          message: rawMessage || 'Data pendaftaran tidak valid.',
+          message: (isSafeMessage ? rawMessage : null) || 'Data pendaftaran tidak valid.',
         },
         { status: 400 }
       );

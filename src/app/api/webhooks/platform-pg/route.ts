@@ -59,8 +59,11 @@ export async function POST(req: Request) {
       refundAmount: totalAmount,
       message: `Pasokan provider gagal (${digiRes.message || 'Stok habis'}). Dana sebesar Rp ${totalAmount.toLocaleString('id-ID')} telah otomatis di-refund ke Dompet PPOB Wali.`,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('SaaS PG Webhook Error:', err);
-    return NextResponse.json({ status: 'error', message: err.message || 'Webhook processing failed' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, code: 'INTERNAL_ERROR', status: 'error', message: 'Gagal memproses webhook pembayaran platform' },
+      { status: 500 }
+    );
   }
 }

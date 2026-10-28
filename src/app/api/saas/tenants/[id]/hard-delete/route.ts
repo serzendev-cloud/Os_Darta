@@ -17,10 +17,6 @@ function validateOrigin(request: NextRequest): boolean {
 
   const targetHeader = origin || referer;
   if (!targetHeader) {
-    const userAgent = request.headers.get('user-agent') || '';
-    if (process.env.NODE_ENV === 'test' || userAgent.includes('node-fetch') || userAgent.includes('supertest')) {
-      return true;
-    }
     return false;
   }
 
@@ -75,13 +71,14 @@ export async function GET(
     });
   } catch (error: unknown) {
     console.error('[API /api/saas/tenants/:id/hard-delete GET] Error:', error);
-    const message = error instanceof Error ? error.message : 'Gagal merencanakan hard-delete tenant.';
-    const isNotFound = message.includes('tidak ditemukan');
+    const errText = error instanceof Error ? error.message : '';
+    const isNotFound = errText.includes('tidak ditemukan');
     return NextResponse.json(
       {
         success: false,
+        code: isNotFound ? 'NOT_FOUND' : 'BAD_REQUEST',
         error: isNotFound ? 'NotFound' : 'BadRequest',
-        message,
+        message: isNotFound ? 'Tenant tidak ditemukan.' : 'Gagal merencanakan hard-delete tenant.',
       },
       { status: isNotFound ? 404 : 400 }
     );
@@ -175,21 +172,39 @@ export async function POST(
     });
   } catch (error: unknown) {
     console.error('[API /api/saas/tenants/:id/hard-delete POST] Error:', error);
-    const message = error instanceof Error ? error.message : 'Gagal mengeksekusi hard-delete tenant.';
-    const isProtected = message.includes('dilindungi secara permanen') || message.includes('Operasi dibatalkan');
-    const isInvalidCode = message.includes('Kode konfirmasi tidak valid');
-    const isNotFound = message.includes('tidak ditemukan');
+    const errText = error instanceof Error ? error.message : '';
+    const isProtected = errText.includes('dilindungi secara permanen') || errText.includes('Operasi dibatalkan');
+    const isInvalidCode = errText.includes('Kode konfirmasi tidak valid');
+    const isNotFound = errText.includes('tidak ditemukan');
 
     let status = 400;
-    if (isProtected) status = 403;
-    else if (isNotFound) status = 404;
-    else if (isInvalidCode) status = 422;
+    let safeMessage = 'Gagal mengeksekusi hard-delete tenant.';
+    let errorCode = 'BAD_REQUEST';
+    let errorName = 'BadRequest';
+
+    if (isProtected) {
+      status = 403;
+      safeMessage = 'Tenant dilindungi secara permanen dari penghapusan.';
+      errorCode = 'PROTECTED_TENANT';
+      errorName = 'Forbidden';
+    } else if (isNotFound) {
+      status = 404;
+      safeMessage = 'Tenant tidak ditemukan.';
+      errorCode = 'NOT_FOUND';
+      errorName = 'NotFound';
+    } else if (isInvalidCode) {
+      status = 422;
+      safeMessage = 'Kode konfirmasi tidak valid.';
+      errorCode = 'INVALID_CONFIRMATION_CODE';
+      errorName = 'UnprocessableEntity';
+    }
 
     return NextResponse.json(
       {
         success: false,
-        error: isProtected ? 'Forbidden' : isInvalidCode ? 'UnprocessableEntity' : 'BadRequest',
-        message,
+        code: errorCode,
+        error: errorName,
+        message: safeMessage,
       },
       { status }
     );

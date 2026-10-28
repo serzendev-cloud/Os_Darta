@@ -20,11 +20,10 @@ export interface TenantContext {
 export async function getTenantContext(): Promise<TenantContext> {
   const headerList = await headers();
   const tenantId =
-    headerList.get('x-tenant-id') ||
     process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ||
     'default-tenant';
   const tenantSlug = headerList.get('x-tenant-slug') || undefined;
-  const userId = headerList.get('x-user-id') || undefined;
+  const userId = undefined;
   const role = undefined;
   const pesantrenName = headerList.get('x-pesantren-name') || undefined;
   const isAuthenticated = Boolean(

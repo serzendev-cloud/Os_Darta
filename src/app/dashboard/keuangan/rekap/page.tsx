@@ -38,7 +38,6 @@ export default function RekapitulasiIndexPage() {
     try {
       setLoading(true);
       const res = await fetch('/api/finance/billing/campaigns', {
-        headers: { 'x-tenant-id': 'default' },
       });
       const json = await res.json();
       if (res.ok && json.data) {

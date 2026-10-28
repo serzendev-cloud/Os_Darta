@@ -78,6 +78,8 @@ export const Permission = {
   // Pengaturan
   VIEW_PENGATURAN: 'view_pengaturan',
   MANAGE_PENGATURAN: 'manage_pengaturan',
+  TENANT_BRANDING_READ: 'view_pengaturan',
+  TENANT_BRANDING_MANAGE: 'manage_pengaturan',
 
   // SaaS Platform / Super Admin / Developer
   MANAGE_TENANTS: 'manage_tenants',
