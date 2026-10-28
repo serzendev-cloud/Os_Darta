@@ -3,10 +3,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Use vi.hoisted for top-level mock functions in Vitest
-const { mockRequirePermission, mockGetTenantContext, mockWithTenantTransaction } = vi.hoisted(() => ({
+const { mockRequirePermission, mockGetTenantContext, mockWithTenantTransaction, mockGetUser } = vi.hoisted(() => ({
   mockRequirePermission: vi.fn(),
   mockGetTenantContext: vi.fn(),
   mockWithTenantTransaction: vi.fn(),
+  mockGetUser: vi.fn(),
+}));
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(async () => ({
+    auth: {
+      getUser: mockGetUser,
+    },
+  })),
 }));
 
 vi.mock('@/lib/authz/authorization-service', () => ({
@@ -59,6 +68,10 @@ import { TenantNotFoundError, TenantUnavailableError } from '@/lib/tenant/contex
 describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error('No session'),
+    });
     mockGetTenantContext.mockResolvedValue({
       id: 'tenant-alfatih',
       name: 'Pesantren Al Fatih',
@@ -96,6 +109,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
     });
 
     it('should return 403 Forbidden when user is missing required read permission', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-unprivileged' } }, error: null });
       mockRequirePermission.mockResolvedValue({
         authorized: false,
         decision: 'DENIED_PERMISSION_MISSING',
@@ -117,6 +131,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
     });
 
     it('should return 200 OK when user possesses required read permission', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-authorized' } }, error: null });
       mockRequirePermission.mockResolvedValue({
         authorized: true,
         decision: 'AUTHORIZED',
@@ -184,6 +199,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
     });
 
     it('should return 403 Forbidden when user attempts mutation without write permission', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-unprivileged' } }, error: null });
       mockRequirePermission.mockResolvedValue({
         authorized: false,
         decision: 'DENIED_PERMISSION_MISSING',
@@ -211,6 +227,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
     });
 
     it('should return 200 OK for authorized mutation when user possesses write permission', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-authorized' } }, error: null });
       mockRequirePermission.mockResolvedValue({
         authorized: true,
         decision: 'AUTHORIZED',
@@ -238,6 +255,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
     });
 
     it('strictly overrides client-forged tenantId with server-resolved tenant context on mutation', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-authorized' } }, error: null });
       mockRequirePermission.mockResolvedValue({
         authorized: true,
         decision: 'AUTHORIZED',
@@ -271,6 +289,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
 
   describe('3. Tenant Resolution Failure Isolation (GET /api/db/query)', () => {
     it('should abort without calling requirePermission or withTenantTransaction when tenant is not found', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-authorized' } }, error: null });
       mockGetTenantContext.mockRejectedValue(new TenantNotFoundError('non-existent-tenant'));
 
       const req = new NextRequest('http://localhost/api/db/query?collection=santri', {
@@ -291,6 +310,7 @@ describe('WP-101 Phase 1F — Authorization Enforcement Integration Tests', () =
     });
 
     it('should abort without calling requirePermission or withTenantTransaction when tenant query is unavailable', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-authorized' } }, error: null });
       mockGetTenantContext.mockRejectedValue(new TenantUnavailableError('Database query failed'));
 
       const req = new NextRequest('http://localhost/api/db/query?collection=santri', {

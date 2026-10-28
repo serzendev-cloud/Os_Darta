@@ -15,8 +15,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const santriId = searchParams.get('santriId') || undefined;
 
-    const headerWaliId = request.headers.get('x-wali-id');
-    const headerRole = request.headers.get('x-user-role');
 
     // 1. Fail-Closed Server-Side Authentication
     let serverUserId: string | null = null;
@@ -30,13 +28,6 @@ export async function GET(request: Request) {
       serverUserId = null;
     }
 
-    // Controlled test harness support ONLY in test environment
-    if (!serverUserId && (process.env.NODE_ENV === 'test' || process.env.VITEST)) {
-      const testWaliId = request.headers.get('x-wali-id') || request.headers.get('x-user-id');
-      if (testWaliId && testWaliId.trim() !== '') {
-        serverUserId = testWaliId.trim();
-      }
-    }
 
     if (!serverUserId) {
       return NextResponse.json(

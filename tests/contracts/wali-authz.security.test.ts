@@ -39,6 +39,21 @@ describe('SECURITY CONTRACT: Wali Route Authorization & Anti-Bypass (WP-SPP-01A)
       status: 'PENDING',
       message: 'Proposal cicilan berhasil diajukan',
     } as any);
+
+    vi.spyOn(supabaseServer, 'createClient').mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: {
+            user: {
+              id: 'wali_legit_001',
+              email: 'wali@darululum.sch.id',
+              user_metadata: { full_name: 'Wali Legit' },
+            },
+          },
+          error: null,
+        }),
+      },
+    } as any);
   });
 
   // ── SCENARIO 1: Unauthenticated Requests Must Return 401 ─────────────────────
@@ -78,6 +93,20 @@ describe('SECURITY CONTRACT: Wali Route Authorization & Anti-Bypass (WP-SPP-01A)
 
   // ── SCENARIO 2: Injected Header x-user-role Cannot Bypass Relationship Check ─
   it('SEC-02: Header palsu x-user-role=wali dan x-wali-id TIDAK BISA melewati pengecekan relasi santri', async () => {
+    vi.spyOn(supabaseServer, 'createClient').mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: {
+            user: {
+              id: 'wali_attacker',
+              email: 'attacker@example.com',
+            },
+          },
+          error: null,
+        }),
+      },
+    } as any);
+
     // Mock authorization service to DENY access (simulating attacker requesting non-related santri)
     vi.spyOn(authzModule, 'authorizeWaliSantriAccess').mockResolvedValue({
       authorized: false,

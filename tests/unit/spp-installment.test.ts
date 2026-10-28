@@ -94,6 +94,11 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
 
   // ── TEST-01: Wali Melihat Tagihan ──────────────────────────────────────────
   it('TEST-01: Wali dapat melihat tagihan yang sah miliknya dan mendapatkan detail tagihan', async () => {
+    mockFinanceAuthSession({
+      userId: 'wali_001',
+      tenantId: 'tenant_darululum',
+      roleCode: 'WALI',
+    });
     vi.spyOn(sppService, 'getWaliSppBills').mockResolvedValueOnce(store.bills as any);
 
     const req = new Request('http://localhost:3000/api/wali/spp/bills?santriId=santri_001', {
@@ -115,6 +120,11 @@ describe('WORK PACKAGE APP-MAHAD-SPP-INSTALLMENT-001: Unit & Contract Tests', ()
 
   // ── TEST-02: Pengajuan Cicilan Tersimpan PENDING ────────────────────────────
   it('TEST-02: Pengajuan cicilan tersimpan dengan status PENDING', async () => {
+    mockFinanceAuthSession({
+      userId: 'wali_001',
+      tenantId: 'tenant_darululum',
+      roleCode: 'WALI',
+    });
     const req = new Request('http://localhost:3000/api/wali/spp/installments/apply', {
       method: 'POST',
       headers: {

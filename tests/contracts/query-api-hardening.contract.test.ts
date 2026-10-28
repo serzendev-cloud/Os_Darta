@@ -5,6 +5,7 @@ import { NextRequest } from 'next/server';
 const mockGetTenantContext = vi.fn();
 const mockRequirePermission = vi.fn();
 const mockWithTenantTransaction = vi.fn();
+const mockServerGetUser = vi.fn();
 
 vi.mock('@/lib/tenant/context', () => ({
   getTenantContext: () => mockGetTenantContext(),
@@ -25,11 +26,11 @@ vi.mock('@/modules/santri/services/santri-server', () => ({
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn().mockResolvedValue({
+  createClient: vi.fn().mockImplementation(async () => ({
     auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: new Error('No cookie') }),
+      getUser: mockServerGetUser,
     },
-  }),
+  })),
 }));
 
 const mockGetUser = vi.fn();
@@ -47,6 +48,15 @@ import { proxy } from '../../src/proxy';
 describe('WP-SEC-QUERY-API-001 — Security Hardening Contract Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockServerGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-admin-1',
+          app_metadata: { role: 'authenticated' },
+        },
+      },
+      error: null,
+    });
     mockGetTenantContext.mockResolvedValue({
       id: 'tenant-test-1',
       name: 'Pesantren Al Fatih',

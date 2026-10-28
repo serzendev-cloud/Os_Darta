@@ -72,8 +72,14 @@ describe('WP-SEC-RFID-PIN-001 — Security Hardening Contract Tests', () => {
     });
 
     mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: new Error('No session cookie present'),
+      data: {
+        user: {
+          id: 'admin-001',
+          email: 'admin@alfatih.sch.id',
+          app_metadata: { role: 'ADMIN' },
+        },
+      },
+      error: null,
     });
 
     mockRequirePermission.mockResolvedValue({
@@ -172,6 +178,16 @@ describe('WP-SEC-RFID-PIN-001 — Security Hardening Contract Tests', () => {
   });
 
   it('3. Spoofing body/header diabaikan: Klaim role super_admin dan tenantId di body tidak mengubah tenant atau otorisasi', async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 'attacker-id',
+          email: 'attacker@evil.com',
+          app_metadata: { role: 'AUTHENTICATED' },
+        },
+      },
+      error: null,
+    });
     mockRequirePermission.mockResolvedValue({
       authorized: false,
       decision: 'DENIED_PERMISSION_MISSING',
@@ -236,6 +252,16 @@ describe('WP-SEC-RFID-PIN-001 — Security Hardening Contract Tests', () => {
   });
 
   it('5. Sukses dengan izin: Berhasil mereset PIN, unblock kartu (status=active, pinFailedAttempts=0), dan mencatat audit log', async () => {
+    mockGetUser.mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 'operator-bendahara',
+          email: null,
+          app_metadata: { role: 'BENDAHARA' },
+        },
+      },
+      error: null,
+    });
     const req = new NextRequest('http://localhost:3000/api/rfid/reset-pin', {
       method: 'POST',
       headers: {

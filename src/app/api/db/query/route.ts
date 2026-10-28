@@ -40,15 +40,6 @@ async function resolveAuthUser(request: NextRequest): Promise<AuthResolution> {
     // Session resolution unavailable in current context (e.g. test harness)
   }
 
-  // 2. Controlled Test Harness Support (Strictly gated to test environments)
-  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
-    const headerUserId = request.headers.get('x-user-id');
-    if (headerUserId && headerUserId.trim() !== '') {
-      const isSuper = request.headers.get('x-is-super-admin') === 'true';
-      return { userId: headerUserId.trim(), isSuperAdmin: isSuper };
-    }
-  }
-
   return { userId: null, isSuperAdmin: false };
 }
 

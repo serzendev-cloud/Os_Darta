@@ -17,6 +17,18 @@ vi.mock('@/lib/supabase/proxy', () => ({
 
 import { createProxyClient } from '@/lib/supabase/proxy';
 
+let mockServerUser: { id: string } | null = null;
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(async () => ({
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: { user: mockServerUser },
+        error: mockServerUser ? null : new Error('No session'),
+      })),
+    },
+  })),
+}));
+
 // Mock Supabase SSR Client
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn().mockImplementation((_url, _key, options) => {
@@ -135,6 +147,7 @@ function createMockDb(config: {
 describe('WP-TENANT-INVITATION-LIFECYCLE-REMEDIATION-IMPLEMENTATION-001', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockServerUser = null;
   });
 
   // ===========================================================================
@@ -449,6 +462,7 @@ describe('WP-TENANT-INVITATION-LIFECYCLE-REMEDIATION-IMPLEMENTATION-001', () => 
 
     it('22. Super Admin platform role bypasses tenant membership constraints via authorizeOperationalApi', async () => {
       // (a) Kasus Pembanding: header x-is-super-admin: 'true' tanpa peran platform di DB -> authorized false
+      mockServerUser = { id: 'usr-spoofed' };
       const spoofedRequest = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-is-super-admin': 'true',
@@ -468,6 +482,7 @@ describe('WP-TENANT-INVITATION-LIFECYCLE-REMEDIATION-IMPLEMENTATION-001', () => 
         userStatus: 'ACTIVE',
         platformRoles: [{ roleId: 'SUPER_ADMIN', roleName: 'SUPER_ADMIN' }],
       });
+      mockServerUser = { id: 'usr-superadmin' };
       const superAdminRequest = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-user-id': 'usr-superadmin',
@@ -488,6 +503,7 @@ describe('WP-TENANT-INVITATION-LIFECYCLE-REMEDIATION-IMPLEMENTATION-001', () => 
         primaryRole: { id: 'role-admin', roleCode: 'ADMIN', status: 'ACTIVE' },
       });
 
+      mockServerUser = { id: 'usr-invited-1' };
       const userRequest = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-user-id': 'usr-invited-1',
@@ -501,6 +517,7 @@ describe('WP-TENANT-INVITATION-LIFECYCLE-REMEDIATION-IMPLEMENTATION-001', () => 
     });
 
     it('24. Unauthenticated request to authorizeOperationalApi returns 401 Unauthorized', async () => {
+      mockServerUser = null;
       const anonRequest = new NextRequest('http://localhost:3000/api/academic/workspace/years');
       const authz = await authorizeOperationalApi(anonRequest, 'tenant-1');
 

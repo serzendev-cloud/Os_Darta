@@ -35,14 +35,6 @@ export async function POST(request: Request) {
       serverUserId = null;
     }
 
-    // Controlled test harness support ONLY in test environment
-    if (!serverUserId && (process.env.NODE_ENV === 'test' || process.env.VITEST)) {
-      const testWaliId = request.headers.get('x-wali-id') || request.headers.get('x-user-id');
-      if (testWaliId && testWaliId.trim() !== '') {
-        serverUserId = testWaliId.trim();
-        serverUserName = request.headers.get('x-user-name') || 'Wali Santri';
-      }
-    }
 
     if (!serverUserId) {
       return NextResponse.json(

@@ -138,6 +138,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
     });
 
     it('1.2. Denies valid session user who is NOT a tenant member and has NO platform role in DB', async () => {
+      mockSessionUser = { id: 'regular_user_123' };
       const req = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-user-id': 'regular_user_123',
@@ -157,6 +158,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
     });
 
     it('1.3. Denies client presenting spoofed x-is-super-admin: true without platform role in DB', async () => {
+      mockSessionUser = { id: 'attacker_user_456' };
       const req = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-user-id': 'attacker_user_456',
@@ -177,6 +179,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
     });
 
     it('1.4. Allows caller when SUPER_ADMIN platform role exists in DB', async () => {
+      mockSessionUser = { id: 'super_admin_uuid_1' };
       const req = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-user-id': 'super_admin_uuid_1',
@@ -193,6 +196,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
     });
 
     it('1.5. Allows caller when DEVELOPER platform role exists in DB', async () => {
+      mockSessionUser = { id: 'dev_uuid_2' };
       const req = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-user-id': 'dev_uuid_2',
@@ -209,6 +213,7 @@ describe('WP-SEC-PLATFORM-001: Platform Authorization Security Contracts', () =>
     });
 
     it('1.6. Allows regular active tenant member in DB', async () => {
+      mockSessionUser = { id: 'member_uuid_3' };
       const req = new NextRequest('http://localhost:3000/api/academic/workspace/years', {
         headers: {
           'x-user-id': 'member_uuid_3',

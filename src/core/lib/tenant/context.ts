@@ -25,7 +25,7 @@ export async function getTenantContext(): Promise<TenantContext> {
     'default-tenant';
   const tenantSlug = headerList.get('x-tenant-slug') || undefined;
   const userId = headerList.get('x-user-id') || undefined;
-  const role = headerList.get('x-user-role') || undefined;
+  const role = undefined;
   const pesantrenName = headerList.get('x-pesantren-name') || undefined;
   const isAuthenticated = Boolean(
     userId || headerList.get('x-authenticated') === 'true'

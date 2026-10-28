@@ -460,13 +460,6 @@ export async function authorizeOperationalApi(
     currentUserId = null;
   }
 
-  // Controlled test harness support ONLY in test environments
-  if (!currentUserId && (process.env.NODE_ENV === 'test' || process.env.VITEST)) {
-    const headerUserId = request.headers.get('x-user-id');
-    if (headerUserId && headerUserId.trim() !== '') {
-      currentUserId = headerUserId.trim();
-    }
-  }
 
   if (!currentUserId) {
     return {

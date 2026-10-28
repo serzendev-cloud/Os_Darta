@@ -138,7 +138,6 @@ export default function TagihanTambahanPage() {
             'Content-Type': 'application/json',
             'x-user-id': 'admin_keuangan_001',
             'x-user-name': 'Ustadz Bendahara Keuangan',
-            'x-user-role': 'admin_keuangan',
             'x-tenant-id': 'default',
           },
           body: JSON.stringify({

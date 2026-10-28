@@ -8,12 +8,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { rfidCards, santri, gatePasses } from '@/lib/db/schema';
 
-// Module-level mock functions
-const mockGetTenantContext = vi.fn();
-const mockRequirePermission = vi.fn();
-const mockAuthorizeWaliSantriAccess = vi.fn();
-const mockWithTenantTransaction = vi.fn();
-const mockGetUser = vi.fn();
+// Module-level mock functions hoisted safely
+const {
+  mockGetTenantContext,
+  mockRequirePermission,
+  mockAuthorizeWaliSantriAccess,
+  mockWithTenantTransaction,
+  mockGetUser,
+  mockDigiflazz,
+  mockSaasPayment,
+} = vi.hoisted(() => ({
+  mockGetTenantContext: vi.fn(),
+  mockRequirePermission: vi.fn(),
+  mockAuthorizeWaliSantriAccess: vi.fn(),
+  mockWithTenantTransaction: vi.fn(),
+  mockGetUser: vi.fn(),
+  mockDigiflazz: {
+    createTransaction: vi.fn(),
+    inquiryCustomer: vi.fn(),
+  },
+  mockSaasPayment: {
+    createInvoice: vi.fn(),
+  },
+}));
 
 vi.mock('@/lib/tenant/context', () => ({
   DEFAULT_TENANT: { id: 'default', slug: 'default', name: 'Default Tenant' },
@@ -37,15 +54,6 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
-const mockDigiflazz = {
-  createTransaction: vi.fn(),
-  inquiryCustomer: vi.fn(),
-};
-
-const mockSaasPayment = {
-  createInvoice: vi.fn(),
-};
-
 vi.mock('@/lib/ppob/digiflazz', () => ({
   digiflazzClient: mockDigiflazz,
 }));
@@ -57,6 +65,7 @@ vi.mock('@/lib/ppob/saas-payment', () => ({
 import { POST as postScanIn } from '@/app/api/gate/scan-in/route';
 import { POST as postScanOut } from '@/app/api/gate/scan-out/route';
 import { POST as postPpobCheckout } from '@/app/api/ppob/checkout/route';
+import { POST as postPpobInquiry } from '@/app/api/ppob/inquiry/route';
 
 function extractParams(sqlObj: any): any[] {
   if (!sqlObj) return [];
@@ -563,6 +572,107 @@ describe('WP-SEC-FAILCLOSED-001 — Gate Checkpoint & PPOB Fail-Closed Contracts
       expect(json.success).toBe(false);
       expect(json.code).toBe('INTERNAL_SERVER_ERROR');
       expect(json.message).not.toContain('PG_ERROR_PPOB_POOL_EXHAUSTED');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 4. PPOB INQUIRY CONTRACTS
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('Route: POST /api/ppob/inquiry', () => {
+    it('(i) Tanpa sesi: menolak inkuiri tanpa sesi login (HTTP 401)', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('No session') });
+
+      const req = new Request('http://localhost:3000/api/ppob/inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerNo: '5123456789', skuCode: 'pln' }),
+      });
+
+      const res = await postPpobInquiry(req);
+      expect(res.status).toBe(401);
+
+      const json = await res.json();
+      expect(json.success).toBe(false);
+      expect(json.code).toBe('UNAUTHENTICATED');
+    });
+
+    it('(ii) Sesi tanpa izin: menolak pengguna tanpa izin process_ppob_checkout (HTTP 403)', async () => {
+      mockRequirePermission.mockResolvedValueOnce({
+        authorized: false,
+        decision: 'DENIED_PERMISSION_MISSING',
+      });
+
+      const req = new Request('http://localhost:3000/api/ppob/inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerNo: '5123456789', skuCode: 'pln' }),
+      });
+
+      const res = await postPpobInquiry(req);
+      expect(res.status).toBe(403);
+
+      const json = await res.json();
+      expect(json.success).toBe(false);
+      expect(json.code).toBe('FORBIDDEN');
+    });
+
+    it('(iii) Konteks tenant: tanpa konteks tenant -> ditolak (HTTP 400)', async () => {
+      mockGetTenantContext.mockResolvedValueOnce(null);
+
+      const req = new Request('http://localhost:3000/api/ppob/inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerNo: '5123456789', skuCode: 'pln' }),
+      });
+
+      const res = await postPpobInquiry(req);
+      expect(res.status).toBe(400);
+
+      const json = await res.json();
+      expect(json.success).toBe(false);
+      expect(json.code).toBe('TENANT_NOT_FOUND');
+    });
+
+    it('(iv) Sukses dengan izin: memanggil provider dan mengembalikan data inkuiri (HTTP 200)', async () => {
+      mockDigiflazz.inquiryCustomer.mockResolvedValueOnce({
+        status: true,
+        customerName: 'Budi Santoso',
+        subscriberId: '5123456789',
+        segmentPower: 'R1 / 1300 VA',
+      });
+
+      const req = new Request('http://localhost:3000/api/ppob/inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerNo: '5123456789', skuCode: 'pln' }),
+      });
+
+      const res = await postPpobInquiry(req);
+      expect(res.status).toBe(200);
+
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.code).toBe('INQUIRY_SUCCESS');
+      expect(json.data.customerName).toBe('Budi Santoso');
+      expect(mockDigiflazz.inquiryCustomer).toHaveBeenCalledWith('5123456789', 'pln');
+    });
+
+    it('(v) Respons error: kegagalan internal provider atau kode tidak membocorkan stack ke klien (HTTP 500)', async () => {
+      mockDigiflazz.inquiryCustomer.mockRejectedValueOnce(new Error('INTERNAL_DIGIFLAZZ_TIMEOUT_SOCKET_ERR'));
+
+      const req = new Request('http://localhost:3000/api/ppob/inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerNo: '5123456789', skuCode: 'pln' }),
+      });
+
+      const res = await postPpobInquiry(req);
+      expect(res.status).toBe(500);
+
+      const json = await res.json();
+      expect(json.success).toBe(false);
+      expect(json.code).toBe('INTERNAL_SERVER_ERROR');
+      expect(json.message).not.toContain('INTERNAL_DIGIFLAZZ_TIMEOUT_SOCKET_ERR');
     });
   });
 });

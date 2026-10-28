@@ -80,7 +80,6 @@ export default function AdminKeuanganSppPage() {
         headers: {
           'x-user-id': 'admin_keuangan_001',
           'x-user-name': 'Ustadz Bendahara Keuangan',
-          'x-user-role': 'admin_keuangan',
           'x-tenant-id': 'default',
         },
       });
@@ -178,7 +177,6 @@ export default function AdminKeuanganSppPage() {
             'Content-Type': 'application/json',
             'x-user-id': 'admin_keuangan_001',
             'x-user-name': 'Ustadz Bendahara Keuangan',
-            'x-user-role': 'admin_keuangan',
             'x-tenant-id': 'default',
           },
           body: JSON.stringify({
