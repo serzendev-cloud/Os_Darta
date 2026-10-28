@@ -117,6 +117,12 @@ export const Permission = {
   VIEW_FINANCE_RECONCILIATION: 'view_finance_reconciliation',
   MANAGE_FINANCE_RECONCILIATION: 'manage_finance_reconciliation',
   VIEW_FINANCE_AUDIT_CCTV: 'view_finance_audit_cctv',
+
+  // Gate Checkpoint
+  PROCESS_GATE_SCAN: 'process_gate_scan',
+
+  // PPOB
+  PROCESS_PPOB_CHECKOUT: 'process_ppob_checkout',
 } as const;
 
 export type PermissionType = (typeof Permission)[keyof typeof Permission];
@@ -174,6 +180,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_BROADCAST,
     Permission.VIEW_PERPUSTAKAAN,
     Permission.MANAGE_PERPUSTAKAAN,
+    Permission.PROCESS_GATE_SCAN,
   ]),
 
   musyrif: new Set([
@@ -194,6 +201,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_PENGUMUMAN,
     Permission.VIEW_KALENDER_KEGIATAN,
     Permission.VIEW_PERPUSTAKAAN,
+    Permission.PROCESS_GATE_SCAN,
   ]),
 
   staff: new Set([
@@ -217,6 +225,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.PROCESS_CANTEEN_PAYMENT,
     Permission.REQUEST_CANTEEN_REFUND,
     Permission.VIEW_CANTEEN_REFUND,
+    Permission.PROCESS_GATE_SCAN,
   ]),
 
   guru: new Set([
@@ -256,6 +265,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionType>> = {
     Permission.VIEW_PENGUMUMAN,
     Permission.VIEW_RAPORT,
     Permission.VIEW_PERPUSTAKAAN,
+    Permission.PROCESS_PPOB_CHECKOUT,
   ]),
 
   santri: new Set([

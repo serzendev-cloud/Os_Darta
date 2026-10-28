@@ -611,6 +611,26 @@ export const CANONICAL_PERMISSIONS: readonly CanonicalPermissionDefinition[] = [
     description: 'Akses melihat linimasa audit visual CCTV dan riwayat log transaksi keuangan santri.',
   },
 
+  // ── Keamanan Gerbang (Gate Checkpoint) ──────────────────────────────────
+  {
+    id: 'perm_process_gate_scan',
+    code: Permission.PROCESS_GATE_SCAN,
+    name: 'Proses Presensi Gerbang RFID',
+    module: 'keamanan',
+    scope: 'TENANT',
+    description: 'Akses memproses pemindaian kartu RFID santri pada checkpoint gerbang (scan-in dan scan-out).',
+  },
+
+  // ── PPOB Wali ────────────────────────────────────────────────────────────
+  {
+    id: 'perm_process_ppob_checkout',
+    code: Permission.PROCESS_PPOB_CHECKOUT,
+    name: 'Proses Checkout PPOB',
+    module: 'ppob',
+    scope: 'TENANT',
+    description: 'Akses melakukan checkout transaksi pembayaran produk digital PPOB.',
+  },
+
   // ── PLATFORM-SCOPED PERMISSIONS (Excluded from Tenant Role) ──────────────
   {
     id: 'perm_manage_tenants',

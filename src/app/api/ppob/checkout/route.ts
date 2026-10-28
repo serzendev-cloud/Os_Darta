@@ -1,110 +1,126 @@
+// ========================================
+// PPOB Digital Products Checkout API Route
+// Work Package: WP-SEC-FAILCLOSED-001
+// Fail-Closed Policy: Zero Client Trust & Strict Session Auth
+// ========================================
+
 import { NextResponse } from 'next/server';
-import { digiflazzClient } from '@/lib/ppob/digiflazz';
-import { saasPaymentClient } from '@/lib/ppob/saas-payment';
+import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
+import { getTenantContext, DEFAULT_TENANT } from '@/lib/tenant/context';
+import { requirePermission, authorizeWaliSantriAccess } from '@/lib/authz/authorization-service';
+import { Permission } from '@/config/permissions';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const {
-      tenantId = 'default',
-      waliId = 'wali-001',
-      waliName = 'Wali Santri Utama',
-      waliPhone = '081234567890',
-      santriId = 'santri-001',
-      categoryCode,
-      buyerSkuCode,
-      productName,
-      customerNo,
-      customerName,
-      amountBase,
-      feeSaas = 1500,
-      totalAmount,
-      paymentMethod = 'QRIS_SAAS', // 'QRIS_SAAS' | 'SALDO_PPOB'
-      walletBalanceCurrent = 0,
-    } = body;
+    // 1. Autentikasi Pengguna Sesi Server (Fail-Closed)
+    let user: { id: string } | null = null;
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data?.user?.id) {
+        user = { id: data.user.id };
+      }
+    } catch {
+      user = null;
+    }
 
-    if (!buyerSkuCode || !customerNo || !totalAmount) {
+    if (!user?.id) {
       return NextResponse.json(
-        { success: false, message: 'Data checkout PPOB tidak lengkap' },
-        { status: 400 }
+        {
+          success: false,
+          code: 'UNAUTHENTICATED',
+          message: 'Autentikasi diperlukan: Sesi pengguna tidak ditemukan atau kedaluwarsa',
+        },
+        { status: 401 }
       );
     }
 
-    const txId = `PPOB-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-    // ── CASE A: Pembayaran Menggunakan Saldo Dompet PPOB Wali ─────────────────
-    if (paymentMethod === 'SALDO_PPOB') {
-      if (walletBalanceCurrent < totalAmount) {
+    // 2. Resolusi Konteks Tenant Resmi (Fail-Closed)
+    let tenant: { id: string };
+    try {
+      const tenantCtx = await getTenantContext();
+      if (!tenantCtx?.id || tenantCtx.id.trim() === '' || tenantCtx.id === DEFAULT_TENANT.id) {
         return NextResponse.json(
           {
             success: false,
-            message: `Saldo Dompet PPOB tidak mencukupi (Saldo: Rp ${walletBalanceCurrent.toLocaleString('id-ID')}, Tagihan: Rp ${totalAmount.toLocaleString('id-ID')})`,
+            code: 'TENANT_NOT_FOUND',
+            message: 'Konteks tenant valid diperlukan',
           },
           { status: 400 }
         );
       }
-
-      // Potong Saldo PPOB & Eksekusi Pembelian ke Digiflazz
-      const digiRes = await digiflazzClient.createTransaction(txId, buyerSkuCode, customerNo);
-
-      if (digiRes.success && digiRes.status === 'SUCCESS') {
-        const newBalance = walletBalanceCurrent - totalAmount;
-        return NextResponse.json({
-          success: true,
-          status: 'SUCCESS',
-          transactionId: txId,
-          paymentMethod: 'SALDO_PPOB',
-          sn: digiRes.sn,
-          newBalance,
-          message: 'Pembelian PPOB via Saldo PPOB berhasil!',
-        });
-      } else {
-        // Jika Digiflazz Gagal saat bayar via Saldo PPOB, saldo TIDAK dipotong / Otomatis kembali
-        return NextResponse.json({
-          success: false,
-          status: 'FAILED_REFUNDED',
-          transactionId: txId,
-          paymentMethod: 'SALDO_PPOB',
-          newBalance: walletBalanceCurrent, // Balance utuh
-          message: `Pembelian ke Digiflazz gagal (${digiRes.message || 'Stok habis'}). Saldo Dompet PPOB Anda utuh.`,
-        });
-      }
-    }
-
-    // ── CASE B: Pembayaran Menggunakan Dynamic QRIS (Payment Gateway SaaS) ───
-    const saasPgRes = await saasPaymentClient.createInvoice({
-      transactionId: txId,
-      amount: totalAmount,
-      productName,
-      customerName: waliName,
-      customerPhone: waliPhone,
-    });
-
-    if (!saasPgRes.success) {
+      tenant = tenantCtx;
+    } catch {
       return NextResponse.json(
-        { success: false, message: 'Gagal membuat QRIS Pembayaran SaaS PG' },
-        { status: 500 }
+        {
+          success: false,
+          code: 'TENANT_NOT_FOUND',
+          message: 'Konteks tenant valid diperlukan',
+        },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      status: 'PENDING_PAYMENT',
-      transactionId: txId,
-      paymentMethod: 'QRIS_SAAS',
-      qrCodeUrl: saasPgRes.qrCodeUrl,
-      paymentUrl: saasPgRes.paymentUrl,
-      expiresAt: saasPgRes.expiresAt,
-      totalAmount,
-      productName,
-      customerNo,
-      customerName,
-      message: 'QRIS Pembayaran berhasil dibuat, silakan scan untuk menyelesaikan transaksi.',
-    });
-  } catch (err: any) {
-    console.error('API PPOB Checkout Error:', err);
+    // 3. Validasi Otorisasi Izin Kanonikal Berbasis Database
+    const authz = await requirePermission(user.id, tenant.id, Permission.PROCESS_PPOB_CHECKOUT);
+    if (!authz.authorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'FORBIDDEN',
+          message: 'Izin ditolak: Anda tidak memiliki wewenang untuk melakukan checkout PPOB',
+        },
+        { status: 403 }
+      );
+    }
+
+    // 4. Parse & Sanitasi Request Body (Abaikan parameter tenant, akun wali, dan saldo dari klien)
+    const body = await req.json().catch(() => ({}));
+    const { santriId, buyerSkuCode, customerNo, totalAmount } = (body || {}) as {
+      santriId?: string;
+      buyerSkuCode?: string;
+      customerNo?: string;
+      totalAmount?: number;
+    };
+
+    if (!buyerSkuCode || !customerNo || !totalAmount) {
+      return NextResponse.json(
+        { success: false, code: 'BAD_REQUEST', message: 'Data checkout PPOB tidak lengkap' },
+        { status: 400 }
+      );
+    }
+
+    // 5. Verifikasi Relasi Wali-Santri via Database jika santriId dilampirkan
+    if (santriId && typeof santriId === 'string' && santriId.trim() !== '') {
+      const relCheck = await authorizeWaliSantriAccess(user.id, tenant.id, santriId.trim());
+      if (!relCheck.authorized) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'FORBIDDEN_WALI_RELATION',
+            message: 'Akses ditolak: Anda tidak memiliki hak asuh yang terverifikasi untuk santri ini',
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 6. Fail-Closed Service Gate:
+    // TODO: Jalur transaksi checkout PPOB dinonaktifkan (Fail-Closed HTTP 503) sampai skema
+    // tabel ledger saldo dompet PPOB wali dan mekanisme debit/refund atomik terintegrasi dengan DB.
+    // Provider eksternal (Digiflazz/SaaS PG) TIDAK dipanggil karena saldo sumber belum terverifikasi.
     return NextResponse.json(
-      { success: false, message: err.message || 'Gagal memproses checkout PPOB' },
+      {
+        success: false,
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Layanan checkout PPOB saat ini belum tersedia',
+      },
+      { status: 503 }
+    );
+  } catch (error: unknown) {
+    console.error('[API /api/ppob/checkout POST] Internal error:', error);
+    return NextResponse.json(
+      { success: false, code: 'INTERNAL_SERVER_ERROR', message: 'Gagal memproses checkout PPOB' },
       { status: 500 }
     );
   }
