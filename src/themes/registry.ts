@@ -11,7 +11,7 @@ import { fajarPreset } from './tokens/fajar';
 import { langitPreset } from './tokens/langit';
 import { mainPreset } from './tokens/main';
 import { buildGradient } from './gradient-builder';
-import { HEX_COLOR_REGEX } from './contrast';
+import { HEX_COLOR_REGEX, getAccessibleForeground, getAccessibleHeaderForeground } from './contrast';
 
 export const THEME_REGISTRY: Record<ThemePresetId, ThemePreset> = {
   'white-label': whiteLabelPreset,
@@ -55,6 +55,7 @@ export function getThemePreset(id?: string | null): ThemePreset {
  * Layer 1: Base preset tokens (Light or Dark)
  * Layer 2: Preset toggles (Gold accent, Neon glow)
  * Layer 3: Tenant brand override (if valid custom primaryColor provided)
+ * Auto-calculation: High contrast foregrounds (>= 4.5:1)
  */
 export function resolveThemeTokens(
   presetId: ThemePresetId,
@@ -90,6 +91,11 @@ export function resolveThemeTokens(
     tokens.neonGlowColor = undefined;
   }
 
+  // Auto-calculate accessible foregrounds (WCAG AA >= 4.5:1)
+  tokens.primaryForeground = getAccessibleForeground(tokens.primary);
+  const stopMatches = tokens.headerGradient.match(/#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})/g);
+  tokens.headerForeground = getAccessibleHeaderForeground(stopMatches || [tokens.primary]);
+
   return tokens;
 }
 
@@ -120,6 +126,8 @@ export function generateThemeCssVariables(
     '--theme-muted': sanitize(tokens.muted, '#5B7391'),
     '--theme-primary': sanitize(tokens.primary, '#1F6FD1'),
     '--theme-primary-strong': sanitize(tokens.primaryStrong, '#173F86'),
+    '--theme-primary-foreground': sanitize(tokens.primaryForeground || '#FFFFFF', '#FFFFFF'),
+    '--theme-header-foreground': sanitize(tokens.headerForeground || '#FFFFFF', '#FFFFFF'),
     '--theme-sky': sanitize(tokens.sky, '#38BDF8'),
     '--theme-sky-soft': sanitize(tokens.skySoft, '#E0F2FE'),
     '--theme-gold': '#F3C74A',
@@ -132,4 +140,3 @@ export function generateThemeCssVariables(
     '--theme-neon-glow': (settings.neonGlow && tokens.neonGlowColor) ? '#FFF44F' : 'transparent',
   };
 }
-

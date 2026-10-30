@@ -24,6 +24,7 @@ export interface ThemeTokens {
   muted: string;            // Secondary / label text color
   primary: string;          // Brand primary accent color
   primaryStrong: string;    // Hover / active brand state
+  primaryForeground?: string; // High-contrast text on primary (>= 4.5:1)
   sky: string;              // Sky accent
   skySoft: string;          // Sky tint surface
   gold: string;             // Gold accent (#F3C74A)
@@ -31,6 +32,7 @@ export interface ThemeTokens {
   goldGradient: string;     // Multi-stop gold metallic sheen
   headerGradient: string;   // 4-stop hero header background
   headerSheen: string;      // Angular light overlay
+  headerForeground?: string; // High-contrast text on header gradient (>= 4.5:1)
   neonGlowColor?: string;   // Optional neon highlight (e.g. #FFF44F)
 }
 
@@ -55,4 +57,3 @@ export interface ThemeSettings {
   motion: MotionPreference;
   bgUrl?: string | null;
 }
-

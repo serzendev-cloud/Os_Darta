@@ -68,16 +68,16 @@
   --color-theme-muted: var(--theme-muted);
   --color-theme-primary: var(--theme-primary);
   --color-theme-primary-strong: var(--theme-primary-strong);
+  --color-theme-primary-foreground: var(--theme-primary-foreground);
+  --color-theme-header-foreground: var(--theme-header-foreground);
   --color-theme-sky: var(--theme-sky);
   --color-theme-sky-soft: var(--theme-sky-soft);
   --color-theme-gold: var(--theme-gold);
   --color-theme-gold-text: var(--theme-gold-text);
-
 }
 
-/* ── Light Mode — Royal Emerald & Amber Gold ─────────────────────────────────────────── */
+/* ── Light Mode — Theme Bridge & Production Fallback ─────────────────────────────────────────── */
 :root {
-
   /* Theme tokens default baseline (White-Label Sky Metallic) */
   --theme-bg: #F4F9FF;
   --theme-surface: #FFFFFF;
@@ -87,6 +87,8 @@
   --theme-muted: #5B7391;
   --theme-primary: #1F6FD1;
   --theme-primary-strong: #173F86;
+  --theme-primary-foreground: #FFFFFF;
+  --theme-header-foreground: #FFFFFF;
   --theme-sky: #38BDF8;
   --theme-sky-soft: #E0F2FE;
   --theme-gold: #F3C74A;
@@ -97,38 +99,40 @@
   --theme-gold-line: transparent;
   --theme-gold-line-height: 0px;
   --theme-neon-glow: transparent;
-  --background: oklch(0.985 0.005 85);
-  --foreground: oklch(0.18 0.02 160);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 160);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 160);
-  --primary: oklch(0.42 0.12 165);          /* Royal Deep Emerald */
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.96 0.01 85);
-  --secondary-foreground: oklch(0.20 0.02 160);
-  --muted: oklch(0.96 0.01 85);
-  --muted-foreground: oklch(0.48 0.03 165);
-  --accent: oklch(0.93 0.03 85);            /* Gold Sand Accent */
-  --accent-foreground: oklch(0.20 0.02 160);
+
+  /* Full Bridge: Maps shadcn & shell tokens to theme tokens with legacy fallback */
+  --background: var(--theme-bg, oklch(0.985 0.005 85));
+  --foreground: var(--theme-ink, oklch(0.18 0.02 160));
+  --card: var(--theme-surface, oklch(1 0 0));
+  --card-foreground: var(--theme-ink, oklch(0.18 0.02 160));
+  --popover: var(--theme-surface, oklch(1 0 0));
+  --popover-foreground: var(--theme-ink, oklch(0.18 0.02 160));
+  --primary: var(--theme-primary, oklch(0.42 0.12 165));
+  --primary-foreground: var(--theme-primary-foreground, oklch(0.98 0 0));
+  --secondary: var(--theme-surface-soft, oklch(0.96 0.01 85));
+  --secondary-foreground: var(--theme-ink, oklch(0.20 0.02 160));
+  --muted: var(--theme-surface-soft, oklch(0.96 0.01 85));
+  --muted-foreground: var(--theme-muted, oklch(0.48 0.03 165));
+  --accent: var(--theme-surface-soft, oklch(0.93 0.03 85));
+  --accent-foreground: var(--theme-ink, oklch(0.20 0.02 160));
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.90 0.015 85);
-  --input: oklch(0.90 0.015 85);
-  --ring: oklch(0.68 0.18 75);             /* Amber Gold Ring */
-  --chart-1: oklch(0.42 0.12 165);
+  --border: var(--theme-border, oklch(0.90 0.015 85));
+  --input: var(--theme-border, oklch(0.90 0.015 85));
+  --ring: var(--theme-primary, oklch(0.68 0.18 75));
+  --chart-1: var(--theme-primary, oklch(0.42 0.12 165));
   --chart-2: oklch(0.68 0.18 75);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.75rem;
-  --sidebar: oklch(0.97 0.01 165);
-  --sidebar-foreground: oklch(0.18 0.02 160);
-  --sidebar-primary: oklch(0.42 0.12 165);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.92 0.02 165);
-  --sidebar-accent-foreground: oklch(0.18 0.02 160);
-  --sidebar-border: oklch(0.88 0.02 165);
-  --sidebar-ring: oklch(0.68 0.18 75);
+  --sidebar: var(--theme-surface, oklch(0.97 0.01 165));
+  --sidebar-foreground: var(--theme-ink, oklch(0.18 0.02 160));
+  --sidebar-primary: var(--theme-primary, oklch(0.42 0.12 165));
+  --sidebar-primary-foreground: var(--theme-primary-foreground, oklch(0.98 0 0));
+  --sidebar-accent: var(--theme-surface-soft, oklch(0.92 0.02 165));
+  --sidebar-accent-foreground: var(--theme-ink, oklch(0.18 0.02 160));
+  --sidebar-border: var(--theme-border, oklch(0.88 0.02 165));
+  --sidebar-ring: var(--theme-primary, oklch(0.68 0.18 75));
 
   /* ── WP-UI-010A: Standard Density Baseline variables ───────────────── */
   --density-control-gap: 0.75rem;   /* Jarak antar-kontrol: 12px */
@@ -165,9 +169,8 @@
   --density-control-height: 2.25rem; /* Tinggi control Compact: 36px */
 }
 
-/* ── Dark Mode — Night Mosque & Obsidian Emerald Gold ───────────────────────────────────────────── */
+/* ── Dark Mode — Theme Bridge & Production Fallback ───────────────────────────────────────────── */
 .dark {
-
   /* Theme tokens dark mode baseline */
   --theme-bg: #0B1A2E;
   --theme-surface: #11263F;
@@ -177,39 +180,43 @@
   --theme-muted: #94A3B8;
   --theme-primary: #5CB6FF;
   --theme-primary-strong: #38A3F0;
+  --theme-primary-foreground: #0F172A;
+  --theme-header-foreground: #FFFFFF;
   --theme-sky: #38BDF8;
   --theme-sky-soft: #1B365D;
-  --background: oklch(0.12 0.02 165);      /* Deep Night Emerald Obsidian */
-  --foreground: oklch(0.95 0.01 85);
-  --card: oklch(0.16 0.02 165 / 92%);      /* Glass Jade Card */
-  --card-foreground: oklch(0.95 0.01 85);
-  --popover: oklch(0.16 0.02 165);
-  --popover-foreground: oklch(0.95 0.01 85);
-  --primary: oklch(0.75 0.16 75);           /* Gold Amber Primary */
-  --primary-foreground: oklch(0.12 0.02 165);
-  --secondary: oklch(0.20 0.02 165);
-  --secondary-foreground: oklch(0.95 0.01 85);
-  --muted: oklch(0.20 0.02 165);
-  --muted-foreground: oklch(0.65 0.02 85);
-  --accent: oklch(0.24 0.03 165);
-  --accent-foreground: oklch(0.95 0.01 85);
+
+  /* Full Bridge: Maps shadcn & shell tokens to theme tokens with legacy fallback */
+  --background: var(--theme-bg, oklch(0.12 0.02 165));
+  --foreground: var(--theme-ink, oklch(0.95 0.01 85));
+  --card: var(--theme-surface, oklch(0.16 0.02 165 / 92%));
+  --card-foreground: var(--theme-ink, oklch(0.95 0.01 85));
+  --popover: var(--theme-surface, oklch(0.16 0.02 165));
+  --popover-foreground: var(--theme-ink, oklch(0.95 0.01 85));
+  --primary: var(--theme-primary, oklch(0.75 0.16 75));
+  --primary-foreground: var(--theme-primary-foreground, oklch(0.12 0.02 165));
+  --secondary: var(--theme-surface-soft, oklch(0.20 0.02 165));
+  --secondary-foreground: var(--theme-ink, oklch(0.95 0.01 85));
+  --muted: var(--theme-surface-soft, oklch(0.20 0.02 165));
+  --muted-foreground: var(--theme-muted, oklch(0.65 0.02 85));
+  --accent: var(--theme-surface-soft, oklch(0.24 0.03 165));
+  --accent-foreground: var(--theme-ink, oklch(0.95 0.01 85));
   --destructive: oklch(0.65 0.22 27);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.75 0.16 75);
-  --chart-1: oklch(0.75 0.16 75);
+  --border: var(--theme-border, oklch(1 0 0 / 12%));
+  --input: var(--theme-border, oklch(1 0 0 / 14%));
+  --ring: var(--theme-primary, oklch(0.75 0.16 75));
+  --chart-1: var(--theme-primary, oklch(0.75 0.16 75));
   --chart-2: oklch(0.60 0.12 165);
   --chart-3: oklch(0.55 0.10 65);
   --chart-4: oklch(0.439 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.13 0.025 165 / 95%);   /* Deep Emerald Sidebar */
-  --sidebar-foreground: oklch(0.95 0.01 85);
-  --sidebar-primary: oklch(0.75 0.16 75);
-  --sidebar-primary-foreground: oklch(0.12 0.02 165);
-  --sidebar-accent: oklch(0.20 0.03 165);
-  --sidebar-accent-foreground: oklch(0.95 0.01 85);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.75 0.16 75);
+  --sidebar: var(--theme-surface, oklch(0.13 0.025 165 / 95%));
+  --sidebar-foreground: var(--theme-ink, oklch(0.95 0.01 85));
+  --sidebar-primary: var(--theme-primary, oklch(0.75 0.16 75));
+  --sidebar-primary-foreground: var(--theme-primary-foreground, oklch(0.12 0.02 165));
+  --sidebar-accent: var(--theme-surface-soft, oklch(0.20 0.03 165));
+  --sidebar-accent-foreground: var(--theme-ink, oklch(0.95 0.01 85));
+  --sidebar-border: var(--theme-border, oklch(1 0 0 / 10%));
+  --sidebar-ring: var(--theme-primary, oklch(0.75 0.16 75));
 
   /* Status palette — dark */
   --status-success: oklch(0.72 0.13 164.3);
@@ -229,41 +236,15 @@
     @apply bg-background text-foreground;
   }
   
-  /* Islamic background geometric motif */
+  /* Islamic background subtle ambient glow */
   body {
-    background-image: radial-gradient(circle at 50% 0%, oklch(0.42 0.12 165 / 6%) 0%, transparent 60%);
+    background-image: radial-gradient(circle at 50% 0%, var(--theme-primary, oklch(0.42 0.12 165)) 0%, transparent 60%);
     background-repeat: no-repeat;
-    background-attachment: fixed;
-    transition: background-color 300ms ease, color 300ms ease;
-  }
-  
-  .dark body {
-    background-image:
-      radial-gradient(ellipse 80% 55% at 50% -5%, oklch(0.35 0.10 165 / 35%) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 50% at 90% 100%, oklch(0.68 0.18 75 / 10%) 0%, transparent 65%);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
   }
 
-  ::selection {
-    background-color: oklch(0.75 0.16 75 / 35%);
-    color: oklch(0.98 0 0);
-  }
-  html {
-    @apply font-sans;
-  }
-
-  /* ── WP-UI-010A: Accessibility Reduced Motion Foundation ────────────── */
-  @media (prefers-reduced-motion: reduce) {
-    *, ::before, ::after {
-      animation-delay: -1ms !important;
-      animation-duration: 1ms !important;
-      animation-iteration-count: 1 !important;
-      background-attachment: initial !important;
-      scroll-behavior: auto !important;
-      transition-duration: 0s !important;
-      transition-delay: 0s !important;
-    }
+  [data-theme-category="Netral"] body,
+  [data-theme-ornament="false"] body {
+    background-image: none;
   }
 }
 
@@ -272,6 +253,12 @@
   /* Islamic SVG Star Geometric Pattern Background Overlay */
   .bg-islamic-pattern {
     background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23D97706' fill-opacity='0.08'%3E%3Cpath d='M30 0l5 10 10-5-5 10 10 5-10 5 5 10-10-5-5 10-5-10-10 5 5-10-10-5 10-5-5-10 10 5z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* Deactivate pattern on neutral categories or when ornament switch is disabled */
+  [data-theme-category="Netral"] .bg-islamic-pattern,
+  [data-theme-ornament="false"] .bg-islamic-pattern {
+    background-image: none;
   }
 
   /* Islamic Gold Gradient Border Trim */

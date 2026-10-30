@@ -4,7 +4,7 @@ export const fajarPreset: ThemePreset = {
   id: 'fajar',
   name: 'Fajar',
   category: 'Berwarna',
-  description: 'Hangatnya semburat fajar dengan sentuhan oranye lembut dan terracotta yang menenangkan.',
+  description: 'Hangatnya semburat fajar dengan sentuhan oranye terracotta yang teduh dan berwibawa.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
   supportsMosqueOrnament: true,
@@ -16,8 +16,8 @@ export const fajarPreset: ThemePreset = {
     border: '#FED7AA',
     ink: '#431407',
     muted: '#9A3412',
-    primary: '#EA580C',
-    primaryStrong: '#C2410C',
+    primary: '#C2410C',
+    primaryStrong: '#9A3412',
     sky: '#F97316',
     skySoft: '#FFEDD5',
     gold: '#F3C74A',
@@ -44,4 +44,3 @@ export const fajarPreset: ThemePreset = {
     headerSheen: 'linear-gradient(115deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%)',
   },
 };
-

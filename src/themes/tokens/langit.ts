@@ -16,8 +16,8 @@ export const langitPreset: ThemePreset = {
     border: '#BAE6FD',
     ink: '#0C4A6E',
     muted: '#0369A1',
-    primary: '#0284C7',
-    primaryStrong: '#0369A1',
+    primary: '#0369A1',
+    primaryStrong: '#075985',
     sky: '#38BDF8',
     skySoft: '#E0F2FE',
     gold: '#F3C74A',
@@ -44,4 +44,3 @@ export const langitPreset: ThemePreset = {
     headerSheen: 'linear-gradient(115deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 42%)',
   },
 };
-
