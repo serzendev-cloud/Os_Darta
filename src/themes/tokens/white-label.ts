@@ -15,7 +15,7 @@ export const whiteLabelPreset: ThemePreset = {
     surfaceSoft: '#EAF4FE',
     border: '#D6E6F7',
     ink: '#0F2A47',
-    muted: '#5B7391',
+    muted: '#526B88',
     primary: '#1F6FD1',
     primaryStrong: '#173F86',
     sky: '#38BDF8',

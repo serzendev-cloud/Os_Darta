@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { THEME_PRESETS } from '@/themes/registry';
+import { THEME_PRESETS, resolveThemeTokens } from '@/themes/registry';
 import { 
   getContrastRatio, 
   getWorstCaseGradientContrast,
@@ -65,6 +65,37 @@ describe('WP-UI-001 Theme Contrast & WCAG AA Verification', () => {
         // Teks sekunder (muted) di atas surface gelap (minimal 3:1)
         const darkMutedContrast = getContrastRatio(darkTokens.muted, darkTokens.surface);
         expect(darkMutedContrast).toBeGreaterThanOrEqual(3.0);
+      });
+    });
+  });
+
+  describe('WP-UI-001e: Pasangan Kontras Nyata Shell (Semua 11 Preset, Terang & Gelap)', () => {
+    THEME_PRESETS.forEach((preset) => {
+      (['light', 'dark'] as const).forEach((mode) => {
+        const isDark = mode === 'dark';
+        it(`preset [${preset.id}] (${mode}): 5 pasangan shell harus memenuhi WCAG AA >= 4.5:1`, () => {
+          const tokens = resolveThemeTokens(preset.id, isDark);
+
+          // 1. primary vs primary-foreground
+          const primaryContrast = getContrastRatio(tokens.primaryForeground || '#FFFFFF', tokens.primary);
+          expect(primaryContrast, `[${preset.id}-${mode}] primary vs primary-foreground (${tokens.primaryForeground} on ${tokens.primary})`).toBeGreaterThanOrEqual(4.5);
+
+          // 2. foreground (ink) vs background
+          const fgBgContrast = getContrastRatio(tokens.ink, tokens.background);
+          expect(fgBgContrast, `[${preset.id}-${mode}] foreground vs background (${tokens.ink} on ${tokens.background})`).toBeGreaterThanOrEqual(4.5);
+
+          // 3. card-foreground (ink) vs card (surface)
+          const cardContrast = getContrastRatio(tokens.ink, tokens.surface);
+          expect(cardContrast, `[${preset.id}-${mode}] card-foreground vs card (${tokens.ink} on ${tokens.surface})`).toBeGreaterThanOrEqual(4.5);
+
+          // 4. sidebar-foreground (ink) vs sidebar (surface)
+          const sidebarContrast = getContrastRatio(tokens.ink, tokens.surface);
+          expect(sidebarContrast, `[${preset.id}-${mode}] sidebar-foreground vs sidebar (${tokens.ink} on ${tokens.surface})`).toBeGreaterThanOrEqual(4.5);
+
+          // 5. muted-foreground vs muted/surfaceSoft
+          const mutedContrast = getContrastRatio(tokens.muted, tokens.surfaceSoft);
+          expect(mutedContrast, `[${preset.id}-${mode}] muted-foreground vs muted (${tokens.muted} on ${tokens.surfaceSoft})`).toBeGreaterThanOrEqual(4.5);
+        });
       });
     });
   });

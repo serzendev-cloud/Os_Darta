@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
 import { ThemeSettings, ThemeTokens } from '@/themes/types';
-import { DEFAULT_THEME_SETTINGS, resolveThemeTokens, generateThemeCssVariables } from '@/themes/registry';
+import { DEFAULT_THEME_SETTINGS, resolveThemeTokens, generateThemeCssVariables, getThemePreset } from '@/themes/registry';
 
 interface ThemeContextValue {
   themeSettings: ThemeSettings;
@@ -90,20 +90,34 @@ function ThemeSynchronizer({
   }, [settings.preset, isDark, tenantPrimaryColor, settings.goldAccent, settings.neonGlow]);
 
   React.useEffect(() => {
-    // Generate CSS variables and apply to document root
-    const root = document.documentElement;
-    const cssVars = generateThemeCssVariables(resolvedTokens, settings);
+    // Generate both :root and .dark rules so dynamic theme changes update immediately
+    const lightTokens = resolveThemeTokens(settings.preset, false, tenantPrimaryColor, settings.goldAccent, settings.neonGlow);
+    const darkTokens = resolveThemeTokens(settings.preset, true, tenantPrimaryColor, settings.goldAccent, settings.neonGlow);
 
-    for (const [key, value] of Object.entries(cssVars)) {
-      root.style.setProperty(key, value);
+    const lightVars = generateThemeCssVariables(lightTokens, settings);
+    const darkVars = generateThemeCssVariables(darkTokens, settings);
+
+    // Apply or update dynamic <style id="client-theme-tokens">
+    let styleEl = document.getElementById('client-theme-tokens') as HTMLStyleElement;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'client-theme-tokens';
+      document.head.appendChild(styleEl);
     }
+    const lightRules = Object.entries(lightVars).map(([k, v]) => `${k}:${v};`).join(' ');
+    const darkRules = Object.entries(darkVars).map(([k, v]) => `${k}:${v};`).join(' ');
+    styleEl.textContent = `:root { ${lightRules} } .dark { ${darkRules} }`;
 
-    // Set declarative data attributes for styling hooks
+    // Also update root data attributes
+    const root = document.documentElement;
+    const currentPreset = getThemePreset(settings.preset);
     root.setAttribute('data-theme-preset', settings.preset);
+    root.setAttribute('data-theme-category', currentPreset.category);
+    root.setAttribute('data-theme-ornament', settings.ornament ? 'true' : 'false');
     root.setAttribute('data-gold-accent', settings.goldAccent || settings.preset === 'sky-emas' ? 'true' : 'false');
     root.setAttribute('data-neon-glow', settings.neonGlow ? 'true' : 'false');
     root.setAttribute('data-motion', settings.motion);
-  }, [resolvedTokens, settings]);
+  }, [settings, tenantPrimaryColor]);
 
   const contextValue = React.useMemo(
     () => ({
@@ -117,4 +131,3 @@ function ThemeSynchronizer({
 
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 }
-

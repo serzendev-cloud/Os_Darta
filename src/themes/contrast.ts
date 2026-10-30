@@ -166,3 +166,26 @@ export function deriveDarkTokens(light: ThemeTokens): ThemeTokens {
   };
 }
 
+/**
+ * Selects an optimal foreground color (#FFFFFF or high-contrast dark color #0F172A / #0F2A47)
+ * against a background hex color to strictly achieve WCAG AA >= 4.5:1.
+ */
+export function getAccessibleForeground(bgHex: string, darkFallback = '#0F2A47'): string {
+  const whiteRatio = getContrastRatio('#FFFFFF', bgHex);
+  if (whiteRatio >= 4.5) return '#FFFFFF';
+  const darkRatio = getContrastRatio(darkFallback, bgHex);
+  if (darkRatio >= 4.5) return darkFallback;
+  return whiteRatio >= darkRatio ? '#FFFFFF' : darkFallback;
+}
+
+/**
+ * Selects an optimal foreground color (#FFFFFF or dark color) against a multi-stop header gradient.
+ */
+export function getAccessibleHeaderForeground(gradientStops: string[], darkFallback = '#0F2A47'): string {
+  if (!gradientStops || gradientStops.length === 0) return '#FFFFFF';
+  const whiteWorst = getWorstCaseGradientContrast('#FFFFFF', gradientStops).worstRatio;
+  if (whiteWorst >= 4.5) return '#FFFFFF';
+  const darkWorst = getWorstCaseGradientContrast(darkFallback, gradientStops).worstRatio;
+  if (darkWorst >= 4.5) return darkFallback;
+  return whiteWorst >= darkWorst ? '#FFFFFF' : darkFallback;
+}
