@@ -1,0 +1,48 @@
+import { ThemePreset } from '../types';
+
+export const malamPreset: ThemePreset = {
+  id: 'malam',
+  name: 'Malam Emas',
+  category: 'Gelap',
+  description: 'Tema malam obsidian yang mewah dengan aksen emas bercahaya, nyaman untuk sesi malam.',
+  supportsGoldAccent: true,
+  supportsNeonGlow: false,
+  supportsMosqueOrnament: true,
+  hasExplicitDark: true,
+  // Malam is dark-first; light mode acts as a softened dusk theme
+  light: {
+    background: '#131B2E',
+    surface: '#1E293B',
+    surfaceSoft: '#293548',
+    border: '#3E4C63',
+    ink: '#F8FAFC',
+    muted: '#94A3B8',
+    primary: '#F3C74A',
+    primaryStrong: '#C9962B',
+    sky: '#38BDF8',
+    skySoft: '#1E293B',
+    gold: '#F3C74A',
+    goldText: '#4A3300',
+    goldGradient: 'linear-gradient(135deg, #FDE68A 0%, #F3C74A 50%, #C9962B 100%)',
+    headerGradient: 'linear-gradient(135deg, #1E293B 0%, #0F172A 50%, #020617 100%)',
+    headerSheen: 'linear-gradient(115deg, rgba(243, 199, 74, 0.25), rgba(255, 255, 255, 0) 45%)',
+  },
+  dark: {
+    background: '#070B14',
+    surface: '#0F1626',
+    surfaceSoft: '#172033',
+    border: '#24304A',
+    ink: '#F1F5F9',
+    muted: '#94A3B8',
+    primary: '#F3C74A',
+    primaryStrong: '#C9962B',
+    sky: '#38BDF8',
+    skySoft: '#111D30',
+    gold: '#F3C74A',
+    goldText: '#4A3300',
+    goldGradient: 'linear-gradient(135deg, #FDE68A 0%, #F3C74A 50%, #C9962B 100%)',
+    headerGradient: 'linear-gradient(135deg, #141E33 0%, #0A0F1A 60%, #020408 100%)',
+    headerSheen: 'linear-gradient(115deg, rgba(243, 199, 74, 0.30), rgba(255, 255, 255, 0) 45%)',
+  },
+};
+

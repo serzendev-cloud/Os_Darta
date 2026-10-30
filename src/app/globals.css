@@ -59,10 +59,44 @@
   --color-status-neutral: var(--status-neutral);
   --color-status-purple: var(--status-purple);
   --color-status-fatal: var(--status-fatal);
+  /* ── 3-Layer Theme Foundation Tokens (WP-UI-001) ── */
+  --color-theme-bg: var(--theme-bg);
+  --color-theme-surface: var(--theme-surface);
+  --color-theme-surface-soft: var(--theme-surface-soft);
+  --color-theme-border: var(--theme-border);
+  --color-theme-ink: var(--theme-ink);
+  --color-theme-muted: var(--theme-muted);
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-primary-strong: var(--theme-primary-strong);
+  --color-theme-sky: var(--theme-sky);
+  --color-theme-sky-soft: var(--theme-sky-soft);
+  --color-theme-gold: var(--theme-gold);
+  --color-theme-gold-text: var(--theme-gold-text);
+
 }
 
 /* ── Light Mode — Royal Emerald & Amber Gold ─────────────────────────────────────────── */
 :root {
+
+  /* Theme tokens default baseline (White-Label Sky Metallic) */
+  --theme-bg: #F4F9FF;
+  --theme-surface: #FFFFFF;
+  --theme-surface-soft: #EAF4FE;
+  --theme-border: #D6E6F7;
+  --theme-ink: #0F2A47;
+  --theme-muted: #5B7391;
+  --theme-primary: #1F6FD1;
+  --theme-primary-strong: #173F86;
+  --theme-sky: #38BDF8;
+  --theme-sky-soft: #E0F2FE;
+  --theme-gold: #F3C74A;
+  --theme-gold-text: #4A3300;
+  --theme-gold-gradient: linear-gradient(135deg, #FDE68A 0%, #F3C74A 50%, #C9962B 100%);
+  --theme-header-gradient: linear-gradient(135deg, #7DD3FC 0%, #38A3F0 28%, #2563C7 62%, #173F86 100%);
+  --theme-header-sheen: linear-gradient(115deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 42%);
+  --theme-gold-line: transparent;
+  --theme-gold-line-height: 0px;
+  --theme-neon-glow: transparent;
   --background: oklch(0.985 0.005 85);
   --foreground: oklch(0.18 0.02 160);
   --card: oklch(1 0 0);
@@ -133,6 +167,18 @@
 
 /* ── Dark Mode — Night Mosque & Obsidian Emerald Gold ───────────────────────────────────────────── */
 .dark {
+
+  /* Theme tokens dark mode baseline */
+  --theme-bg: #0B1A2E;
+  --theme-surface: #11263F;
+  --theme-surface-soft: #173354;
+  --theme-border: #1F4470;
+  --theme-ink: #F4F9FF;
+  --theme-muted: #94A3B8;
+  --theme-primary: #5CB6FF;
+  --theme-primary-strong: #38A3F0;
+  --theme-sky: #38BDF8;
+  --theme-sky-soft: #1B365D;
   --background: oklch(0.12 0.02 165);      /* Deep Night Emerald Obsidian */
   --foreground: oklch(0.95 0.01 85);
   --card: oklch(0.16 0.02 165 / 92%);      /* Glass Jade Card */
@@ -267,5 +313,25 @@
     box-shadow: 0 8px 32px oklch(0 0 0 / 20%);
     border-radius: var(--radius-xl);
     transition: all 300ms ease;
+  }
+}
+
+/* ── Motion Preferences & Accessibility (WP-UI-001) ── */
+[data-motion="off"] * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+[data-motion="soft"] * {
+  animation-duration: 1.5s !important;
+  transition-duration: 0.35s !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

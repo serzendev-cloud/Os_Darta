@@ -1,6 +1,7 @@
 // ========================================
 // Tenant Branding API Route
 // Traceability: WP-SAAS-BRAND-002 Core Tenant Branding Configuration
+// Theme Bridge: WP-DEV-003 Centralized Theme Permissions
 // ========================================
 
 import { NextResponse } from 'next/server';
@@ -10,6 +11,8 @@ import { eq, and } from 'drizzle-orm';
 import { getTenantContext } from '@/lib/tenant/context';
 import { requirePermission } from '@/lib/authz/authorization-service';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
+import { THEME_SETTINGS_READ, THEME_SETTINGS_MANAGE } from '@/themes/permissions';
+import { getThemeSettings, serializeThemeSettings, sanitizePublicBgUrl, extractBgUrl } from '@/lib/theme-settings-store';
 
 /**
  * GET /api/tenant/branding
@@ -22,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Enforce RBAC Permission Check if user session header exists
     if (userId) {
-      const authz = await requirePermission(userId, tenant.id, 'view_pengaturan');
+      const authz = await requirePermission(userId, tenant.id, THEME_SETTINGS_READ);
       if (!authz.authorized) {
         return NextResponse.json(
           { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk membaca pengaturan branding' },
@@ -57,9 +60,10 @@ export async function GET(request: NextRequest) {
         record?.loginDescription ||
         'Platform tata kelola santri, pemantauan pelanggaran, pembinaan karakter, dan manajemen asrama — terintegrasi dalam satu sistem.',
       customLogoUrl: record?.customLogoUrl || null,
-      customBgUrl: record?.customBgUrl || null,
+      customBgUrl: sanitizePublicBgUrl(record?.customBgUrl),
       primaryColor: record?.primaryColor || '#0F766E',
       tagline: record?.tagline || 'Sistem Informasi Pesantren Terpadu',
+      themeSettings: getThemeSettings({ settings: record }),
     };
 
     return NextResponse.json({ success: true, data: brandingData });
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Enforce RBAC Permission Check if user session header exists
     if (userId) {
-      const authz = await requirePermission(userId, tenant.id, 'manage_pengaturan');
+      const authz = await requirePermission(userId, tenant.id, THEME_SETTINGS_MANAGE);
       if (!authz.authorized) {
         return NextResponse.json(
           { error: 'Forbidden', message: authz.reason || 'Izin ditolak untuk mengedit pengaturan branding' },
@@ -102,6 +106,7 @@ export async function POST(request: NextRequest) {
       customBgUrl,
       primaryColor,
       tagline,
+      themeSettings,
     } = body;
 
     // Server-side Input Validation
@@ -144,12 +149,21 @@ export async function POST(request: NextRequest) {
 
         const existingDoc = existingRecords[0];
 
+        // Process themeSettings persistence inside customBgUrl JSON wrapper
+        let resolvedBgUrl: string | null = null;
+        if (themeSettings !== undefined) {
+          const preservedBgUrl = customBgUrl !== undefined ? customBgUrl : extractBgUrl(existingDoc?.customBgUrl);
+          resolvedBgUrl = serializeThemeSettings(themeSettings, preservedBgUrl);
+        } else {
+          resolvedBgUrl = customBgUrl ?? existingDoc?.customBgUrl ?? null;
+        }
+
         const payload = {
           loginTitle: loginTitle ?? existingDoc?.loginTitle ?? tenant.name,
           loginSubtitle: loginSubtitle ?? existingDoc?.loginSubtitle ?? 'Malang',
           loginDescription: loginDescription ?? existingDoc?.loginDescription ?? '',
           customLogoUrl: customLogoUrl ?? existingDoc?.customLogoUrl ?? null,
-          customBgUrl: customBgUrl ?? existingDoc?.customBgUrl ?? null,
+          customBgUrl: resolvedBgUrl,
           primaryColor: primaryColor ?? existingDoc?.primaryColor ?? '#0F766E',
           tagline: tagline ?? existingDoc?.tagline ?? 'Sistem Informasi Pesantren Terpadu',
           updatedAt: new Date(),

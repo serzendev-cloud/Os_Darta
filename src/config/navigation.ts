@@ -7,6 +7,7 @@
 import { NavGroup, NavItem, UserRole } from '@/types';
 import { Permission, hasPermission } from './permissions';
 import type { PermissionType } from './permissions';
+import { THEME_SETTINGS_READ } from '@/themes/permissions';
 
 export const navigationGroups: NavGroup[] = [
   // ── 0. SAAS PLATFORM CONSOLE (Developer & Super Admin) ─────────────────
@@ -568,6 +569,13 @@ export const navigationGroups: NavGroup[] = [
             icon: 'LayoutTemplate',
             roles: ['developer', 'super_admin', 'admin'],
             requiredPermission: Permission.MANAGE_PENGATURAN,
+          },
+          {
+            title: 'Tampilan & Tema',
+            href: '/dashboard/pengaturan/tampilan',
+            icon: 'Palette',
+            roles: ['developer', 'super_admin', 'admin'],
+            requiredPermission: THEME_SETTINGS_READ,
           },
         ],
       },

@@ -212,39 +212,40 @@ export function Sidebar() {
       )}
       <aside className={cn(
         'fixed top-0 left-0 z-50 h-dvh flex flex-col transition-all duration-300 ease-in-out bg-islamic-pattern',
-        'bg-gradient-to-b from-emerald-950/20 via-stone-100 to-amber-950/10 dark:from-emerald-950 dark:via-stone-950 dark:to-stone-950 border-r border-amber-500/30 dark:border-amber-500/20 shadow-2xl',
+        'bg-card text-card-foreground border-r border-border shadow-xl relative overflow-hidden',
         isCollapsed ? 'w-[var(--sidebar-width-collapsed)]' : 'w-[var(--sidebar-width)]',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
         {/* Logo Header */}
-        <div className={cn('flex items-center h-20 border-b border-amber-500/20 px-4 shrink-0 bg-gradient-to-r from-emerald-900/90 to-teal-950/90 text-white relative overflow-hidden', isCollapsed ? 'justify-center' : 'gap-3')}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+        <div className={cn('flex items-center h-20 border-b border-border px-4 shrink-0 bg-accent/40 text-foreground relative overflow-hidden', isCollapsed ? 'justify-center' : 'gap-3')}>
+          <div className="absolute bottom-0 left-0 right-0 h-[var(--theme-gold-line-height,2px)] bg-[var(--theme-gold-line,transparent)]" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-xl pointer-events-none" />
           {isDevOrSuperAdmin ? (
             <>
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 shrink-0 shadow-[0_0_14px_rgba(245,158,11,0.4)] text-white border border-amber-300/40">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground shrink-0 shadow-md border border-primary/20">
                 <Shield className="w-5 h-5" />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col overflow-hidden">
-                  <span className="text-sm font-extrabold text-amber-200 tracking-tight truncate">SaaS Console</span>
-                  <span className="text-[11px] font-semibold text-emerald-200 truncate">نظام Super Admin</span>
+                  <span className="text-sm font-extrabold text-foreground tracking-tight truncate">SaaS Console</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground truncate">نظام Super Admin</span>
                 </div>
               )}
             </>
           ) : (
             <>
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 shrink-0 shadow-[0_0_14px_rgba(16,185,129,0.4)] border border-amber-400/40 text-amber-300">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground shrink-0 shadow-md border border-primary/20">
                 <GraduationCap className="w-6 h-6" />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col overflow-hidden">
-                  <span className="text-sm font-extrabold text-amber-100 tracking-tight truncate">Ma&apos;had Manager</span>
-                  <span className="text-[11px] font-serif italic text-emerald-200/90 truncate">نظام إدارة المعهد</span>
+                  <span className="text-sm font-extrabold text-foreground tracking-tight truncate">Ma&apos;had Manager</span>
+                  <span className="text-[11px] font-serif italic text-muted-foreground truncate">نظام إدارة المعهد</span>
                 </div>
               )}
             </>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} className="lg:hidden ml-auto text-amber-200 hover:text-white">
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} className="lg:hidden ml-auto text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </Button>
         </div>
@@ -333,15 +334,15 @@ export function Sidebar() {
                                 'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
                                 'border',
                                 isActiveItem
-                                  ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
-                                  : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md'
+                                  ? 'bg-primary text-primary-foreground border-primary/40 shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/60 border-transparent'
                               )}
                             >
                               <div className={cn(
                                 'p-1.5 rounded-xl transition-all duration-300 shrink-0',
                                 isActiveItem
                                   ? 'bg-white/20 text-white shadow-inner'
-                                  : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                                  : 'bg-accent text-accent-foreground group-hover:text-foreground'
                               )}>
                                 <ItemIcon className="w-4 h-4" />
                               </div>
@@ -349,7 +350,7 @@ export function Sidebar() {
                               {!isCollapsed && (
                                 <ChevronDown className={cn(
                                   'w-4 h-4 shrink-0 transition-transform duration-300',
-                                  isActiveItem ? 'text-white' : 'text-orange-500/70',
+                                  isActiveItem ? 'text-primary-foreground' : 'text-muted-foreground',
                                   isExpanded && 'rotate-180'
                                 )} />
                               )}
@@ -360,10 +361,10 @@ export function Sidebar() {
                               <div className={cn(
                                 'overflow-hidden transition-all duration-300 ease-in-out mt-1.5 mb-2.5 rounded-2xl',
                                 isExpanded 
-                                  ? 'max-h-[36rem] opacity-100 bg-white/95 dark:bg-stone-900/95 border-2 border-amber-500/40 dark:border-amber-500/50 p-2.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.08),0_4px_24px_rgba(249,115,22,0.25)] backdrop-blur-md' 
+                                  ? 'max-h-[36rem] opacity-100 bg-background/90 border border-border p-2 rounded-xl shadow-sm backdrop-blur-md' 
                                   : 'max-h-0 opacity-0'
                               )}>
-                                <div className="space-y-1 pl-1.5 border-l-2 border-amber-500/70 dark:border-amber-400/70">
+                                <div className="space-y-1 pl-1.5 border-l-2 border-primary/30">
                                   {item.children?.map((child) => {
                                     const ChildIcon = iconMap[child.icon] || LayoutDashboard;
                                     const isChildActive = isPathActive(child.href);
@@ -371,12 +372,12 @@ export function Sidebar() {
                                       'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12.5px] font-bold',
                                       'transition-all duration-200 ease-out border',
                                       isChildActive
-                                        ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white font-black border-amber-300/80 shadow-[0_4px_16px_rgba(249,115,22,0.4)] scale-[1.02]'
-                                        : 'text-stone-700 dark:text-stone-300 hover:bg-amber-500/10 dark:hover:bg-amber-500/20 hover:text-amber-700 dark:hover:text-amber-300 border-transparent',
+                                        ? 'bg-primary text-primary-foreground font-semibold border-primary/30 shadow-xs'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50 border-transparent',
                                     );
                                     return (
                                       <Link key={child.href} href={child.href} onClick={() => setMobileOpen(false)} className={childClasses}>
-                                        <ChildIcon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isChildActive ? 'text-white drop-shadow-sm' : 'text-stone-500 dark:text-stone-400 group-hover:text-amber-600')} />
+                                        <ChildIcon className={cn('shrink-0 w-4 h-4 transition-colors duration-200', isChildActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground')} />
                                         <span className="truncate">{child.title}</span>
                                       </Link>
                                     );
@@ -394,8 +395,8 @@ export function Sidebar() {
                         'transition-all duration-300 ease-out shadow-sm active:scale-[0.98]',
                         'border',
                         isActiveItem
-                          ? 'bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 text-white border-amber-300/40 shadow-[0_4px_16px_rgba(249,115,22,0.35)]'
-                          : 'bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 text-stone-800 dark:text-stone-200 border-amber-500/20 hover:from-amber-600/20 hover:to-orange-500/25 hover:border-amber-500/40 hover:shadow-md',
+                          ? 'bg-primary text-primary-foreground border-primary/40 shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/60 border-transparent',
                         isCollapsed && 'justify-center px-2',
                       );
 
