@@ -56,4 +56,6 @@ export interface ThemeSettings {
   ornament: boolean;
   motion: MotionPreference;
   bgUrl?: string | null;
+  useBrandColor?: boolean;
+  brandColor?: string | null;
 }

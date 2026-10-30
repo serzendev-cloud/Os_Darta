@@ -34,14 +34,18 @@ export default async function RootLayout({
     false,
     tenantPrimaryColor,
     themeSettings.goldAccent,
-    themeSettings.neonGlow
+    themeSettings.neonGlow,
+    themeSettings.useBrandColor,
+    themeSettings.brandColor
   );
   const darkTokens = resolveThemeTokens(
     themeSettings.preset,
     true,
     tenantPrimaryColor,
     themeSettings.goldAccent,
-    themeSettings.neonGlow
+    themeSettings.neonGlow,
+    themeSettings.useBrandColor,
+    themeSettings.brandColor
   );
 
   const lightVars = generateThemeCssVariables(lightTokens, themeSettings);

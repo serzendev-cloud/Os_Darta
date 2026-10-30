@@ -20,6 +20,7 @@ describe('WP-UI-001 Theme Settings Store Module', () => {
     const settings = parseThemeSettings(rawBg);
     expect(settings.preset).toBe(DEFAULT_THEME_SETTINGS.preset);
     expect(settings.bgUrl).toBe(rawBg);
+    expect(settings.useBrandColor).toBe(false);
 
     // Saat mengekstrak bgUrl, URL aslinya harus terbaca
     expect(extractBgUrl(rawBg)).toBe(rawBg);
@@ -33,6 +34,8 @@ describe('WP-UI-001 Theme Settings Store Module', () => {
       neonGlow: false,
       ornament: true,
       motion: 'standard',
+      useBrandColor: true,
+      brandColor: '#2563EB',
     };
     const bgUrl = 'https://cdn.ponpes.id/bg-santri.png';
 
@@ -45,10 +48,39 @@ describe('WP-UI-001 Theme Settings Store Module', () => {
     expect(parsed.neonGlow).toBe(false);
     expect(parsed.ornament).toBe(true);
     expect(parsed.motion).toBe('standard');
+    expect(parsed.useBrandColor).toBe(true);
+    expect(parsed.brandColor).toBe('#2563EB');
 
     // BgUrl harus terekstrak dengan benar
     expect(extractBgUrl(serialized)).toBe(bgUrl);
     expect(sanitizePublicBgUrl(serialized)).toBe(bgUrl);
+  });
+
+  it('harus kompatibel mundur: payload lama tanpa useBrandColor otomatis bernilai false', () => {
+    const legacyPayload = 'theme:{"preset":"sky-emas","goldAccent":true,"neonGlow":false,"ornament":true,"motion":"standard"}';
+    const parsed = parseThemeSettings(legacyPayload);
+
+    expect(parsed.preset).toBe('sky-emas');
+    expect(parsed.useBrandColor).toBe(false);
+    expect(parsed.brandColor).toBeNull();
+  });
+
+  it('harus membersihkan / membuang (strip) field tak dikenal demi keamanan', () => {
+    const payloadWithUnknown = 'theme:{"preset":"white-label","goldAccent":false,"neonGlow":false,"ornament":true,"motion":"standard","maliciousField":"<script>alert(1)</script>","adminOverride":true}';
+    const parsed = parseThemeSettings(payloadWithUnknown);
+
+    expect(parsed.preset).toBe('white-label');
+    expect((parsed as unknown as Record<string, unknown>).maliciousField).toBeUndefined();
+    expect((parsed as unknown as Record<string, unknown>).adminOverride).toBeUndefined();
+  });
+
+  it('harus menolak payload yang melebihi batas 1 KB (1024 bytes) dan fallback ke default', () => {
+    const hugePadding = 'A'.repeat(1200);
+    const oversizedPayload = `theme:{"preset":"white-label","bgUrl":"${hugePadding}"}`;
+    expect(oversizedPayload.length).toBeGreaterThan(1024);
+
+    const parsed = parseThemeSettings(oversizedPayload);
+    expect(parsed).toEqual(DEFAULT_THEME_SETTINGS);
   });
 
   it('harus mengabaikan opsi neonGlow jika preset bukan islami-sky saat serialisasi/parsing', () => {
