@@ -25,6 +25,8 @@ export const themeSettingsSchema = z.object({
   ornament: z.boolean().default(true),
   motion: z.enum(['soft', 'standard', 'off'] as const).default('standard'),
   bgUrl: z.string().max(500).nullable().optional(),
+  useBrandColor: z.boolean().default(false),
+  brandColor: z.string().max(30).nullable().optional(),
 }).strip(); // Strips any unknown fields strictly
 
 export { DEFAULT_THEME_SETTINGS };
@@ -71,6 +73,8 @@ export function parseThemeSettings(rawValue?: string | null): ThemeSettings {
       ornament: validated.ornament,
       motion: validated.motion as MotionPreference,
       bgUrl: validated.bgUrl || null,
+      useBrandColor: validated.useBrandColor ?? false,
+      brandColor: validated.brandColor || null,
     };
   } catch {
     // Fail-safe: Any parse/validation error falls back to defaults without throwing
@@ -92,6 +96,8 @@ export function serializeThemeSettings(
     ornament: typeof newSettings.ornament === 'boolean' ? newSettings.ornament : true,
     motion: newSettings.motion || 'standard',
     bgUrl: bgUrl !== undefined ? bgUrl : (newSettings.bgUrl || null),
+    useBrandColor: typeof newSettings.useBrandColor === 'boolean' ? newSettings.useBrandColor : false,
+    brandColor: newSettings.brandColor !== undefined ? newSettings.brandColor : null,
   };
 
   const validated = themeSettingsSchema.parse(merged);

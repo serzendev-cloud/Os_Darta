@@ -85,14 +85,40 @@ function ThemeSynchronizer({
       isDark,
       tenantPrimaryColor,
       settings.goldAccent,
-      settings.neonGlow
+      settings.neonGlow,
+      settings.useBrandColor,
+      settings.brandColor
     );
-  }, [settings.preset, isDark, tenantPrimaryColor, settings.goldAccent, settings.neonGlow]);
+  }, [
+    settings.preset,
+    isDark,
+    tenantPrimaryColor,
+    settings.goldAccent,
+    settings.neonGlow,
+    settings.useBrandColor,
+    settings.brandColor,
+  ]);
 
   React.useEffect(() => {
     // Generate both :root and .dark rules so dynamic theme changes update immediately
-    const lightTokens = resolveThemeTokens(settings.preset, false, tenantPrimaryColor, settings.goldAccent, settings.neonGlow);
-    const darkTokens = resolveThemeTokens(settings.preset, true, tenantPrimaryColor, settings.goldAccent, settings.neonGlow);
+    const lightTokens = resolveThemeTokens(
+      settings.preset,
+      false,
+      tenantPrimaryColor,
+      settings.goldAccent,
+      settings.neonGlow,
+      settings.useBrandColor,
+      settings.brandColor
+    );
+    const darkTokens = resolveThemeTokens(
+      settings.preset,
+      true,
+      tenantPrimaryColor,
+      settings.goldAccent,
+      settings.neonGlow,
+      settings.useBrandColor,
+      settings.brandColor
+    );
 
     const lightVars = generateThemeCssVariables(lightTokens, settings);
     const darkVars = generateThemeCssVariables(darkTokens, settings);

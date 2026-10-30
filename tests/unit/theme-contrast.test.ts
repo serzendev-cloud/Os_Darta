@@ -100,6 +100,47 @@ describe('WP-UI-001 Theme Contrast & WCAG AA Verification', () => {
     });
   });
 
+  describe('WP-UI-001f: Aturan Prioritas Brand Color vs Preset & Kontras Otomatis', () => {
+    it('(a) resolveThemeTokens mengabaikan tenantPrimaryColor bila useBrandColor=false atau undefined', () => {
+      // White-label preset primary adalah '#1F6FD1'
+      const tokensWithoutFlag = resolveThemeTokens('white-label', false, '#0F766E');
+      expect(tokensWithoutFlag.primary).toBe('#1F6FD1');
+
+      const tokensExplicitFalse = resolveThemeTokens('white-label', false, '#0F766E', false, false, false);
+      expect(tokensExplicitFalse.primary).toBe('#1F6FD1');
+    });
+
+    it('(b) resolveThemeTokens menerapkan warna brand jika useBrandColor=true dan kontras tetap >= 4.5:1', () => {
+      // Uji warna gelap (Teal #0F766E)
+      const tealTokens = resolveThemeTokens('white-label', false, '#0F766E', false, false, true);
+      expect(tealTokens.primary).toBe('#0F766E');
+      const tealContrast = getContrastRatio(tealTokens.primaryForeground || '#FFFFFF', tealTokens.primary);
+      expect(tealContrast).toBeGreaterThanOrEqual(4.5);
+
+      // Uji warna terang (Kuning #FACC15) -> harus menghasilkan teks gelap
+      const yellowTokens = resolveThemeTokens('white-label', false, null, false, false, true, '#FACC15');
+      expect(yellowTokens.primary).toBe('#FACC15');
+      expect(yellowTokens.primaryForeground).toBe('#0F2A47');
+      const yellowContrast = getContrastRatio(yellowTokens.primaryForeground || '#000000', yellowTokens.primary);
+      expect(yellowContrast).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it('(c) nilai jahat (XSS, script injection, format bukan hex) tetap ditolak dan fallback ke preset', () => {
+      const maliciousInputs = [
+        '<script>alert("xss")</script>',
+        '#12345; background: red;',
+        'rgb(255, 0, 0)',
+        'blue',
+        'javascript:void(0)',
+      ];
+
+      maliciousInputs.forEach((badInput) => {
+        const tokens = resolveThemeTokens('white-label', false, badInput, false, false, true);
+        expect(tokens.primary).toBe('#1F6FD1');
+      });
+    });
+  });
+
   describe('Auto-Derived Dark Mode Fallback', () => {
     THEME_PRESETS.forEach((preset) => {
       it(`preset [${preset.id}] deriveDarkTokens harus menghasilkan kontras WCAG AA >= 4.5:1`, () => {

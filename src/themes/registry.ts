@@ -38,6 +38,8 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   ornament: true,
   motion: 'standard',
   bgUrl: null,
+  useBrandColor: false,
+  brandColor: null,
 };
 
 /**
@@ -54,7 +56,7 @@ export function getThemePreset(id?: string | null): ThemePreset {
  * Resolves final theme tokens applying:
  * Layer 1: Base preset tokens (Light or Dark)
  * Layer 2: Preset toggles (Gold accent, Neon glow)
- * Layer 3: Tenant brand override (if valid custom primaryColor provided)
+ * Layer 3: Tenant brand override (ONLY if useBrandColor === true and valid HEX provided)
  * Auto-calculation: High contrast foregrounds (>= 4.5:1)
  */
 export function resolveThemeTokens(
@@ -62,16 +64,19 @@ export function resolveThemeTokens(
   isDark: boolean,
   tenantPrimaryColor?: string | null,
   goldAccent?: boolean,
-  neonGlow?: boolean
+  neonGlow?: boolean,
+  useBrandColor?: boolean,
+  brandColor?: string | null
 ): ThemeTokens {
   const preset = getThemePreset(presetId);
   const baseTokens = isDark ? preset.dark : preset.light;
 
   let tokens = { ...baseTokens };
 
-  // Layer 3: Apply Tenant Custom Brand Primary (if valid HEX)
-  if (tenantPrimaryColor && HEX_COLOR_REGEX.test(tenantPrimaryColor.trim())) {
-    const validPrimary = tenantPrimaryColor.trim();
+  // Layer 3: Apply Tenant Custom Brand Primary HANYA jika useBrandColor diaktifkan secara sengaja
+  const effectiveBrandColor = brandColor || tenantPrimaryColor;
+  if (useBrandColor && effectiveBrandColor && HEX_COLOR_REGEX.test(effectiveBrandColor.trim())) {
+    const validPrimary = effectiveBrandColor.trim();
     const gradient = buildGradient(validPrimary);
     tokens.primary = validPrimary;
     tokens.headerGradient = gradient.headerGradient;

@@ -11,7 +11,8 @@ import {
   Moon, 
   Sun,
   Activity,
-  ArrowRight
+  ArrowRight,
+  Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -38,6 +39,8 @@ export default function PengaturanTampilanPage() {
   const [neonGlow, setNeonGlow] = useState<boolean>(themeSettings.neonGlow);
   const [ornament, setOrnament] = useState<boolean>(themeSettings.ornament);
   const [motion, setMotion] = useState<'soft' | 'standard' | 'off'>(themeSettings.motion);
+  const [useBrandColor, setUseBrandColor] = useState<boolean>(themeSettings.useBrandColor || false);
+  const [brandColor, setBrandColor] = useState<string>(themeSettings.brandColor || '#1F6FD1');
 
   // Existing branding fields to preserve on save
   const [brandingBase, setBrandingBase] = useState<{
@@ -76,6 +79,14 @@ export default function PengaturanTampilanPage() {
               setNeonGlow(Boolean(ts.neonGlow));
               setOrnament(Boolean(ts.ornament));
               setMotion(ts.motion || 'soft');
+              setUseBrandColor(Boolean(ts.useBrandColor));
+              if (ts.brandColor) {
+                setBrandColor(ts.brandColor);
+              } else if (json.data.primaryColor) {
+                setBrandColor(json.data.primaryColor);
+              }
+            } else if (json.data.primaryColor) {
+              setBrandColor(json.data.primaryColor);
             }
           }
         }
@@ -97,6 +108,8 @@ export default function PengaturanTampilanPage() {
       neonGlow: presetId === 'islami-sky' ? neonGlow : false,
       ornament,
       motion,
+      useBrandColor,
+      brandColor: useBrandColor ? brandColor : null,
     });
   };
 
@@ -120,6 +133,24 @@ export default function PengaturanTampilanPage() {
     updateLocalThemeSettings({ motion: val });
   };
 
+  const handleToggleBrandColor = (checked: boolean) => {
+    setUseBrandColor(checked);
+    updateLocalThemeSettings({
+      useBrandColor: checked,
+      brandColor: checked ? brandColor : null,
+    });
+  };
+
+  const handleBrandColorChange = (color: string) => {
+    setBrandColor(color);
+    if (useBrandColor) {
+      updateLocalThemeSettings({
+        useBrandColor: true,
+        brandColor: color,
+      });
+    }
+  };
+
   const handleSave = async () => {
     setIsSubmitting(true);
     setToastMsg('');
@@ -134,6 +165,8 @@ export default function PengaturanTampilanPage() {
           neonGlow: selectedPreset === 'islami-sky' ? neonGlow : false,
           ornament,
           motion,
+          useBrandColor,
+          brandColor: useBrandColor ? brandColor : null,
         },
       };
 
@@ -225,6 +258,55 @@ export default function PengaturanTampilanPage() {
           </Button>
         </div>
       </PageCard>
+
+      {/* Brand Color Override Section */}
+      <div className="p-5 rounded-2xl border border-border bg-card shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1 max-w-xl">
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 text-primary" />
+            <span className="text-base font-bold text-foreground">Gunakan Warna Brand Lembaga</span>
+            <Badge variant="outline" className="text-xs">
+              {useBrandColor ? 'Aktif' : 'Default Preset'}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Bila diaktifkan, warna primer shell antarmuka akan menggunakan warna khas lembaga Anda. Bila dinonaktifkan, warna mengikuti preset tema yang dipilih secara murni tanpa tertimpa warna bawaan.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+          {useBrandColor && (
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                id="brand-color-picker"
+                value={brandColor.startsWith('#') && brandColor.length === 7 ? brandColor : '#1F6FD1'}
+                onChange={(e) => handleBrandColorChange(e.target.value)}
+                className="w-9 h-9 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
+                title="Pilih Warna Brand"
+              />
+              <input
+                type="text"
+                value={brandColor}
+                onChange={(e) => handleBrandColorChange(e.target.value)}
+                placeholder="#1F6FD1"
+                maxLength={7}
+                className="w-24 px-2 py-1.5 text-xs font-mono rounded-lg border border-input bg-background text-foreground"
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Label htmlFor="toggle-brand-color" className="text-xs font-semibold cursor-pointer">
+              {useBrandColor ? 'Aktif' : 'Nonaktif'}
+            </Label>
+            <Switch
+              id="toggle-brand-color"
+              checked={useBrandColor}
+              onCheckedChange={handleToggleBrandColor}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Controls & Options Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -348,10 +430,10 @@ export default function PengaturanTampilanPage() {
           isDark={isDark}
         />
 
-        {/* 2. Islami Category */}
+        {/* 2. Islamic Heritage Category */}
         <PresetGroupSection
-          title={`Tema Nuansa Islami (${islamicPresets.length} Preset)`}
-          description="Palet teal, emerald zamrud, dan aksen emas klasik khas ma'had dengan siluet kubah 3D."
+          title={`Tema Mahad & Warisan Islami (${islamicPresets.length} Preset)`}
+          description="Palet zamrud, kubah emas, dan ornamen lengkung khas pesantren yang khidmat dan bersahaja."
           presets={islamicPresets}
           selectedPreset={selectedPreset}
           onSelect={handleSelectPreset}
@@ -362,8 +444,8 @@ export default function PengaturanTampilanPage() {
 
         {/* 3. Colored Category */}
         <PresetGroupSection
-          title={`Tema Berwarna & Identitas (${coloredPresets.length} Preset)`}
-          description="Pilihan warna hangat fajar, biru langit sejuk, dan penyesuaian warna kustom lembaga."
+          title={`Tema Warna-Warni Khusus (${coloredPresets.length} Preset)`}
+          description="Variasi nuansa langit fajar hangat dan metallic cyan kontemporer."
           presets={coloredPresets}
           selectedPreset={selectedPreset}
           onSelect={handleSelectPreset}
@@ -374,8 +456,8 @@ export default function PengaturanTampilanPage() {
 
         {/* 4. Dark Category */}
         <PresetGroupSection
-          title={`Tema Gelap & Obsidian (${darkPresets.length} Preset)`}
-          description="Tema gelap elegan untuk kenyamanan mata di malam hari dan tampilan futuristik."
+          title={`Tema Mode Gelap Terdedikasi (${darkPresets.length} Preset)`}
+          description="Preset dengan kontras pekat untuk efisiensi mata di malam hari."
           presets={darkPresets}
           selectedPreset={selectedPreset}
           onSelect={handleSelectPreset}
@@ -393,7 +475,7 @@ interface PresetGroupSectionProps {
   description: string;
   presets: typeof THEME_PRESETS;
   selectedPreset: ThemePresetId;
-  onSelect: (id: ThemePresetId) => void;
+  onSelect: (presetId: ThemePresetId) => void;
   goldAccent: boolean;
   ornament: boolean;
   isDark: boolean;
@@ -416,85 +498,86 @@ function PresetGroupSection({
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {presets.map((preset) => {
           const isSelected = selectedPreset === preset.id;
           const tokens = isDark ? preset.dark : preset.light;
-          const isWhiteTheme = preset.id === 'putih' && !isDark;
 
           return (
             <div
               key={preset.id}
               onClick={() => onSelect(preset.id)}
               className={cn(
-                'group relative rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col justify-between bg-card hover:shadow-lg',
+                'group relative rounded-2xl border text-card-foreground shadow-xs transition-all cursor-pointer overflow-hidden flex flex-col justify-between',
                 isSelected
-                  ? 'border-primary shadow-md ring-2 ring-primary/20'
-                  : 'border-border hover:border-border/80'
+                  ? 'border-primary ring-2 ring-primary/30 shadow-md bg-card'
+                  : 'border-border hover:border-primary/40 hover:shadow-xs bg-card/60'
               )}
             >
-              {/* Card Header Preview Area */}
+              {/* Header Preview Banner */}
               <div
-                className="h-28 w-full relative overflow-hidden p-3 flex flex-col justify-between"
+                className="h-28 w-full relative p-3 flex flex-col justify-between overflow-hidden"
                 style={{ background: tokens.headerGradient }}
               >
-                {/* Contrast dark scrim guarantee for colored headers, omitted on white theme */}
-                {!isWhiteTheme && (
-                  <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/35 via-black/10 to-transparent pointer-events-none" />
-                )}
-
-                {/* Optional Ornament: Mosque for Islamic themes, Paper-cut waves for Neutral */}
-                {ornament && preset.supportsMosqueOrnament && (
-                  <div className="absolute -bottom-2 -right-2 pointer-events-none opacity-40">
-                    <MosqueOrnament3D className="w-20 h-20" />
-                  </div>
-                )}
-                {ornament && !preset.supportsMosqueOrnament && (
-                  <div className="absolute inset-0 pointer-events-none opacity-25">
-                    <AbstractPattern showLattice={false} />
-                  </div>
-                )}
-
-                {/* Optional Gold Line */}
-                {goldAccent && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#F3C74A]" />
+                {/* Visual Ornaments */}
+                {ornament && (
+                  <>
+                    {preset.supportsMosqueOrnament ? (
+                      <MosqueOrnament3D className="right-[-10px] top-[-10px] w-24 h-24" />
+                    ) : (
+                      <AbstractPattern className="right-0 top-0 w-32 h-28 opacity-40" />
+                    )}
+                  </>
                 )}
 
                 {/* Top Badge */}
-                <div className="relative z-10 flex items-center justify-between">
-                  <span className={cn(
-                    "text-[11px] font-bold tracking-wider uppercase",
-                    isWhiteTheme ? "text-slate-900" : "text-white drop-shadow-sm"
-                  )}>
-                    {preset.name}
+                <div className="flex items-center justify-between z-10">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-black/30 text-white backdrop-blur-xs border border-white/10">
+                    {preset.category}
                   </span>
+
                   {isSelected && (
-                    <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-white text-stone-900 shadow-sm">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-zinc-900 shadow-xs">
                       <Check className="w-3 h-3 text-emerald-600" />
                       Aktif
                     </span>
                   )}
                 </div>
 
-                {/* Bottom preview info */}
-                <div className={cn(
-                  "relative z-10 text-[10px] font-medium",
-                  isWhiteTheme ? "text-slate-700" : "text-white/90"
-                )}>
-                  Header Gradien 4-Stop
-                </div>
-              </div>
-
-              {/* Card Content & Token Chips */}
-              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
+                {/* Bottom Title on Header */}
+                <div className="z-10">
+                  <h4 className="text-white font-bold text-sm tracking-tight drop-shadow-xs">
+                    {preset.name}
+                  </h4>
+                  <p className="text-white/80 text-[11px] line-clamp-1">
                     {preset.description}
                   </p>
                 </div>
 
-                {/* Color swatches */}
-                <div className="pt-2 border-t border-border flex items-center justify-between">
+                {/* Gold Accent Line Preview */}
+                {(goldAccent || preset.id === 'sky-emas') && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-1 z-20"
+                    style={{
+                      background: 'linear-gradient(90deg, #C9962B 0%, #F3C74A 50%, #FDE68A 100%)',
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Preset Meta & Palette Swatches */}
+              <div className="p-3.5 space-y-3 flex-1 flex flex-col justify-between bg-card">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="font-mono text-[11px]">ID: {preset.id}</span>
+                  {preset.supportsNeonGlow && (
+                    <span className="text-[10px] font-medium text-cyan-600 dark:text-cyan-400">
+                      ★ Neon Glow
+                    </span>
+                  )}
+                </div>
+
+                {/* Palette color dots */}
+                <div className="flex items-center justify-between pt-2 border-t border-border/60">
                   <div className="flex items-center gap-1.5">
                     <span
                       className="w-4 h-4 rounded-full border border-black/10 shadow-xs"
