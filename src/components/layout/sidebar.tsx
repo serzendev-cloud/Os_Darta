@@ -212,7 +212,7 @@ export function Sidebar() {
       )}
       <aside className={cn(
         'fixed top-0 left-0 z-50 h-dvh flex flex-col transition-all duration-300 ease-in-out bg-islamic-pattern',
-        'bg-card text-card-foreground border-r border-border shadow-xl relative overflow-hidden',
+        'bg-card text-card-foreground border-r border-border shadow-xl overflow-hidden',
         isCollapsed ? 'w-[var(--sidebar-width-collapsed)]' : 'w-[var(--sidebar-width)]',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
