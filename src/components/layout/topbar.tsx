@@ -47,7 +47,7 @@ export function Topbar() {
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'AD';
 
   return (
-    <header className="sticky top-0 z-30 flex items-center h-16 border-b border-border bg-background/80 backdrop-blur-xl px-3.5 sm:px-4 lg:px-6 relative overflow-hidden before:absolute before:bottom-0 before:left-0 before:right-0 before:h-[var(--theme-gold-line-height,2px)] before:bg-[var(--theme-gold-line,transparent)]">
+    <header className="sticky top-0 z-30 flex items-center h-16 border-b border-border bg-background/80 backdrop-blur-xl px-3.5 sm:px-4 lg:px-6 overflow-hidden before:absolute before:bottom-0 before:left-0 before:right-0 before:h-[var(--theme-gold-line-height,2px)] before:bg-[var(--theme-gold-line,transparent)]">
       <Button variant="ghost" size="icon" className="lg:hidden mr-1.5 sm:mr-2" onClick={() => setMobileOpen(true)}>
         <Menu className="w-5 h-5 text-foreground" />
       </Button>
