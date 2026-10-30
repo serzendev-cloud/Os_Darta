@@ -18,6 +18,8 @@ const routeLabels: Record<string, string> = {
   monitoring: 'Monitoring',
   notifikasi: 'Notifikasi',
   pengaturan: 'Pengaturan',
+  tampilan: 'Tema & Tampilan',
+  'tampilan-login': 'Tampilan Login',
   // Academic Configuration Center Enhancements
   kurikulum: 'Program Akademik',
   master: 'Pustaka Program',
@@ -71,7 +73,7 @@ export function Breadcrumb() {
   return (
     <nav className="flex items-center text-xs text-muted-foreground mb-4 overflow-x-auto py-1" aria-label="Breadcrumb">
       <Link href="/dashboard" className="hover:text-foreground transition-colors flex items-center gap-1 font-semibold">
-        <Home className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <Home className="w-3.5 h-3.5 text-primary" />
         <span>Administrator</span>
       </Link>
 
@@ -83,7 +85,7 @@ export function Breadcrumb() {
               {item.label}
             </Link>
           ) : (
-            <span className={cn('text-foreground font-extrabold text-amber-700 dark:text-amber-400')}>
+            <span className={cn('text-foreground font-extrabold text-primary')}>
               {item.label}
             </span>
           )}
