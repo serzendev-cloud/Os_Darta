@@ -7,7 +7,8 @@ export const fajarPreset: ThemePreset = {
   description: 'Hangatnya semburat fajar dengan sentuhan oranye terracotta yang teduh dan berwibawa.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: true,
+  
+  ornamentType: 'abstract',
   hasExplicitDark: true,
   light: {
     background: '#FFFBF5',

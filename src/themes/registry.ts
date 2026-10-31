@@ -1,4 +1,4 @@
-import { ThemePreset, ThemePresetId, ThemeTokens, ThemeSettings } from './types';
+import { ThemePreset, ThemePresetId, ThemeTokens, ThemeSettings, ThemeOrnamentType } from './types';
 import { whiteLabelPreset } from './tokens/white-label';
 import { islamiSkyPreset } from './tokens/islami-sky';
 import { skyEmasPreset } from './tokens/sky-emas';
@@ -50,6 +50,20 @@ export function getThemePreset(id?: string | null): ThemePreset {
     return THEME_REGISTRY[id as ThemePresetId];
   }
   return THEME_REGISTRY[DEFAULT_THEME_PRESET_ID];
+}
+
+/**
+ * Resolves the effective ornament type for a preset taking user preference into account.
+ * When ornament setting is false, strictly returns 'none'.
+ * Otherwise returns the preset's defined ornamentType ('mosque' | 'abstract').
+ */
+export function getEffectiveOrnamentType(
+  presetOrId: ThemePreset | ThemePresetId,
+  ornamentSetting: boolean
+): ThemeOrnamentType {
+  if (!ornamentSetting) return 'none';
+  const preset = typeof presetOrId === 'string' ? getThemePreset(presetOrId) : presetOrId;
+  return preset.ornamentType || (preset.supportsMosqueOrnament ? 'mosque' : 'abstract');
 }
 
 /**

@@ -7,7 +7,8 @@ export const malamPreset: ThemePreset = {
   description: 'Tema malam obsidian yang mewah dengan aksen emas bercahaya, nyaman untuk sesi malam.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: true,
+  
+  ornamentType: 'mosque',
   hasExplicitDark: true,
   // Malam is dark-first; light mode acts as a softened dusk theme
   light: {
