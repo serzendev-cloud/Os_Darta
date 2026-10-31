@@ -7,7 +7,8 @@ export const putihPreset: ThemePreset = {
   description: 'Desain monokromatik bersih dengan latar putih murni dan ketajaman kontras tertinggi.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: false,
+  
+  ornamentType: 'abstract',
   hasExplicitDark: true,
   light: {
     background: '#FFFFFF',

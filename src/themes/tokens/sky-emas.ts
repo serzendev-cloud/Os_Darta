@@ -7,7 +7,8 @@ export const skyEmasPreset: ThemePreset = {
   description: 'Tema netral bernuansa biru langit dengan aksen emas prestisius pada garis header, tombol, dan cincin aksi.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: false,
+  
+  ornamentType: 'abstract',
   hasExplicitDark: true,
   light: {
     background: '#F5F9FF',

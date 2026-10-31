@@ -7,7 +7,8 @@ export const mainPreset: ThemePreset = {
   description: 'Palet enterprise profesional dengan nuansa Royal Indigo untuk tata kelola institusi skala besar.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: false,
+  
+  ornamentType: 'abstract',
   hasExplicitDark: true,
   light: {
     background: '#F8FAFC',

@@ -7,7 +7,8 @@ export const whiteLabelPreset: ThemePreset = {
   description: 'Tema netral dasar universal bernuansa biru langit metalik yang bersih dan adaptif.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: false,
+  
+  ornamentType: 'abstract',
   hasExplicitDark: true,
   light: {
     background: '#F4F9FF',

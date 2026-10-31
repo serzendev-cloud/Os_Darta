@@ -7,7 +7,8 @@ export const zamrudCerahPreset: ThemePreset = {
   description: 'Nuansa hijau zamrud muda yang segar, ramah, dan memancarkan energi positif.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: true,
+  
+  ornamentType: 'mosque',
   hasExplicitDark: true,
   light: {
     background: '#F0FDF4',

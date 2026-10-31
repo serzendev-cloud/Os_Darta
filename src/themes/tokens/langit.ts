@@ -7,7 +7,8 @@ export const langitPreset: ThemePreset = {
   description: 'Biru langit terbuka yang lapang, memberikan kesegaran dan kejernihan fokus belajar.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: true,
+  
+  ornamentType: 'abstract',
   hasExplicitDark: true,
   light: {
     background: '#F0F9FF',

@@ -7,7 +7,8 @@ export const islamiSkyPreset: ThemePreset = {
   description: 'Tema Islami bernuansa biru langit cerah dengan siluet kubah masjid 3D dan pendar lembut.',
   supportsGoldAccent: true,
   supportsNeonGlow: true,
-  supportsMosqueOrnament: true,
+  
+  ornamentType: 'mosque',
   hasExplicitDark: true,
   light: {
     background: '#F0F8FF',

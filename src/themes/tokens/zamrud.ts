@@ -7,7 +7,8 @@ export const zamrudPreset: ThemePreset = {
   description: 'Warna hijau zamrud klasik khas pesantren Nusantara dengan wibawa dan kedalaman spiritual.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: true,
+  
+  ornamentType: 'mosque',
   hasExplicitDark: true,
   light: {
     background: '#F0FDF4',

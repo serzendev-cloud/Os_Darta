@@ -7,7 +7,8 @@ export const skyMetallicPreset: ThemePreset = {
   description: 'Tema netral bernuansa biru langit metalik polos tanpa ornamen Islami.',
   supportsGoldAccent: true,
   supportsNeonGlow: false,
-  supportsMosqueOrnament: false,
+  
+  ornamentType: 'abstract',
   hasExplicitDark: true,
   light: {
     background: '#F4F9FF',

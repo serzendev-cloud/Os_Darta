@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createProxyClient } from '@/lib/supabase/proxy';
 import { getTenantRootDomain } from '@/config/tenant';
+import { isUiLabAllowed } from '@/lib/ui-lab-guard';
 
 /**
  * Public routes that do not require authentication
@@ -118,6 +119,11 @@ export async function proxy(request: NextRequest) {
     pathname === '/favicon.ico' ||
     /\.(png|jpg|jpeg|svg|ico|webp|gif|css|js|woff|woff2)$/i.test(pathname);
   if (isStaticAsset) {
+    return NextResponse.next();
+  }
+
+  // 0b. Strict Preview Exemption: /ui-lab ONLY allowed when VERCEL_ENV !== 'production'
+  if (isUiLabAllowed(pathname)) {
     return NextResponse.next();
   }
 

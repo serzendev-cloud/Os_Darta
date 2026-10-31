@@ -15,6 +15,8 @@ export type ThemeCategory = 'Netral' | 'Islami' | 'Berwarna' | 'Gelap';
 
 export type MotionPreference = 'soft' | 'standard' | 'off';
 
+export type ThemeOrnamentType = 'mosque' | 'abstract' | 'none';
+
 export interface ThemeTokens {
   background: string;       // Page canvas background (#RRGGBB)
   surface: string;          // Cards, modals, containers
@@ -45,7 +47,8 @@ export interface ThemePreset {
   dark: ThemeTokens;
   supportsGoldAccent: boolean;
   supportsNeonGlow: boolean;
-  supportsMosqueOrnament: boolean;
+  supportsMosqueOrnament?: boolean;
+  ornamentType: ThemeOrnamentType;
   hasExplicitDark: boolean;
 }
 
